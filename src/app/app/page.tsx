@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/src/lib/supabaseClient";
 import type { User } from "@supabase/supabase-js";
 
@@ -12,18 +13,24 @@ export default function AppPage() {
 
   useEffect(() => {
     async function checkSession() {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session) {
         router.push("/login");
         return;
       }
+
       setUser(session.user);
       setLoading(false);
     }
 
     checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
         router.push("/login");
       } else {
@@ -58,7 +65,18 @@ export default function AppPage() {
           Log Out
         </button>
       </div>
-      <p>Welcome, {user?.user_metadata?.full_name || user?.email}!</p>
+
+      <p className="mb-6">
+        Welcome, {user?.user_metadata?.full_name || user?.email}!
+      </p>
+
+      {/* Directory Link */}
+      <Link
+        href="/app/directory"
+        className="inline-block bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700 transition"
+      >
+        Open Directory
+      </Link>
     </main>
   );
 }
