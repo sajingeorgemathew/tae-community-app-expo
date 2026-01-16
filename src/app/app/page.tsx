@@ -70,13 +70,21 @@ export default function AppPage() {
         Welcome, {user?.user_metadata?.full_name || user?.email}!
       </p>
 
-      {/* Directory Link */}
-      <Link
-        href="/app/directory"
-        className="inline-block bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700 transition"
-      >
-        Open Directory
-      </Link>
+      {/* Navigation Links */}
+      <div className="flex gap-4">
+        <Link
+          href="/app/directory"
+          className="inline-block bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700 transition"
+        >
+          Open Directory
+        </Link>
+        <Link
+          href="/app/me"
+          className="inline-block bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700 transition"
+        >
+          My Profile
+        </Link>
+      </div>
     </main>
   );
 }
