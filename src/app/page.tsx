@@ -1,27 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/src/lib/supabaseClient";
 
 export default function Home() {
-  const [status, setStatus] = useState("Checking...");
+  const router = useRouter();
 
   useEffect(() => {
-    async function test() {
-      try {
-        const { data } = await supabase.auth.getSession();
-        setStatus("Supabase connected ✅ Session read OK.");
-      } catch (e) {
-        setStatus("Supabase connection failed ❌ Check env keys.");
+    async function checkSession() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        router.push("/app");
+      } else {
+        router.push("/login");
       }
     }
-    test();
-  }, []);
+    checkSession();
+  }, [router]);
 
   return (
-    <main className="p-8">
-      <h1 className="text-2xl font-semibold">TAE Community App</h1>
-      <p className="mt-4">{status}</p>
+    <main className="min-h-screen flex items-center justify-center">
+      <p>Redirecting...</p>
     </main>
   );
 }
