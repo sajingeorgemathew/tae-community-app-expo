@@ -87,7 +87,15 @@ export default function FeedPage() {
         </Link>
       </div>
 
-      <h1 className="text-2xl font-semibold mb-6">Feed</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-semibold">Feed</h1>
+        <Link
+          href="/app/feed/new"
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          New Post
+        </Link>
+      </div>
 
       <div className="mb-6 flex gap-2">
         {(["all", "students", "alumni"] as AudienceFilter[]).map((option) => (
