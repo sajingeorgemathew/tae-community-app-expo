@@ -13,6 +13,21 @@ interface PostRow {
   profiles: { full_name: string | null }[];
 }
 
+interface AttachmentRow {
+  id: string;
+  post_id: string;
+  type: "image" | "video" | "link";
+  storage_path: string | null;
+  url: string | null;
+}
+
+interface Attachment {
+  id: string;
+  type: "image" | "video" | "link";
+  signedUrl?: string;
+  linkUrl?: string;
+}
+
 interface Post {
   id: string;
   author_id: string;
@@ -20,6 +35,7 @@ interface Post {
   audience: string;
   created_at: string;
   author_name: string;
+  attachments: Attachment[];
 }
 
 type AudienceFilter = "all" | "students" | "alumni";
@@ -62,19 +78,61 @@ export default function FeedPage() {
 
       if (error) {
         console.error("Error fetching posts:", error.message);
-      } else {
-        const rows = (data ?? []) as PostRow[];
-        setPosts(
-          rows.map((row) => ({
-            id: row.id,
-            author_id: row.author_id,
-            content: row.content,
-            audience: row.audience,
-            created_at: row.created_at,
-            author_name: row.profiles[0]?.full_name ?? "Unknown Author",
-          }))
-        );
+        setLoading(false);
+        return;
       }
+
+      const rows = (data ?? []) as PostRow[];
+      const postIds = rows.map((r) => r.id);
+
+      // Fetch attachments for all posts
+      const attachmentsByPost: Record<string, Attachment[]> = {};
+      if (postIds.length > 0) {
+        const { data: attachData } = await supabase
+          .from("post_attachments")
+          .select("id, post_id, type, storage_path, url")
+          .in("post_id", postIds);
+
+        const attachRows = (attachData ?? []) as AttachmentRow[];
+
+        // Generate signed URLs for image/video attachments
+        for (const att of attachRows) {
+          let attachment: Attachment;
+
+          if (att.type === "link") {
+            attachment = { id: att.id, type: "link", linkUrl: att.url ?? undefined };
+          } else if (att.storage_path) {
+            const { data: signedData } = await supabase.storage
+              .from("post-media")
+              .createSignedUrl(att.storage_path, 3600);
+            attachment = {
+              id: att.id,
+              type: att.type,
+              signedUrl: signedData?.signedUrl,
+            };
+          } else {
+            continue;
+          }
+
+          if (!attachmentsByPost[att.post_id]) {
+            attachmentsByPost[att.post_id] = [];
+          }
+          attachmentsByPost[att.post_id].push(attachment);
+        }
+      }
+
+      setPosts(
+        rows.map((row) => ({
+          id: row.id,
+          author_id: row.author_id,
+          content: row.content,
+          audience: row.audience,
+          created_at: row.created_at,
+          author_name: row.profiles[0]?.full_name ?? "Unknown Author",
+          attachments: attachmentsByPost[row.id] ?? [],
+        }))
+      );
+
       setLoading(false);
     }
 
@@ -180,6 +238,46 @@ export default function FeedPage() {
                 </div>
               </div>
               <p className="text-gray-700 whitespace-pre-wrap">{post.content}</p>
+              {post.attachments.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {post.attachments.map((att) => {
+                    if (att.type === "image" && att.signedUrl) {
+                      return (
+                        <img
+                          key={att.id}
+                          src={att.signedUrl}
+                          alt="Attachment"
+                          className="max-w-xs rounded"
+                        />
+                      );
+                    }
+                    if (att.type === "video" && att.signedUrl) {
+                      return (
+                        <video
+                          key={att.id}
+                          src={att.signedUrl}
+                          controls
+                          className="max-w-md rounded"
+                        />
+                      );
+                    }
+                    if (att.type === "link" && att.linkUrl) {
+                      return (
+                        <a
+                          key={att.id}
+                          href={att.linkUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline block"
+                        >
+                          {att.linkUrl}
+                        </a>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+              )}
               {canDelete(post) && (
                 <div className="mt-3 pt-3 border-t">
                   <button
