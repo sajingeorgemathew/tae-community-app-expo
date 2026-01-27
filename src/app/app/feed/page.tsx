@@ -165,6 +165,29 @@ export default function FeedPage() {
       return;
     }
 
+    // Fetch attachments to get storage paths for cleanup
+    const { data: attachments } = await supabase
+      .from("post_attachments")
+      .select("storage_path, type")
+      .eq("post_id", postId);
+
+    // Delete storage objects for image/video attachments
+    const storagePaths = (attachments ?? [])
+      .filter((a) => (a.type === "image" || a.type === "video") && a.storage_path)
+      .map((a) => a.storage_path as string);
+
+    if (storagePaths.length > 0) {
+      const { error: storageError } = await supabase.storage
+        .from("post-media")
+        .remove(storagePaths);
+
+      if (storageError) {
+        console.error("Error deleting storage objects:", storageError.message);
+        // Continue with post deletion even if storage cleanup fails
+      }
+    }
+
+    // Delete the post (cascades to post_attachments rows)
     const { error } = await supabase.from("posts").delete().eq("id", postId);
 
     if (error) {
@@ -219,7 +242,9 @@ export default function FeedPage() {
       </div>
 
       {filteredPosts.length === 0 ? (
-        <p className="text-gray-500">No posts found.</p>
+        <p className="text-gray-500">
+          {posts.length === 0 ? "No posts yet." : "No posts for this filter."}
+        </p>
       ) : (
         <ul className="space-y-4">
           {filteredPosts.map((post) => (
