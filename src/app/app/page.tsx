@@ -73,6 +73,12 @@ export default function AppPage() {
       {/* Navigation Links */}
       <div className="flex gap-4">
         <Link
+          href="/app/feed"
+          className="inline-block bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700 transition"
+        >
+          Feed
+        </Link>
+        <Link
           href="/app/directory"
           className="inline-block bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700 transition"
         >
