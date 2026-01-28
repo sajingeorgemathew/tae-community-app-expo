@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/src/lib/supabaseClient";
+import PostCard, { Attachment } from "@/src/components/PostCard";
 
 interface PostRow {
   id: string;
@@ -19,13 +20,6 @@ interface AttachmentRow {
   type: "image" | "video" | "link";
   storage_path: string | null;
   url: string | null;
-}
-
-interface Attachment {
-  id: string;
-  type: "image" | "video" | "link";
-  signedUrl?: string;
-  linkUrl?: string;
 }
 
 interface Post {
@@ -144,17 +138,6 @@ export default function FeedPage() {
       ? posts
       : posts.filter((post) => post.audience === filter);
 
-  function formatDate(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-
   function canDelete(post: Post): boolean {
     if (!currentUserId) return false;
     return post.author_id === currentUserId || isAdmin;
@@ -248,71 +231,16 @@ export default function FeedPage() {
       ) : (
         <ul className="space-y-4">
           {filteredPosts.map((post) => (
-            <li key={post.id} className="border rounded p-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="font-medium">{post.author_name}</p>
-                <div className="flex items-center gap-2">
-                  {post.audience !== "all" && (
-                    <span className="text-xs bg-gray-200 px-2 py-1 rounded capitalize">
-                      {post.audience}
-                    </span>
-                  )}
-                  <span className="text-xs text-gray-500">
-                    {formatDate(post.created_at)}
-                  </span>
-                </div>
-              </div>
-              <p className="text-gray-700 whitespace-pre-wrap">{post.content}</p>
-              {post.attachments.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  {post.attachments.map((att) => {
-                    if (att.type === "image" && att.signedUrl) {
-                      return (
-                        <img
-                          key={att.id}
-                          src={att.signedUrl}
-                          alt="Attachment"
-                          className="max-w-xs rounded"
-                        />
-                      );
-                    }
-                    if (att.type === "video" && att.signedUrl) {
-                      return (
-                        <video
-                          key={att.id}
-                          src={att.signedUrl}
-                          controls
-                          className="max-w-md rounded"
-                        />
-                      );
-                    }
-                    if (att.type === "link" && att.linkUrl) {
-                      return (
-                        <a
-                          key={att.id}
-                          href={att.linkUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline block"
-                        >
-                          {att.linkUrl}
-                        </a>
-                      );
-                    }
-                    return null;
-                  })}
-                </div>
-              )}
-              {canDelete(post) && (
-                <div className="mt-3 pt-3 border-t">
-                  <button
-                    onClick={() => handleDelete(post.id)}
-                    className="text-red-600 hover:text-red-800 text-sm"
-                  >
-                    Delete
-                  </button>
-                </div>
-              )}
+            <li key={post.id}>
+              <PostCard
+                content={post.content}
+                audience={post.audience}
+                authorName={post.author_name}
+                createdAt={post.created_at}
+                attachments={post.attachments}
+                canDelete={canDelete(post)}
+                onDelete={() => handleDelete(post.id)}
+              />
             </li>
           ))}
         </ul>
