@@ -7,6 +7,13 @@ export interface Attachment {
   linkUrl?: string;
 }
 
+export const EMOJI_SET = ["❤️", "👍", "😂"] as const;
+export type Emoji = (typeof EMOJI_SET)[number];
+
+export interface ReactionCounts {
+  [emoji: string]: number;
+}
+
 export interface PostCardProps {
   content: string;
   audience: string;
@@ -16,6 +23,9 @@ export interface PostCardProps {
   attachments: Attachment[];
   canDelete?: boolean;
   onDelete?: () => void;
+  reactionCounts?: ReactionCounts;
+  userReactions?: Emoji[];
+  onReactionToggle?: (emoji: Emoji) => void;
 }
 
 function formatDate(dateString: string): string {
@@ -38,6 +48,9 @@ export default function PostCard({
   attachments,
   canDelete,
   onDelete,
+  reactionCounts = {},
+  userReactions = [],
+  onReactionToggle,
 }: PostCardProps) {
   return (
     <div className="border rounded p-4">
@@ -98,6 +111,28 @@ export default function PostCard({
               );
             }
             return null;
+          })}
+        </div>
+      )}
+      {onReactionToggle && (
+        <div className="mt-3 pt-3 border-t flex gap-2">
+          {EMOJI_SET.map((emoji) => {
+            const count = reactionCounts[emoji] ?? 0;
+            const isActive = userReactions.includes(emoji);
+            return (
+              <button
+                key={emoji}
+                onClick={() => onReactionToggle(emoji)}
+                className={`px-2 py-1 rounded text-sm flex items-center gap-1 ${
+                  isActive
+                    ? "bg-blue-100 border border-blue-300"
+                    : "bg-gray-100 hover:bg-gray-200 border border-transparent"
+                }`}
+              >
+                <span>{emoji}</span>
+                {count > 0 && <span className="text-gray-600">{count}</span>}
+              </button>
+            );
           })}
         </div>
       )}

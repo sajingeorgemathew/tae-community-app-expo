@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/src/lib/supabaseClient";
-import PostCard, { Attachment } from "@/src/components/PostCard";
+import PostCard, { Attachment, Emoji, ReactionCounts } from "@/src/components/PostCard";
 
 interface Profile {
   id: string;
@@ -30,12 +30,20 @@ interface AttachmentRow {
   url: string | null;
 }
 
+interface ReactionRow {
+  post_id: string;
+  user_id: string;
+  emoji: string;
+}
+
 interface Post {
   id: string;
   content: string;
   audience: string;
   created_at: string;
   attachments: Attachment[];
+  reactionCounts: ReactionCounts;
+  userReactions: Emoji[];
 }
 
 export default function MyProfilePage() {
@@ -129,14 +137,48 @@ export default function MyProfilePage() {
         }
       }
 
+      // Fetch reactions for all posts
+      const reactionsByPost: Record<string, ReactionRow[]> = {};
+      if (postIds.length > 0) {
+        const { data: reactionsData } = await supabase
+          .from("post_reactions")
+          .select("post_id, user_id, emoji")
+          .in("post_id", postIds);
+
+        const reactionRows = (reactionsData ?? []) as ReactionRow[];
+        for (const r of reactionRows) {
+          if (!reactionsByPost[r.post_id]) {
+            reactionsByPost[r.post_id] = [];
+          }
+          reactionsByPost[r.post_id].push(r);
+        }
+      }
+
       setPosts(
-        rows.map((row) => ({
-          id: row.id,
-          content: row.content,
-          audience: row.audience,
-          created_at: row.created_at,
-          attachments: attachmentsByPost[row.id] ?? [],
-        }))
+        rows.map((row) => {
+          const postReactions = reactionsByPost[row.id] ?? [];
+
+          // Compute counts
+          const reactionCounts: ReactionCounts = {};
+          for (const r of postReactions) {
+            reactionCounts[r.emoji] = (reactionCounts[r.emoji] ?? 0) + 1;
+          }
+
+          // Get current user's reactions
+          const userReactions = postReactions
+            .filter((r) => r.user_id === session.user.id)
+            .map((r) => r.emoji as Emoji);
+
+          return {
+            id: row.id,
+            content: row.content,
+            audience: row.audience,
+            created_at: row.created_at,
+            attachments: attachmentsByPost[row.id] ?? [],
+            reactionCounts,
+            userReactions,
+          };
+        })
       );
 
       setLoading(false);
@@ -228,6 +270,70 @@ export default function MyProfilePage() {
     }
 
     setPosts((prev) => prev.filter((p) => p.id !== postId));
+  }
+
+  async function handleReactionToggle(postId: string, emoji: Emoji) {
+    if (!currentUserId) return;
+
+    const post = posts.find((p) => p.id === postId);
+    if (!post) return;
+
+    const hasReacted = post.userReactions.includes(emoji);
+
+    if (hasReacted) {
+      // Remove reaction
+      const { error } = await supabase
+        .from("post_reactions")
+        .delete()
+        .eq("post_id", postId)
+        .eq("user_id", currentUserId)
+        .eq("emoji", emoji);
+
+      if (error) {
+        console.error("Error removing reaction:", error.message);
+        return;
+      }
+
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId
+            ? {
+                ...p,
+                reactionCounts: {
+                  ...p.reactionCounts,
+                  [emoji]: (p.reactionCounts[emoji] ?? 1) - 1,
+                },
+                userReactions: p.userReactions.filter((e) => e !== emoji),
+              }
+            : p
+        )
+      );
+    } else {
+      // Add reaction
+      const { error } = await supabase
+        .from("post_reactions")
+        .insert({ post_id: postId, user_id: currentUserId, emoji });
+
+      if (error) {
+        console.error("Error adding reaction:", error.message);
+        return;
+      }
+
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId
+            ? {
+                ...p,
+                reactionCounts: {
+                  ...p.reactionCounts,
+                  [emoji]: (p.reactionCounts[emoji] ?? 0) + 1,
+                },
+                userReactions: [...p.userReactions, emoji],
+              }
+            : p
+        )
+      );
+    }
   }
 
   if (loading) {
@@ -357,6 +463,9 @@ export default function MyProfilePage() {
                     attachments={post.attachments}
                     canDelete={!!currentUserId}
                     onDelete={() => handleDelete(post.id)}
+                    reactionCounts={post.reactionCounts}
+                    userReactions={post.userReactions}
+                    onReactionToggle={(emoji) => handleReactionToggle(post.id, emoji)}
                   />
                 </li>
               ))}
