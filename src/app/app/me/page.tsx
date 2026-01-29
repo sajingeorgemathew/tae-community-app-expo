@@ -46,6 +46,7 @@ export default function MyProfilePage() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   // Form state
   const [fullName, setFullName] = useState("");
@@ -62,6 +63,8 @@ export default function MyProfilePage() {
         router.push("/login");
         return;
       }
+
+      setCurrentUserId(session.user.id);
 
       const { data, error } = await supabase
         .from("profiles")
@@ -189,6 +192,44 @@ export default function MyProfilePage() {
     setSaving(false);
   }
 
+  async function handleDelete(postId: string) {
+    if (!confirm("Are you sure you want to delete this post?")) {
+      return;
+    }
+
+    // Fetch attachments to get storage paths for cleanup
+    const { data: attachments } = await supabase
+      .from("post_attachments")
+      .select("storage_path, type")
+      .eq("post_id", postId);
+
+    // Delete storage objects for image/video attachments
+    const storagePaths = (attachments ?? [])
+      .filter((a) => (a.type === "image" || a.type === "video") && a.storage_path)
+      .map((a) => a.storage_path as string);
+
+    if (storagePaths.length > 0) {
+      const { error: storageError } = await supabase.storage
+        .from("post-media")
+        .remove(storagePaths);
+
+      if (storageError) {
+        console.error("Error deleting storage objects:", storageError.message);
+      }
+    }
+
+    // Delete the post (cascades to post_attachments rows)
+    const { error } = await supabase.from("posts").delete().eq("id", postId);
+
+    if (error) {
+      console.error("Error deleting post:", error.message);
+      alert("Failed to delete post");
+      return;
+    }
+
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
@@ -314,6 +355,8 @@ export default function MyProfilePage() {
                     audience={post.audience}
                     createdAt={post.created_at}
                     attachments={post.attachments}
+                    canDelete={!!currentUserId}
+                    onDelete={() => handleDelete(post.id)}
                   />
                 </li>
               ))}

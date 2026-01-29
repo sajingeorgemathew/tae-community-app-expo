@@ -46,6 +46,8 @@ export default function ProfilePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -53,6 +55,25 @@ export default function ProfilePage() {
         setNotFound(true);
         setLoading(false);
         return;
+      }
+
+      // Get current user session and check admin role
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session) {
+        setCurrentUserId(session.user.id);
+
+        const { data: currentProfile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
+          .single();
+
+        if (currentProfile?.role === "admin") {
+          setIsAdmin(true);
+        }
       }
 
       const { data, error } = await supabase
@@ -131,6 +152,47 @@ export default function ProfilePage() {
     fetchData();
   }, [id]);
 
+  // canDelete: user is viewing their own profile OR user is admin
+  const canDeletePosts = currentUserId === id || isAdmin;
+
+  async function handleDelete(postId: string) {
+    if (!confirm("Are you sure you want to delete this post?")) {
+      return;
+    }
+
+    // Fetch attachments to get storage paths for cleanup
+    const { data: attachments } = await supabase
+      .from("post_attachments")
+      .select("storage_path, type")
+      .eq("post_id", postId);
+
+    // Delete storage objects for image/video attachments
+    const storagePaths = (attachments ?? [])
+      .filter((a) => (a.type === "image" || a.type === "video") && a.storage_path)
+      .map((a) => a.storage_path as string);
+
+    if (storagePaths.length > 0) {
+      const { error: storageError } = await supabase.storage
+        .from("post-media")
+        .remove(storagePaths);
+
+      if (storageError) {
+        console.error("Error deleting storage objects:", storageError.message);
+      }
+    }
+
+    // Delete the post (cascades to post_attachments rows)
+    const { error } = await supabase.from("posts").delete().eq("id", postId);
+
+    if (error) {
+      console.error("Error deleting post:", error.message);
+      alert("Failed to delete post");
+      return;
+    }
+
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
@@ -196,6 +258,8 @@ export default function ProfilePage() {
                     audience={post.audience}
                     createdAt={post.created_at}
                     attachments={post.attachments}
+                    canDelete={canDeletePosts}
+                    onDelete={() => handleDelete(post.id)}
                   />
                 </li>
               ))}

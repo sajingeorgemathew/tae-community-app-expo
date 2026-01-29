@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export interface Attachment {
   id: string;
   type: "image" | "video" | "link";
@@ -9,6 +11,7 @@ export interface PostCardProps {
   content: string;
   audience: string;
   authorName?: string;
+  authorId?: string;
   createdAt: string;
   attachments: Attachment[];
   canDelete?: boolean;
@@ -30,6 +33,7 @@ export default function PostCard({
   content,
   audience,
   authorName,
+  authorId,
   createdAt,
   attachments,
   canDelete,
@@ -38,7 +42,15 @@ export default function PostCard({
   return (
     <div className="border rounded p-4">
       <div className="flex items-center justify-between mb-2">
-        {authorName && <p className="font-medium">{authorName}</p>}
+        {authorName && (
+          authorId ? (
+            <Link href={`/app/profile/${authorId}`} className="font-medium text-blue-600 hover:underline">
+              {authorName}
+            </Link>
+          ) : (
+            <p className="font-medium">{authorName}</p>
+          )
+        )}
         <div className={`flex items-center gap-2 ${authorName ? "" : "ml-auto"}`}>
           {audience !== "all" && (
             <span className="text-xs bg-gray-200 px-2 py-1 rounded capitalize">
