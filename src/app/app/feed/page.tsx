@@ -5,13 +5,17 @@ import Link from "next/link";
 import { supabase } from "@/src/lib/supabaseClient";
 import PostCard, { Attachment } from "@/src/components/PostCard";
 
+interface ProfileJoin {
+  full_name: string | null;
+}
+
 interface PostRow {
   id: string;
   author_id: string;
   content: string;
   audience: string;
   created_at: string;
-  profiles: { full_name: string | null }[];
+  profiles: ProfileJoin | ProfileJoin[] | null;
 }
 
 interface AttachmentRow {
@@ -116,15 +120,18 @@ export default function FeedPage() {
       }
 
       setPosts(
-        rows.map((row) => ({
-          id: row.id,
-          author_id: row.author_id,
-          content: row.content,
-          audience: row.audience,
-          created_at: row.created_at,
-          author_name: row.profiles[0]?.full_name ?? "Unknown Author",
-          attachments: attachmentsByPost[row.id] ?? [],
-        }))
+        rows.map((row) => {
+          const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+          return {
+            id: row.id,
+            author_id: row.author_id,
+            content: row.content,
+            audience: row.audience,
+            created_at: row.created_at,
+            author_name: profile?.full_name ?? "Unknown Author",
+            attachments: attachmentsByPost[row.id] ?? [],
+          };
+        })
       );
 
       setLoading(false);
@@ -236,6 +243,7 @@ export default function FeedPage() {
                 content={post.content}
                 audience={post.audience}
                 authorName={post.author_name}
+                authorId={post.author_id}
                 createdAt={post.created_at}
                 attachments={post.attachments}
                 canDelete={canDelete(post)}
