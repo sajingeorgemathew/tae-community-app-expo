@@ -38,6 +38,37 @@ interface Post {
 
 type AudienceFilter = "all" | "students" | "alumni";
 
+// Helper: simple hash function for seed string
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash);
+}
+
+// Helper: seeded shuffle (Fisher-Yates with seeded LCG)
+function seededShuffle<T>(array: T[], seed: string): T[] {
+  const result = [...array];
+  let state = hashString(seed);
+
+  // Simple LCG for pseudo-random numbers
+  const random = () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+
+  // Fisher-Yates shuffle
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+
+  return result;
+}
+
 export default function FeedPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,12 +98,16 @@ export default function FeedPage() {
         }
       }
 
-      // Fetch posts
+      // Calculate 5-day cutoff for feed
+      const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+
+      // Fetch posts within 5-day window
       const { data, error } = await supabase
         .from("posts")
         .select("id, author_id, content, audience, created_at, profiles(full_name)")
+        .gte("created_at", fiveDaysAgo)
         .order("created_at", { ascending: false })
-        .limit(30);
+        .limit(100);
 
       if (error) {
         console.error("Error fetching posts:", error.message);
@@ -119,21 +154,42 @@ export default function FeedPage() {
         }
       }
 
-      setPosts(
-        rows.map((row) => {
-          const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-          return {
-            id: row.id,
-            author_id: row.author_id,
-            content: row.content,
-            audience: row.audience,
-            created_at: row.created_at,
-            author_name: profile?.full_name ?? "Unknown Author",
-            attachments: attachmentsByPost[row.id] ?? [],
-          };
-        })
-      );
+      // Map rows to Post objects
+      const allPosts: Post[] = rows.map((row) => {
+        const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+        return {
+          id: row.id,
+          author_id: row.author_id,
+          content: row.content,
+          audience: row.audience,
+          created_at: row.created_at,
+          author_name: profile?.full_name ?? "Unknown Author",
+          attachments: attachmentsByPost[row.id] ?? [],
+        };
+      });
 
+      // Apply feed ranking: Fresh (< 24h) newest-first, Recent (1-5 days) shuffled daily
+      const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
+      const fresh: Post[] = [];
+      const recent: Post[] = [];
+
+      for (const post of allPosts) {
+        const postTime = new Date(post.created_at).getTime();
+        if (postTime >= twentyFourHoursAgo) {
+          fresh.push(post);
+        } else {
+          recent.push(post);
+        }
+      }
+
+      // Fresh posts are already sorted newest-first from the query
+      // Shuffle recent posts deterministically per-day per-user
+      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      const userId = session?.user.id ?? "anonymous";
+      const seed = `${today}:${userId}`;
+      const shuffledRecent = seededShuffle(recent, seed);
+
+      setPosts([...fresh, ...shuffledRecent]);
       setLoading(false);
     }
 
