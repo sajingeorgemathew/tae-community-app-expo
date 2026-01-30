@@ -23,6 +23,19 @@ export async function middleware(request: NextRequest) {
       const loginUrl = new URL("/login", request.url);
       return NextResponse.redirect(loginUrl);
     }
+
+    // Check if user is disabled
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_disabled")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.is_disabled) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("disabled", "1");
+      return NextResponse.redirect(loginUrl);
+    }
   }
 
   // Optional: Redirect authenticated users away from /login and /signup
