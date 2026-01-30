@@ -239,7 +239,7 @@ export default function FeedPage() {
   const filteredPosts =
     filter === "all"
       ? posts
-      : posts.filter((post) => post.audience === filter);
+      : posts.filter((post) => post.audience === filter || post.audience === "all");
 
   function canDelete(post: Post): boolean {
     if (!currentUserId) return false;
