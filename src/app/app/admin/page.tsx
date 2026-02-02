@@ -47,7 +47,9 @@ interface Post {
 interface UserProfile {
   id: string;
   full_name: string | null;
-  email: string | null;
+  program: string | null;
+  grad_year: number | null;
+  role: string | null;
   is_disabled: boolean;
   created_at: string;
 }
@@ -71,10 +73,16 @@ export default function AdminPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [audienceFilter, setAudienceFilter] = useState<AudienceFilter>("all");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("24h");
+  const [selectedPosts, setSelectedPosts] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // Users state
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [userSearch, setUserSearch] = useState("");
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [togglingUser, setTogglingUser] = useState<string | null>(null);
+  const [bulkDisabling, setBulkDisabling] = useState(false);
+  const [deletingUserPosts, setDeletingUserPosts] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -208,31 +216,33 @@ export default function AdminPage() {
     });
 
     setPosts(allPosts);
+    setSelectedPosts(new Set());
   }
 
   async function fetchUsers() {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, full_name, is_disabled, created_at")
+      .select("id, full_name, program, grad_year, role, is_disabled, created_at")
       .order("created_at", { ascending: false })
-      .limit(30);
+      .limit(50);
 
     if (error) {
       console.error("Error fetching users:", error.message);
       return;
     }
 
-    // Fetch emails from auth.users via RPC or just show without email for MVP
-    // Since we can't access auth.users directly, we'll show profiles without email
     setUsers(
       (data ?? []).map((p) => ({
         id: p.id,
         full_name: p.full_name,
-        email: null,
+        program: p.program,
+        grad_year: p.grad_year,
+        role: p.role,
         is_disabled: p.is_disabled ?? false,
         created_at: p.created_at,
       }))
     );
+    setSelectedUsers(new Set());
   }
 
   // Re-fetch posts when time filter changes
@@ -248,11 +258,20 @@ export default function AdminPage() {
       ? posts
       : posts.filter((post) => post.audience === audienceFilter);
 
-  async function handleDelete(postId: string) {
-    if (!confirm("Are you sure you want to delete this post?")) {
-      return;
-    }
+  // Filter users by search term (client-side)
+  const filteredUsers = users.filter((user) => {
+    if (!userSearch.trim()) return true;
+    const searchLower = userSearch.toLowerCase();
+    return (
+      (user.full_name?.toLowerCase().includes(searchLower)) ||
+      (user.program?.toLowerCase().includes(searchLower)) ||
+      (user.grad_year?.toString().includes(searchLower)) ||
+      (user.role?.toLowerCase().includes(searchLower))
+    );
+  });
 
+  // Delete a single post with storage cleanup
+  async function deletePostWithCleanup(postId: string): Promise<boolean> {
     // Fetch attachments for storage cleanup
     const { data: attachments } = await supabase
       .from("post_attachments")
@@ -277,11 +296,107 @@ export default function AdminPage() {
 
     if (error) {
       console.error("Error deleting post:", error.message);
-      alert("Failed to delete post");
+      return false;
+    }
+
+    return true;
+  }
+
+  async function handleDelete(postId: string) {
+    if (!confirm("Are you sure you want to delete this post?")) {
       return;
     }
 
-    setPosts((prev) => prev.filter((p) => p.id !== postId));
+    const success = await deletePostWithCleanup(postId);
+    if (success) {
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+      setSelectedPosts((prev) => {
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
+    } else {
+      alert("Failed to delete post");
+    }
+  }
+
+  async function handleBulkDeletePosts() {
+    if (selectedPosts.size === 0) {
+      alert("No posts selected");
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete ${selectedPosts.size} selected post(s)?`)) {
+      return;
+    }
+
+    setBulkDeleting(true);
+    const postIds = Array.from(selectedPosts);
+    const deletedIds: string[] = [];
+
+    for (const postId of postIds) {
+      const success = await deletePostWithCleanup(postId);
+      if (success) {
+        deletedIds.push(postId);
+      }
+    }
+
+    setPosts((prev) => prev.filter((p) => !deletedIds.includes(p.id)));
+    setSelectedPosts(new Set());
+    setBulkDeleting(false);
+
+    if (deletedIds.length < postIds.length) {
+      alert(`Deleted ${deletedIds.length} of ${postIds.length} posts. Some failed.`);
+    }
+  }
+
+  async function handleDeletePostsBySelectedUsers() {
+    if (selectedUsers.size === 0) {
+      alert("No users selected");
+      return;
+    }
+
+    const timeOption = TIME_FILTER_OPTIONS.find((t) => t.value === timeFilter);
+    const timeLabel = timeOption?.label ?? "selected time window";
+
+    if (!confirm(`Delete all posts from ${selectedUsers.size} selected user(s) within ${timeLabel}?`)) {
+      return;
+    }
+
+    setDeletingUserPosts(true);
+
+    const cutoff = new Date(Date.now() - (timeOption?.hours ?? 24) * 60 * 60 * 1000).toISOString();
+    const userIds = Array.from(selectedUsers);
+
+    // Fetch posts by selected users within the time window
+    const { data: userPosts, error } = await supabase
+      .from("posts")
+      .select("id")
+      .in("author_id", userIds)
+      .gte("created_at", cutoff);
+
+    if (error) {
+      console.error("Error fetching user posts:", error.message);
+      alert("Failed to fetch posts");
+      setDeletingUserPosts(false);
+      return;
+    }
+
+    const postIds = (userPosts ?? []).map((p) => p.id);
+    const deletedIds: string[] = [];
+
+    for (const postId of postIds) {
+      const success = await deletePostWithCleanup(postId);
+      if (success) {
+        deletedIds.push(postId);
+      }
+    }
+
+    setPosts((prev) => prev.filter((p) => !deletedIds.includes(p.id)));
+    setSelectedPosts(new Set());
+    setDeletingUserPosts(false);
+
+    alert(`Deleted ${deletedIds.length} post(s) from selected users.`);
   }
 
   async function handleReactionToggle(postId: string, emoji: Emoji) {
@@ -369,6 +484,93 @@ export default function AdminPage() {
     setTogglingUser(null);
   }
 
+  async function handleBulkDisableUsers() {
+    if (selectedUsers.size === 0) {
+      alert("No users selected");
+      return;
+    }
+
+    // Filter out current user from bulk disable
+    const usersToDisable = Array.from(selectedUsers).filter((id) => id !== currentUserId);
+
+    if (usersToDisable.length === 0) {
+      alert("Cannot disable yourself");
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to disable ${usersToDisable.length} selected user(s)?`)) {
+      return;
+    }
+
+    setBulkDisabling(true);
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ is_disabled: true })
+      .in("id", usersToDisable);
+
+    if (error) {
+      console.error("Error bulk disabling users:", error.message);
+      alert("Failed to disable users");
+      setBulkDisabling(false);
+      return;
+    }
+
+    setUsers((prev) =>
+      prev.map((u) =>
+        usersToDisable.includes(u.id) ? { ...u, is_disabled: true } : u
+      )
+    );
+    setSelectedUsers(new Set());
+    setBulkDisabling(false);
+  }
+
+  function togglePostSelection(postId: string) {
+    setSelectedPosts((prev) => {
+      const next = new Set(prev);
+      if (next.has(postId)) {
+        next.delete(postId);
+      } else {
+        next.add(postId);
+      }
+      return next;
+    });
+  }
+
+  function toggleAllPostsSelection() {
+    const visiblePostIds = filteredPosts.map((p) => p.id);
+    const allSelected = visiblePostIds.every((id) => selectedPosts.has(id));
+
+    if (allSelected) {
+      setSelectedPosts(new Set());
+    } else {
+      setSelectedPosts(new Set(visiblePostIds));
+    }
+  }
+
+  function toggleUserSelection(userId: string) {
+    setSelectedUsers((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  }
+
+  function toggleAllUsersSelection() {
+    const visibleUserIds = filteredUsers.map((u) => u.id);
+    const allSelected = visibleUserIds.every((id) => selectedUsers.has(id));
+
+    if (allSelected) {
+      setSelectedUsers(new Set());
+    } else {
+      setSelectedUsers(new Set(visibleUserIds));
+    }
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
@@ -392,6 +594,9 @@ export default function AdminPage() {
       </main>
     );
   }
+
+  const allPostsSelected = filteredPosts.length > 0 && filteredPosts.every((p) => selectedPosts.has(p.id));
+  const allUsersSelected = filteredUsers.length > 0 && filteredUsers.every((u) => selectedUsers.has(u.id));
 
   return (
     <main className="min-h-screen p-8">
@@ -445,28 +650,59 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* Bulk actions for posts */}
+        <div className="mb-4 flex flex-wrap gap-2 items-center">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={allPostsSelected}
+              onChange={toggleAllPostsSelection}
+              className="w-4 h-4"
+            />
+            Select all visible
+          </label>
+          <span className="text-sm text-gray-500">
+            ({selectedPosts.size} selected)
+          </span>
+          <button
+            onClick={handleBulkDeletePosts}
+            disabled={selectedPosts.size === 0 || bulkDeleting}
+            className="px-3 py-1 rounded text-sm bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {bulkDeleting ? "Deleting..." : "Delete Selected Posts"}
+          </button>
+        </div>
+
         {filteredPosts.length === 0 ? (
           <p className="text-gray-500">No posts found for selected filters.</p>
         ) : (
           <ul className="space-y-4">
             {filteredPosts.map((post) => (
-              <li key={post.id}>
-                <PostCard
-                  postId={post.id}
-                  content={post.content}
-                  audience={post.audience}
-                  authorName={post.author_name}
-                  authorId={post.author_id}
-                  createdAt={post.created_at}
-                  attachments={post.attachments}
-                  canDelete={true}
-                  onDelete={() => handleDelete(post.id)}
-                  reactionCounts={post.reactionCounts}
-                  userReactions={post.userReactions}
-                  onReactionToggle={(emoji) => handleReactionToggle(post.id, emoji)}
-                  currentUserId={currentUserId}
-                  isAdmin={true}
+              <li key={post.id} className="flex gap-3 items-start">
+                <input
+                  type="checkbox"
+                  checked={selectedPosts.has(post.id)}
+                  onChange={() => togglePostSelection(post.id)}
+                  className="w-4 h-4 mt-4 flex-shrink-0"
                 />
+                <div className="flex-1">
+                  <PostCard
+                    postId={post.id}
+                    content={post.content}
+                    audience={post.audience}
+                    authorName={post.author_name}
+                    authorId={post.author_id}
+                    createdAt={post.created_at}
+                    attachments={post.attachments}
+                    canDelete={true}
+                    onDelete={() => handleDelete(post.id)}
+                    reactionCounts={post.reactionCounts}
+                    userReactions={post.userReactions}
+                    onReactionToggle={(emoji) => handleReactionToggle(post.id, emoji)}
+                    currentUserId={currentUserId}
+                    isAdmin={true}
+                  />
+                </div>
               </li>
             ))}
           </ul>
@@ -477,21 +713,81 @@ export default function AdminPage() {
       <section>
         <h2 className="text-xl font-medium mb-4">Users Management</h2>
 
-        {users.length === 0 ? (
+        {/* User search */}
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="Search by name, program, grad year, or role..."
+            value={userSearch}
+            onChange={(e) => setUserSearch(e.target.value)}
+            className="w-full max-w-md px-3 py-2 border rounded text-sm"
+          />
+        </div>
+
+        {/* Bulk actions for users */}
+        <div className="mb-4 flex flex-wrap gap-2 items-center">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={allUsersSelected}
+              onChange={toggleAllUsersSelection}
+              className="w-4 h-4"
+            />
+            Select all visible
+          </label>
+          <span className="text-sm text-gray-500">
+            ({selectedUsers.size} selected)
+          </span>
+          <button
+            onClick={handleBulkDisableUsers}
+            disabled={selectedUsers.size === 0 || bulkDisabling}
+            className="px-3 py-1 rounded text-sm bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {bulkDisabling ? "Disabling..." : "Disable Selected Users"}
+          </button>
+          <button
+            onClick={handleDeletePostsBySelectedUsers}
+            disabled={selectedUsers.size === 0 || deletingUserPosts}
+            className="px-3 py-1 rounded text-sm bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {deletingUserPosts ? "Deleting..." : `Delete Their Posts (${TIME_FILTER_OPTIONS.find(t => t.value === timeFilter)?.label})`}
+          </button>
+        </div>
+
+        {filteredUsers.length === 0 ? (
           <p className="text-gray-500">No users found.</p>
         ) : (
-          <div className="border rounded overflow-hidden">
+          <div className="border rounded overflow-hidden overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-100">
                 <tr>
+                  <th className="text-left px-4 py-2 w-8">
+                    <input
+                      type="checkbox"
+                      checked={allUsersSelected}
+                      onChange={toggleAllUsersSelection}
+                      className="w-4 h-4"
+                    />
+                  </th>
                   <th className="text-left px-4 py-2">Name</th>
+                  <th className="text-left px-4 py-2">Program</th>
+                  <th className="text-left px-4 py-2">Grad Year</th>
+                  <th className="text-left px-4 py-2">Role</th>
                   <th className="text-left px-4 py-2">Status</th>
                   <th className="text-left px-4 py-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map((user) => (
+                {filteredUsers.map((user) => (
                   <tr key={user.id} className="border-t">
+                    <td className="px-4 py-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedUsers.has(user.id)}
+                        onChange={() => toggleUserSelection(user.id)}
+                        className="w-4 h-4"
+                      />
+                    </td>
                     <td className="px-4 py-2">
                       <Link
                         href={`/app/profile/${user.id}`}
@@ -500,6 +796,9 @@ export default function AdminPage() {
                         {user.full_name ?? "No name"}
                       </Link>
                     </td>
+                    <td className="px-4 py-2">{user.program ?? "-"}</td>
+                    <td className="px-4 py-2">{user.grad_year ?? "-"}</td>
+                    <td className="px-4 py-2">{user.role ?? "member"}</td>
                     <td className="px-4 py-2">
                       {user.is_disabled ? (
                         <span className="text-red-600 font-medium">Disabled</span>

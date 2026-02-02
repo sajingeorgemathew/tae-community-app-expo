@@ -10,6 +10,7 @@ export default function AppPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     async function checkSession() {
@@ -23,6 +24,18 @@ export default function AppPage() {
       }
 
       setUser(session.user);
+
+      // Check admin role
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .single();
+
+      if (profile?.role === "admin") {
+        setIsAdmin(true);
+      }
+
       setLoading(false);
     }
 
@@ -71,7 +84,7 @@ export default function AppPage() {
       </p>
 
       {/* Navigation Links */}
-      <div className="flex gap-4">
+      <div className="flex gap-4 flex-wrap">
         <Link
           href="/app/feed"
           className="inline-block bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700 transition"
@@ -90,6 +103,14 @@ export default function AppPage() {
         >
           My Profile
         </Link>
+        {isAdmin && (
+          <Link
+            href="/app/admin"
+            className="inline-block bg-red-600 text-white px-5 py-2 rounded hover:bg-red-700 transition"
+          >
+            Admin Dashboard
+          </Link>
+        )}
       </div>
     </main>
   );
