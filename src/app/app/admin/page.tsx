@@ -701,6 +701,7 @@ export default function AdminPage() {
                     onReactionToggle={(emoji) => handleReactionToggle(post.id, emoji)}
                     currentUserId={currentUserId}
                     isAdmin={true}
+                    mediaSize="feed"
                   />
                 </div>
               </li>

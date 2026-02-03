@@ -414,6 +414,7 @@ export default function FeedPage() {
                 onReactionToggle={(emoji) => handleReactionToggle(post.id, emoji)}
                 currentUserId={currentUserId}
                 isAdmin={isAdmin}
+                mediaSize="feed"
               />
             </li>
           ))}

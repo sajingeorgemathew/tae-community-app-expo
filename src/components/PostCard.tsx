@@ -40,6 +40,7 @@ export interface PostCardProps {
   onReactionToggle?: (emoji: Emoji) => void;
   currentUserId?: string | null;
   isAdmin?: boolean;
+  mediaSize?: "feed" | "profile";
 }
 
 function formatDate(dateString: string): string {
@@ -68,6 +69,7 @@ export default function PostCard({
   onReactionToggle,
   currentUserId,
   isAdmin = false,
+  mediaSize = "feed",
 }: PostCardProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
@@ -189,7 +191,7 @@ export default function PostCard({
   }
 
   return (
-    <div className="border rounded p-4">
+    <div className="border rounded p-4 max-w-full overflow-hidden">
       <div className="flex items-center justify-between mb-2">
         {authorName && (
           authorId ? (
@@ -211,7 +213,7 @@ export default function PostCard({
       </div>
       <p className="text-gray-700 whitespace-pre-wrap">{content}</p>
       {attachments.length > 0 && (
-        <div className="mt-3 space-y-2">
+        <div className="mt-3 space-y-2 max-w-full overflow-hidden">
           {attachments.map((att) => {
             if (att.type === "image" && att.signedUrl) {
               return (
@@ -219,7 +221,11 @@ export default function PostCard({
                   key={att.id}
                   src={att.signedUrl}
                   alt="Attachment"
-                  className="max-w-xs rounded"
+                  className={
+                    mediaSize === "feed"
+                      ? "max-w-[520px] w-full h-auto object-contain rounded"
+                      : "w-full max-w-full h-auto object-contain rounded"
+                  }
                 />
               );
             }
@@ -229,7 +235,12 @@ export default function PostCard({
                   key={att.id}
                   src={att.signedUrl}
                   controls
-                  className="max-w-md rounded"
+                  className={
+                    mediaSize === "feed"
+                      ? "max-w-[640px] w-full h-auto rounded"
+                      : "w-full max-w-full h-auto rounded"
+                  }
+                  style={{ maxHeight: mediaSize === "feed" ? "380px" : "420px" }}
                 />
               );
             }
@@ -240,7 +251,7 @@ export default function PostCard({
                   href={att.linkUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline block"
+                  className="text-blue-600 hover:underline block break-all"
                 >
                   {att.linkUrl}
                 </a>

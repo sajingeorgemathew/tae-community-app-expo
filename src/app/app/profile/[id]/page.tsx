@@ -372,6 +372,7 @@ export default function ProfilePage() {
                     onReactionToggle={(emoji) => handleReactionToggle(post.id, emoji)}
                     currentUserId={currentUserId}
                     isAdmin={isAdmin}
+                    mediaSize="profile"
                   />
                 </li>
               ))}

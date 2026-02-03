@@ -468,6 +468,7 @@ export default function MyProfilePage() {
                     userReactions={post.userReactions}
                     onReactionToggle={(emoji) => handleReactionToggle(post.id, emoji)}
                     currentUserId={currentUserId}
+                    mediaSize="profile"
                   />
                 </li>
               ))}
