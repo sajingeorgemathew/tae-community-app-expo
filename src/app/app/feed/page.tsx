@@ -400,6 +400,7 @@ export default function FeedPage() {
           {filteredPosts.map((post) => (
             <li key={post.id}>
               <PostCard
+                postId={post.id}
                 content={post.content}
                 audience={post.audience}
                 authorName={post.author_name}
@@ -411,6 +412,8 @@ export default function FeedPage() {
                 reactionCounts={post.reactionCounts}
                 userReactions={post.userReactions}
                 onReactionToggle={(emoji) => handleReactionToggle(post.id, emoji)}
+                currentUserId={currentUserId}
+                isAdmin={isAdmin}
               />
             </li>
           ))}

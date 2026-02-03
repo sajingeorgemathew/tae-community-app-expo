@@ -360,6 +360,7 @@ export default function ProfilePage() {
               {posts.map((post) => (
                 <li key={post.id}>
                   <PostCard
+                    postId={post.id}
                     content={post.content}
                     audience={post.audience}
                     createdAt={post.created_at}
@@ -369,6 +370,8 @@ export default function ProfilePage() {
                     reactionCounts={post.reactionCounts}
                     userReactions={post.userReactions}
                     onReactionToggle={(emoji) => handleReactionToggle(post.id, emoji)}
+                    currentUserId={currentUserId}
+                    isAdmin={isAdmin}
                   />
                 </li>
               ))}
