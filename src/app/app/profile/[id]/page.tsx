@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/src/lib/supabaseClient";
 import PostCard, { Attachment, Emoji, ReactionCounts } from "@/src/components/PostCard";
@@ -48,6 +48,7 @@ interface Post {
 
 export default function ProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
 
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -56,6 +57,7 @@ export default function ProfilePage() {
   const [notFound, setNotFound] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [messagingLoading, setMessagingLoading] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -299,6 +301,27 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleMessage() {
+    if (!currentUserId || currentUserId === id) return;
+
+    setMessagingLoading(true);
+    try {
+      const { data, error } = await supabase.rpc("create_conversation_1to1", {
+        other_user_id: id,
+      });
+
+      if (error) {
+        console.error("Error creating conversation:", error.message);
+        alert("Failed to start conversation");
+        return;
+      }
+
+      router.push(`/app/messages?c=${data}`);
+    } finally {
+      setMessagingLoading(false);
+    }
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
@@ -350,6 +373,18 @@ export default function ProfilePage() {
             <p>{profile?.grad_year || "Not specified"}</p>
           </div>
         </div>
+
+        {currentUserId && currentUserId !== id && (
+          <div className="mt-4">
+            <button
+              onClick={handleMessage}
+              disabled={messagingLoading}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+            >
+              {messagingLoading ? "Starting..." : "Message"}
+            </button>
+          </div>
+        )}
 
         <div className="mt-8">
           <h2 className="text-xl font-semibold mb-4">Posts by this member</h2>
