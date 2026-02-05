@@ -397,21 +397,42 @@ function MessagesContent() {
     router.push(`/app/messages?c=${convId}`);
   }
 
-  function formatTime(dateStr: string | null) {
+  // Format timestamp for conversation list (WhatsApp-style: time for today, "Yesterday", or date)
+  function formatConversationTimestamp(dateStr: string | null): string {
     if (!dateStr) return "";
     const date = new Date(dateStr);
     const now = new Date();
-    const diffDays = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
-    );
 
-    if (diffDays === 0) {
-      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    } else if (diffDays < 7) {
-      return date.toLocaleDateString([], { weekday: "short" });
-    } else {
-      return date.toLocaleDateString([], { month: "short", day: "numeric" });
+    // Check if same calendar day (today)
+    const isToday =
+      date.getDate() === now.getDate() &&
+      date.getMonth() === now.getMonth() &&
+      date.getFullYear() === now.getFullYear();
+
+    if (isToday) {
+      return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
     }
+
+    // Check if yesterday
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday =
+      date.getDate() === yesterday.getDate() &&
+      date.getMonth() === yesterday.getMonth() &&
+      date.getFullYear() === yesterday.getFullYear();
+
+    if (isYesterday) {
+      return "Yesterday";
+    }
+
+    // Older dates: show "Jan 31, 2026"
+    return date.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  // Format time for message bubbles (h:mm AM/PM)
+  function formatMessageTime(dateStr: string): string {
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   }
 
   const selectedConvo = conversations.find(
@@ -461,7 +482,7 @@ function MessagesContent() {
                       </p>
                       {convo.last_message_at && (
                         <span className="text-xs text-gray-400 ml-2">
-                          {formatTime(convo.last_message_at)}
+                          {formatConversationTimestamp(convo.last_message_at)}
                         </span>
                       )}
                     </div>
@@ -543,7 +564,7 @@ function MessagesContent() {
                             isOwn ? "text-blue-200" : "text-gray-500"
                           }`}
                         >
-                          {formatTime(msg.created_at)}
+                          {formatMessageTime(msg.created_at)}
                         </p>
                       </div>
                     </div>
