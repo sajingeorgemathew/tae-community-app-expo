@@ -16,6 +16,8 @@ interface Conversation {
   other_user_name: string;
   last_message_content: string | null;
   last_message_at: string | null;
+  unread_count: number;
+  is_unread: boolean;
 }
 
 interface Attachment {
@@ -51,6 +53,43 @@ function MessagesContent() {
   const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const lastMarkedRef = useRef<string | null>(null);
+
+  // Mark conversation as read (with guard to prevent duplicate calls)
+  async function markConversationAsRead(convId: string) {
+    // Guard: skip if we already marked this conversation as read
+    if (lastMarkedRef.current === convId) return;
+    if (!currentUserId) return;
+
+    // Upsert conversation_reads row
+    const { error } = await supabase
+      .from("conversation_reads")
+      .upsert(
+        {
+          conversation_id: convId,
+          user_id: currentUserId,
+          last_read_at: new Date().toISOString(),
+        },
+        { onConflict: "conversation_id,user_id" }
+      );
+
+    if (error) {
+      console.error("Error marking conversation as read:", error.message);
+      return;
+    }
+
+    // Mark this conversation as processed to prevent re-runs
+    lastMarkedRef.current = convId;
+
+    // Update local state to reflect read status
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.conversation_id === convId
+          ? { ...c, is_unread: false, unread_count: 0 }
+          : c
+      )
+    );
+  }
 
   // Fetch current user and conversations
   useEffect(() => {
@@ -76,13 +115,16 @@ function MessagesContent() {
     fetchConversations();
   }, []);
 
-  // Fetch messages when conversation changes
+  // Fetch messages when conversation changes and mark as read
   useEffect(() => {
     if (!conversationId || !currentUserId) {
       setMessages([]);
       setThreadError(null);
       return;
     }
+
+    // Mark conversation as read when opened
+    markConversationAsRead(conversationId);
 
     async function fetchMessages() {
       setLoadingMessages(true);
@@ -137,7 +179,10 @@ function MessagesContent() {
     }
 
     fetchMessages();
-  }, [conversationId, currentUserId, conversations]);
+    // Note: conversations intentionally excluded to prevent re-fetch loops
+    // Access check inside fetchMessages reads conversations at call time
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId, currentUserId]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -324,11 +369,16 @@ function MessagesContent() {
                         : ""
                     }`}
                   >
-                    <p className="font-medium truncate">
-                      {convo.other_user_name}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      {convo.is_unread && (
+                        <span className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0" />
+                      )}
+                      <p className={`truncate flex-1 ${convo.is_unread ? "font-bold" : "font-medium"}`}>
+                        {convo.other_user_name}
+                      </p>
+                    </div>
                     <div className="flex items-center justify-between mt-1">
-                      <p className="text-sm text-gray-500 truncate flex-1">
+                      <p className={`text-sm truncate flex-1 ${convo.is_unread ? "font-semibold text-gray-700" : "text-gray-500"}`}>
                         {convo.last_message_content ||
                           (convo.last_message_at ? "📎 Attachment" : "No messages yet")}
                       </p>
