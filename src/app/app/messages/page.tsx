@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useRef } from "react";
+import { Suspense, useEffect, useState, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/src/lib/supabaseClient";
@@ -9,6 +9,9 @@ const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_VIDEO_SIZE = 35 * 1024 * 1024; // 35MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const ACCEPTED_VIDEO_TYPES = ["video/mp4", "video/webm"];
+
+const CONVERSATION_POLL_INTERVAL = 6000; // 6 seconds
+const MESSAGES_POLL_INTERVAL = 3000; // 3 seconds
 
 interface Conversation {
   conversation_id: string;
@@ -55,6 +58,12 @@ function MessagesContent() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMarkedRef = useRef<string | null>(null);
 
+  // Polling refs to prevent unnecessary state updates
+  const isVisibleRef = useRef(true);
+  const lastConvosJsonRef = useRef<string>("");
+  const lastMessagesJsonRef = useRef<string>("");
+  const lastMessageIdRef = useRef<string | null>(null);
+
   // Mark conversation as read (with guard to prevent duplicate calls)
   async function markConversationAsRead(convId: string) {
     // Guard: skip if we already marked this conversation as read
@@ -91,52 +100,51 @@ function MessagesContent() {
     );
   }
 
-  // Fetch current user and conversations
-  useEffect(() => {
-    async function fetchConversations() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        setLoadingConvos(false);
-        return;
-      }
-      setCurrentUserId(session.user.id);
-
-      const { data, error } = await supabase.rpc("get_my_conversations");
-      if (error) {
-        console.error("Error fetching conversations:", error.message);
-      } else {
-        setConversations(data || []);
-      }
-      setLoadingConvos(false);
-    }
-
-    fetchConversations();
-  }, []);
-
-  // Fetch messages when conversation changes and mark as read
-  useEffect(() => {
-    if (!conversationId || !currentUserId) {
-      setMessages([]);
-      setThreadError(null);
+  // Fetch conversations (reusable for initial load + polling)
+  const fetchConversations = useCallback(async (isInitial = false) => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      if (isInitial) setLoadingConvos(false);
       return;
     }
+    if (isInitial) setCurrentUserId(session.user.id);
 
-    // Mark conversation as read when opened
-    markConversationAsRead(conversationId);
+    const { data, error } = await supabase.rpc("get_my_conversations");
+    if (error) {
+      console.error("Error fetching conversations:", error.message);
+    } else {
+      // Only update state if data has changed (shallow compare JSON)
+      const newJson = JSON.stringify(data || []);
+      if (newJson !== lastConvosJsonRef.current) {
+        lastConvosJsonRef.current = newJson;
+        setConversations(data || []);
+      }
+    }
+    if (isInitial) setLoadingConvos(false);
+  }, []);
 
-    async function fetchMessages() {
+  // Initial fetch of conversations
+  useEffect(() => {
+    fetchConversations(true);
+  }, [fetchConversations]);
+
+  // Fetch messages (reusable for initial load + polling)
+  const fetchMessages = useCallback(async (convId: string, isInitial = false) => {
+    if (isInitial) {
       setLoadingMessages(true);
       setThreadError(null);
+    }
 
-      const { data, error } = await supabase
-        .from("messages")
-        .select("id, sender_id, content, created_at, message_attachments(id, type, storage_path, mime_type)")
-        .eq("conversation_id", conversationId)
-        .order("created_at", { ascending: true });
+    const { data, error } = await supabase
+      .from("messages")
+      .select("id, sender_id, content, created_at, message_attachments(id, type, storage_path, mime_type)")
+      .eq("conversation_id", convId)
+      .order("created_at", { ascending: true });
 
-      if (error) {
+    if (error) {
+      if (isInitial) {
         if (error.code === "PGRST116" || error.message.includes("RLS")) {
           setThreadError("Conversation not found or not authorized");
         } else {
@@ -144,45 +152,114 @@ function MessagesContent() {
         }
         console.error("Error fetching messages:", error.message);
         setMessages([]);
-      } else {
-        // Check if we got results - if empty, verify we have access
-        if (data.length === 0) {
-          // Verify conversation exists and we're a member by checking our conversations list
-          const hasAccess = conversations.some(
-            (c) => c.conversation_id === conversationId
-          );
-          if (!hasAccess && conversations.length > 0) {
-            setThreadError("Conversation not found or not authorized");
-          }
-        }
-        // Fetch signed URLs for attachments
-        const messagesWithUrls = await Promise.all(
-          (data || []).map(async (msg) => {
-            const rawAttachments = msg.message_attachments as Attachment[] | null;
-            if (!rawAttachments || rawAttachments.length === 0) {
-              return { ...msg, attachments: [] };
-            }
-            const attachmentsWithUrls = await Promise.all(
-              rawAttachments.map(async (att) => {
-                const { data: urlData } = await supabase.storage
-                  .from("message-media")
-                  .createSignedUrl(att.storage_path, 3600);
-                return { ...att, signedUrl: urlData?.signedUrl };
-              })
-            );
-            return { ...msg, attachments: attachmentsWithUrls };
-          })
-        );
-        setMessages(messagesWithUrls);
+        setLoadingMessages(false);
       }
-      setLoadingMessages(false);
+      return;
     }
 
-    fetchMessages();
-    // Note: conversations intentionally excluded to prevent re-fetch loops
-    // Access check inside fetchMessages reads conversations at call time
+    // For polling: check if the latest message ID changed before full processing
+    const latestMsgId = data && data.length > 0 ? data[data.length - 1].id : null;
+    if (!isInitial && latestMsgId === lastMessageIdRef.current) {
+      // No new messages, skip processing
+      return;
+    }
+
+    // Check if we got results - if empty, verify we have access (only on initial load)
+    if (isInitial && data.length === 0) {
+      // Verify conversation exists by checking conversations list
+      const { data: convCheck } = await supabase.rpc("get_my_conversations");
+      const hasAccess = (convCheck || []).some(
+        (c: Conversation) => c.conversation_id === convId
+      );
+      if (!hasAccess) {
+        setThreadError("Conversation not found or not authorized");
+      }
+    }
+
+    // Fetch signed URLs for attachments
+    const messagesWithUrls = await Promise.all(
+      (data || []).map(async (msg) => {
+        const rawAttachments = msg.message_attachments as Attachment[] | null;
+        if (!rawAttachments || rawAttachments.length === 0) {
+          return { ...msg, attachments: [] };
+        }
+        const attachmentsWithUrls = await Promise.all(
+          rawAttachments.map(async (att) => {
+            const { data: urlData } = await supabase.storage
+              .from("message-media")
+              .createSignedUrl(att.storage_path, 3600);
+            return { ...att, signedUrl: urlData?.signedUrl };
+          })
+        );
+        return { ...msg, attachments: attachmentsWithUrls };
+      })
+    );
+
+    // Only update if data changed (compare without signedUrls which change each time)
+    const newJson = JSON.stringify(messagesWithUrls.map(m => ({ id: m.id, content: m.content, created_at: m.created_at })));
+    if (newJson !== lastMessagesJsonRef.current) {
+      lastMessagesJsonRef.current = newJson;
+      lastMessageIdRef.current = latestMsgId;
+      setMessages(messagesWithUrls);
+    }
+
+    if (isInitial) setLoadingMessages(false);
+  }, []);
+
+  // Fetch messages when conversation changes and mark as read
+  useEffect(() => {
+    if (!conversationId || !currentUserId) {
+      setMessages([]);
+      setThreadError(null);
+      lastMessagesJsonRef.current = "";
+      lastMessageIdRef.current = null;
+      return;
+    }
+
+    // Mark conversation as read when opened
+    markConversationAsRead(conversationId);
+
+    fetchMessages(conversationId, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId, currentUserId]);
+  }, [conversationId, currentUserId, fetchMessages]);
+
+  // Visibility change detection for polling pause/resume
+  useEffect(() => {
+    function handleVisibilityChange() {
+      isVisibleRef.current = document.visibilityState === "visible";
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  // Poll conversations every 6 seconds
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const intervalId = setInterval(() => {
+      if (isVisibleRef.current) {
+        fetchConversations(false);
+      }
+    }, CONVERSATION_POLL_INTERVAL);
+
+    return () => clearInterval(intervalId);
+  }, [currentUserId, fetchConversations]);
+
+  // Poll messages every 3 seconds when a conversation is selected
+  useEffect(() => {
+    if (!conversationId || !currentUserId) return;
+
+    const intervalId = setInterval(() => {
+      if (isVisibleRef.current) {
+        fetchMessages(conversationId, false);
+      }
+    }, MESSAGES_POLL_INTERVAL);
+
+    return () => clearInterval(intervalId);
+  }, [conversationId, currentUserId, fetchMessages]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
