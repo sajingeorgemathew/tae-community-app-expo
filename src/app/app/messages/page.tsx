@@ -329,7 +329,8 @@ function MessagesContent() {
                     </p>
                     <div className="flex items-center justify-between mt-1">
                       <p className="text-sm text-gray-500 truncate flex-1">
-                        {convo.last_message_content || "No messages yet"}
+                        {convo.last_message_content ||
+                          (convo.last_message_at ? "📎 Attachment" : "No messages yet")}
                       </p>
                       {convo.last_message_at && (
                         <span className="text-xs text-gray-400 ml-2">
