@@ -36,6 +36,7 @@ interface Message {
   sender_id: string;
   content: string | null;
   created_at: string;
+  updated_at: string | null;
   attachments?: Attachment[];
 }
 
@@ -57,6 +58,11 @@ function MessagesContent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMarkedRef = useRef<string | null>(null);
+
+  // Ticket 30: edit/delete state
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const editingMessageIdRef = useRef<string | null>(null);
 
   // Ticket 29: delivery upsert guard + tick state
   const lastDeliveryMsgIdRef = useRef<string | null>(null);
@@ -197,7 +203,7 @@ function MessagesContent() {
 
     const { data, error } = await supabase
       .from("messages")
-      .select("id, sender_id, content, created_at, message_attachments(id, type, storage_path, mime_type)")
+      .select("id, sender_id, content, created_at, updated_at, message_attachments(id, type, storage_path, mime_type)")
       .eq("conversation_id", convId)
       .order("created_at", { ascending: true });
 
@@ -254,11 +260,14 @@ function MessagesContent() {
     );
 
     // Only update if data changed (compare without signedUrls which change each time)
-    const newJson = JSON.stringify(messagesWithUrls.map(m => ({ id: m.id, content: m.content, created_at: m.created_at })));
+    const newJson = JSON.stringify(messagesWithUrls.map(m => ({ id: m.id, content: m.content, created_at: m.created_at, updated_at: m.updated_at })));
     if (newJson !== lastMessagesJsonRef.current) {
       lastMessagesJsonRef.current = newJson;
       lastMessageIdRef.current = latestMsgId;
-      setMessages(messagesWithUrls);
+      // Ticket 30: skip poll update while user is editing a message to prevent flicker
+      if (!editingMessageIdRef.current) {
+        setMessages(messagesWithUrls);
+      }
     }
 
     // Ticket 29: upsert delivery when we fetch/poll messages
@@ -410,7 +419,7 @@ function MessagesContent() {
         sender_id: currentUserId,
         content,
       })
-      .select("id, sender_id, content, created_at")
+      .select("id, sender_id, content, created_at, updated_at")
       .single();
 
     if (msgError) {
@@ -484,6 +493,68 @@ function MessagesContent() {
       );
     }
     setSending(false);
+  }
+
+  // Ticket 30: Start editing a message
+  function startEdit(msg: Message) {
+    setEditingMessageId(msg.id);
+    editingMessageIdRef.current = msg.id;
+    setEditContent(msg.content || "");
+  }
+
+  function cancelEdit() {
+    setEditingMessageId(null);
+    editingMessageIdRef.current = null;
+    setEditContent("");
+  }
+
+  async function saveEdit(msgId: string) {
+    const trimmed = editContent.trim();
+    if (!trimmed) return;
+
+    const { error } = await supabase
+      .from("messages")
+      .update({ content: trimmed, updated_at: new Date().toISOString() })
+      .eq("id", msgId);
+
+    if (error) {
+      console.error("Error updating message:", error.message);
+      alert("Failed to update message");
+      return;
+    }
+
+    // Update local state
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === msgId
+          ? { ...m, content: trimmed, updated_at: new Date().toISOString() }
+          : m
+      )
+    );
+    // Clear stale poll cache so next poll picks up edited content
+    lastMessagesJsonRef.current = "";
+    cancelEdit();
+  }
+
+  async function handleDelete(msgId: string) {
+    if (!confirm("Delete this message?")) return;
+
+    const { error } = await supabase
+      .from("messages")
+      .delete()
+      .eq("id", msgId);
+
+    if (error) {
+      console.error("Error deleting message:", error.message);
+      alert("Failed to delete message");
+      return;
+    }
+
+    // Remove from local state
+    setMessages((prev) => prev.filter((m) => m.id !== msgId));
+    // Clear stale poll cache
+    lastMessagesJsonRef.current = "";
+    lastMessageIdRef.current = null;
   }
 
   function selectConversation(convId: string) {
@@ -665,8 +736,27 @@ function MessagesContent() {
                           </div>
                         )}
                         <div
-                          className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
+                          className={`group flex items-center gap-1 ${isOwn ? "justify-end" : "justify-start"}`}
                         >
+                          {/* Ticket 30: Edit/Delete actions for own messages (show on hover) */}
+                          {isOwn && editingMessageId !== msg.id && (
+                            <div className="hidden group-hover:flex items-center gap-1 mr-1">
+                              <button
+                                onClick={() => startEdit(msg)}
+                                className="text-gray-400 hover:text-gray-600 p-1 rounded"
+                                title="Edit"
+                              >
+                                &#9998;
+                              </button>
+                              <button
+                                onClick={() => handleDelete(msg.id)}
+                                className="text-gray-400 hover:text-red-500 p-1 rounded"
+                                title="Delete"
+                              >
+                                &#128465;
+                              </button>
+                            </div>
+                          )}
                           <div
                             className={`max-w-[70%] rounded-lg px-4 py-2 ${
                               isOwn
@@ -674,37 +764,70 @@ function MessagesContent() {
                                 : "bg-gray-200 text-gray-900"
                             }`}
                           >
-                            {msg.content && (
-                              <p className="whitespace-pre-wrap break-words">
-                                {msg.content}
-                              </p>
-                            )}
-                            {msg.attachments?.map((att) => (
-                              <div key={att.id} className="mt-2">
-                                {att.type === "image" && att.signedUrl && (
-                                  <img
-                                    src={att.signedUrl}
-                                    alt="attachment"
-                                    className="max-w-full rounded"
-                                    style={{ maxWidth: 300 }}
-                                  />
-                                )}
-                                {att.type === "video" && att.signedUrl && (
-                                  <video
-                                    src={att.signedUrl}
-                                    controls
-                                    className="max-w-full rounded"
-                                    style={{ maxWidth: 300, maxHeight: 200 }}
-                                  />
-                                )}
+                            {/* Ticket 30: Inline edit mode */}
+                            {editingMessageId === msg.id ? (
+                              <div>
+                                <textarea
+                                  value={editContent}
+                                  onChange={(e) => setEditContent(e.target.value)}
+                                  className="w-full rounded p-1 text-gray-900 text-sm resize-none"
+                                  rows={3}
+                                  autoFocus
+                                />
+                                <div className="flex gap-2 mt-1 justify-end">
+                                  <button
+                                    onClick={cancelEdit}
+                                    className="text-xs px-2 py-1 rounded bg-gray-300 text-gray-700 hover:bg-gray-400"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    onClick={() => saveEdit(msg.id)}
+                                    disabled={!editContent.trim()}
+                                    className="text-xs px-2 py-1 rounded bg-white text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+                                  >
+                                    Save
+                                  </button>
+                                </div>
                               </div>
-                            ))}
+                            ) : (
+                              <>
+                                {msg.content && (
+                                  <p className="whitespace-pre-wrap break-words">
+                                    {msg.content}
+                                  </p>
+                                )}
+                                {msg.attachments?.map((att) => (
+                                  <div key={att.id} className="mt-2">
+                                    {att.type === "image" && att.signedUrl && (
+                                      <img
+                                        src={att.signedUrl}
+                                        alt="attachment"
+                                        className="max-w-full rounded"
+                                        style={{ maxWidth: 300 }}
+                                      />
+                                    )}
+                                    {att.type === "video" && att.signedUrl && (
+                                      <video
+                                        src={att.signedUrl}
+                                        controls
+                                        className="max-w-full rounded"
+                                        style={{ maxWidth: 300, maxHeight: 200 }}
+                                      />
+                                    )}
+                                  </div>
+                                ))}
+                              </>
+                            )}
                             <p
                               className={`text-xs mt-1 flex items-center gap-1 ${
                                 isOwn ? "text-blue-200 justify-end" : "text-gray-500"
                               }`}
                             >
                               {formatMessageTime(msg.created_at)}
+                              {msg.updated_at && (
+                                <span className={isOwn ? "text-blue-200" : "text-gray-400"} title="Edited">(edited)</span>
+                              )}
                               {isOwn && (() => {
                                 const tick = getTickStatus(msg);
                                 if (tick === "read")
