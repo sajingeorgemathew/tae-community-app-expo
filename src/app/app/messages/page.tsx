@@ -435,6 +435,33 @@ function MessagesContent() {
     return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   }
 
+  // Day separator helpers
+  function getLocalDateKey(ts: string): string {
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  function formatDayLabel(ts: string): string {
+    const date = new Date(ts);
+    const now = new Date();
+
+    const isToday =
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth() &&
+      date.getDate() === now.getDate();
+    if (isToday) return "Today";
+
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday =
+      date.getFullYear() === yesterday.getFullYear() &&
+      date.getMonth() === yesterday.getMonth() &&
+      date.getDate() === yesterday.getDate();
+    if (isYesterday) return "Yesterday";
+
+    return date.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+  }
+
   const selectedConvo = conversations.find(
     (c) => c.conversation_id === conversationId
   );
@@ -520,56 +547,70 @@ function MessagesContent() {
                   No messages yet. Start the conversation!
                 </p>
               ) : (
-                messages.map((msg) => {
-                  const isOwn = msg.sender_id === currentUserId;
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
-                    >
-                      <div
-                        className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                          isOwn
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-200 text-gray-900"
-                        }`}
-                      >
-                        {msg.content && (
-                          <p className="whitespace-pre-wrap break-words">
-                            {msg.content}
-                          </p>
-                        )}
-                        {msg.attachments?.map((att) => (
-                          <div key={att.id} className="mt-2">
-                            {att.type === "image" && att.signedUrl && (
-                              <img
-                                src={att.signedUrl}
-                                alt="attachment"
-                                className="max-w-full rounded"
-                                style={{ maxWidth: 300 }}
-                              />
-                            )}
-                            {att.type === "video" && att.signedUrl && (
-                              <video
-                                src={att.signedUrl}
-                                controls
-                                className="max-w-full rounded"
-                                style={{ maxWidth: 300, maxHeight: 200 }}
-                              />
-                            )}
+                (() => {
+                  let lastDateKey = "";
+                  return messages.map((msg) => {
+                    const isOwn = msg.sender_id === currentUserId;
+                    const dateKey = getLocalDateKey(msg.created_at);
+                    const showSeparator = dateKey !== lastDateKey;
+                    if (showSeparator) lastDateKey = dateKey;
+                    return (
+                      <div key={msg.id}>
+                        {showSeparator && (
+                          <div className="flex items-center justify-center my-3">
+                            <span className="px-3 py-1 text-xs text-gray-500 bg-gray-100 rounded-full">
+                              {formatDayLabel(msg.created_at)}
+                            </span>
                           </div>
-                        ))}
-                        <p
-                          className={`text-xs mt-1 ${
-                            isOwn ? "text-blue-200" : "text-gray-500"
-                          }`}
+                        )}
+                        <div
+                          className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
                         >
-                          {formatMessageTime(msg.created_at)}
-                        </p>
+                          <div
+                            className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                              isOwn
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-200 text-gray-900"
+                            }`}
+                          >
+                            {msg.content && (
+                              <p className="whitespace-pre-wrap break-words">
+                                {msg.content}
+                              </p>
+                            )}
+                            {msg.attachments?.map((att) => (
+                              <div key={att.id} className="mt-2">
+                                {att.type === "image" && att.signedUrl && (
+                                  <img
+                                    src={att.signedUrl}
+                                    alt="attachment"
+                                    className="max-w-full rounded"
+                                    style={{ maxWidth: 300 }}
+                                  />
+                                )}
+                                {att.type === "video" && att.signedUrl && (
+                                  <video
+                                    src={att.signedUrl}
+                                    controls
+                                    className="max-w-full rounded"
+                                    style={{ maxWidth: 300, maxHeight: 200 }}
+                                  />
+                                )}
+                              </div>
+                            ))}
+                            <p
+                              className={`text-xs mt-1 ${
+                                isOwn ? "text-blue-200" : "text-gray-500"
+                              }`}
+                            >
+                              {formatMessageTime(msg.created_at)}
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })
+                    );
+                  });
+                })()
               )}
               <div ref={messagesEndRef} />
             </div>
