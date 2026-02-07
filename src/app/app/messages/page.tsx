@@ -63,6 +63,15 @@ function MessagesContent() {
   const [otherLastReadAt, setOtherLastReadAt] = useState<string | null>(null);
   const [otherLastDeliveredAt, setOtherLastDeliveredAt] = useState<string | null>(null);
 
+  // Ticket 29.1: auto-read guards for incoming messages while conversation is open
+  const lastAutoReadMsgIdRef = useRef<string | null>(null);
+  const lastAutoReadTimeRef = useRef<number>(0);
+  const AUTO_READ_COOLDOWN = 5000; // 5 seconds
+
+  // Ref to track currently-open conversation for use inside stable callbacks
+  const conversationIdRef = useRef<string | null>(conversationId);
+  conversationIdRef.current = conversationId;
+
   // Polling refs to prevent unnecessary state updates
   const isVisibleRef = useRef(true);
   const lastConvosJsonRef = useRef<string>("");
@@ -123,15 +132,10 @@ function MessagesContent() {
       );
   }
 
-  // Ticket 29: Fetch other user's read + delivery timestamps for ticks
+  // Ticket 29 / 29.1: Fetch other user's read + delivery timestamps for ticks
   const fetchTickState = useCallback(async (convId: string, otherUserId: string) => {
     const [readRes, deliveryRes] = await Promise.all([
-      supabase
-        .from("conversation_reads")
-        .select("last_read_at")
-        .eq("conversation_id", convId)
-        .eq("user_id", otherUserId)
-        .maybeSingle(),
+      supabase.rpc("get_conversation_read_state", { conv_id: convId }),
       supabase
         .from("conversation_deliveries")
         .select("last_delivered_at")
@@ -140,7 +144,9 @@ function MessagesContent() {
         .maybeSingle(),
     ]);
 
-    setOtherLastReadAt(readRes.data?.last_read_at ?? null);
+    if (readRes.data && readRes.data.length > 0) {
+      setOtherLastReadAt(readRes.data[0].other_last_read_at ?? null);
+    }
     setOtherLastDeliveredAt(deliveryRes.data?.last_delivered_at ?? null);
   }, []);
 
@@ -163,7 +169,15 @@ function MessagesContent() {
       const newJson = JSON.stringify(data || []);
       if (newJson !== lastConvosJsonRef.current) {
         lastConvosJsonRef.current = newJson;
-        setConversations(data || []);
+        // Ticket 29.1: preserve is_unread=false for the currently-open conversation
+        // Server data may be stale (race between read upsert and poll)
+        const openId = conversationIdRef.current;
+        const patched = (data || []).map((c: Conversation) =>
+          c.conversation_id === openId
+            ? { ...c, is_unread: false, unread_count: 0 }
+            : c
+        );
+        setConversations(patched);
       }
     }
     if (isInitial) setLoadingConvos(false);
@@ -252,6 +266,21 @@ function MessagesContent() {
       upsertDelivery(convId, latestMsgId);
     }
 
+    // Ticket 29.1: auto-mark-as-read when conversation is open and new incoming message arrives
+    if (!isInitial && currentUserId) {
+      const latestIncoming = [...messagesWithUrls].reverse().find(m => m.sender_id !== currentUserId);
+      if (
+        latestIncoming &&
+        latestIncoming.id !== lastAutoReadMsgIdRef.current &&
+        Date.now() - lastAutoReadTimeRef.current >= AUTO_READ_COOLDOWN
+      ) {
+        lastAutoReadMsgIdRef.current = latestIncoming.id;
+        lastAutoReadTimeRef.current = Date.now();
+        lastMarkedRef.current = null; // Reset so markConversationAsRead proceeds
+        markConversationAsRead(convId);
+      }
+    }
+
     if (isInitial) setLoadingMessages(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -266,6 +295,8 @@ function MessagesContent() {
       lastMessagesJsonRef.current = "";
       lastMessageIdRef.current = null;
       lastDeliveryMsgIdRef.current = null;
+      lastAutoReadMsgIdRef.current = null;
+      lastAutoReadTimeRef.current = 0;
       return;
     }
 
