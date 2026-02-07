@@ -58,6 +58,11 @@ function MessagesContent() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMarkedRef = useRef<string | null>(null);
 
+  // Ticket 29: delivery upsert guard + tick state
+  const lastDeliveryMsgIdRef = useRef<string | null>(null);
+  const [otherLastReadAt, setOtherLastReadAt] = useState<string | null>(null);
+  const [otherLastDeliveredAt, setOtherLastDeliveredAt] = useState<string | null>(null);
+
   // Polling refs to prevent unnecessary state updates
   const isVisibleRef = useRef(true);
   const lastConvosJsonRef = useRef<string>("");
@@ -99,6 +104,45 @@ function MessagesContent() {
       )
     );
   }
+
+  // Ticket 29: Upsert delivery row (guarded by newest message id)
+  async function upsertDelivery(convId: string, newestMsgId: string | null) {
+    if (!currentUserId || !newestMsgId) return;
+    if (lastDeliveryMsgIdRef.current === newestMsgId) return;
+    lastDeliveryMsgIdRef.current = newestMsgId;
+
+    await supabase
+      .from("conversation_deliveries")
+      .upsert(
+        {
+          conversation_id: convId,
+          user_id: currentUserId,
+          last_delivered_at: new Date().toISOString(),
+        },
+        { onConflict: "conversation_id,user_id" }
+      );
+  }
+
+  // Ticket 29: Fetch other user's read + delivery timestamps for ticks
+  const fetchTickState = useCallback(async (convId: string, otherUserId: string) => {
+    const [readRes, deliveryRes] = await Promise.all([
+      supabase
+        .from("conversation_reads")
+        .select("last_read_at")
+        .eq("conversation_id", convId)
+        .eq("user_id", otherUserId)
+        .maybeSingle(),
+      supabase
+        .from("conversation_deliveries")
+        .select("last_delivered_at")
+        .eq("conversation_id", convId)
+        .eq("user_id", otherUserId)
+        .maybeSingle(),
+    ]);
+
+    setOtherLastReadAt(readRes.data?.last_read_at ?? null);
+    setOtherLastDeliveredAt(deliveryRes.data?.last_delivered_at ?? null);
+  }, []);
 
   // Fetch conversations (reusable for initial load + polling)
   const fetchConversations = useCallback(async (isInitial = false) => {
@@ -203,7 +247,13 @@ function MessagesContent() {
       setMessages(messagesWithUrls);
     }
 
+    // Ticket 29: upsert delivery when we fetch/poll messages
+    if (latestMsgId) {
+      upsertDelivery(convId, latestMsgId);
+    }
+
     if (isInitial) setLoadingMessages(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch messages when conversation changes and mark as read
@@ -211,8 +261,11 @@ function MessagesContent() {
     if (!conversationId || !currentUserId) {
       setMessages([]);
       setThreadError(null);
+      setOtherLastReadAt(null);
+      setOtherLastDeliveredAt(null);
       lastMessagesJsonRef.current = "";
       lastMessageIdRef.current = null;
+      lastDeliveryMsgIdRef.current = null;
       return;
     }
 
@@ -220,6 +273,10 @@ function MessagesContent() {
     markConversationAsRead(conversationId);
 
     fetchMessages(conversationId, true);
+
+    // Ticket 29: fetch tick state for this conversation
+    const otherUserId = conversations.find(c => c.conversation_id === conversationId)?.other_user_id;
+    if (otherUserId) fetchTickState(conversationId, otherUserId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, currentUserId, fetchMessages]);
 
@@ -252,13 +309,18 @@ function MessagesContent() {
   useEffect(() => {
     if (!conversationId || !currentUserId) return;
 
+    const otherUserId = conversations.find(c => c.conversation_id === conversationId)?.other_user_id;
+
     const intervalId = setInterval(() => {
       if (isVisibleRef.current) {
         fetchMessages(conversationId, false);
+        // Ticket 29: poll tick state alongside messages
+        if (otherUserId) fetchTickState(conversationId, otherUserId);
       }
     }, MESSAGES_POLL_INTERVAL);
 
     return () => clearInterval(intervalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, currentUserId, fetchMessages]);
 
   // Scroll to bottom when messages change
@@ -462,6 +524,14 @@ function MessagesContent() {
     return date.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
   }
 
+  // Ticket 29: determine tick status for own messages
+  function getTickStatus(msg: Message): "sent" | "delivered" | "read" {
+    if (msg.sender_id !== currentUserId) return "sent";
+    if (otherLastReadAt && msg.created_at <= otherLastReadAt) return "read";
+    if (otherLastDeliveredAt && msg.created_at <= otherLastDeliveredAt) return "delivered";
+    return "sent";
+  }
+
   const selectedConvo = conversations.find(
     (c) => c.conversation_id === conversationId
   );
@@ -599,11 +669,19 @@ function MessagesContent() {
                               </div>
                             ))}
                             <p
-                              className={`text-xs mt-1 ${
-                                isOwn ? "text-blue-200" : "text-gray-500"
+                              className={`text-xs mt-1 flex items-center gap-1 ${
+                                isOwn ? "text-blue-200 justify-end" : "text-gray-500"
                               }`}
                             >
                               {formatMessageTime(msg.created_at)}
+                              {isOwn && (() => {
+                                const tick = getTickStatus(msg);
+                                if (tick === "read")
+                                  return <span className="text-blue-300" title="Read">{"✓✓"}</span>;
+                                if (tick === "delivered")
+                                  return <span className="opacity-70" title="Delivered">{"✓✓"}</span>;
+                                return <span className="opacity-70" title="Sent">{"✓"}</span>;
+                              })()}
                             </p>
                           </div>
                         </div>
