@@ -57,6 +57,9 @@ function MessagesContent() {
   const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const userScrolledUpRef = useRef(false);
+  const lastAutoScrollMessageIdRef = useRef<string | null>(null);
   const lastMarkedRef = useRef<string | null>(null);
 
   // Ticket 30: edit/delete state
@@ -363,10 +366,71 @@ function MessagesContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, currentUserId, fetchMessages]);
 
-  // Scroll to bottom when messages change
+  // --- Ticket 31: WhatsApp-style scroll helpers ---
+  function isNearBottom(container: HTMLElement, threshold = 120): boolean {
+    return container.scrollHeight - container.scrollTop - container.clientHeight <= threshold;
+  }
+
+  function scrollToBottom(behavior: ScrollBehavior = "auto") {
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTo({ top: container.scrollHeight, behavior });
+    }
+  }
+
+  // Ticket 31: On conversation switch, force scroll to bottom after layout settles
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!conversationId) return;
+    // Reset scroll tracking for new conversation
+    userScrolledUpRef.current = false;
+    lastAutoScrollMessageIdRef.current = null;
+
+    // Double rAF ensures images/layout have settled before scrolling
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        scrollToBottom("auto");
+      });
+    });
+  }, [conversationId]);
+
+  // Ticket 31: Smart scroll on message changes (polling / new messages)
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const lastMsg = messages[messages.length - 1];
+
+    // On first load for this conversation, always scroll to bottom
+    if (lastAutoScrollMessageIdRef.current === null) {
+      lastAutoScrollMessageIdRef.current = lastMsg.id;
+      requestAnimationFrame(() => {
+        scrollToBottom("auto");
+      });
+      return;
+    }
+
+    // New message arrived
+    if (lastMsg.id !== lastAutoScrollMessageIdRef.current) {
+      lastAutoScrollMessageIdRef.current = lastMsg.id;
+      if (!userScrolledUpRef.current) {
+        scrollToBottom("smooth");
+      }
+    }
   }, [messages]);
+
+  // Ticket 31: Track scroll position
+  function handleContainerScroll() {
+    const container = messagesContainerRef.current;
+    if (container) {
+      userScrolledUpRef.current = !isNearBottom(container);
+    }
+  }
+
+  // Ticket 31: Media load handler — keep pinned to bottom if user is near bottom
+  function handleMediaLoad() {
+    const container = messagesContainerRef.current;
+    if (container && !userScrolledUpRef.current) {
+      scrollToBottom("auto");
+    }
+  }
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     setFileError(null);
@@ -711,7 +775,7 @@ function MessagesContent() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div ref={messagesContainerRef} onScroll={handleContainerScroll} className="flex-1 overflow-y-auto p-4 space-y-3">
               {loadingMessages ? (
                 <p className="text-gray-500">Loading messages...</p>
               ) : messages.length === 0 ? (
@@ -805,6 +869,7 @@ function MessagesContent() {
                                         alt="attachment"
                                         className="max-w-full rounded"
                                         style={{ maxWidth: 300 }}
+                                        onLoad={handleMediaLoad}
                                       />
                                     )}
                                     {att.type === "video" && att.signedUrl && (
@@ -813,6 +878,7 @@ function MessagesContent() {
                                         controls
                                         className="max-w-full rounded"
                                         style={{ maxWidth: 300, maxHeight: 200 }}
+                                        onLoadedMetadata={handleMediaLoad}
                                       />
                                     )}
                                   </div>
@@ -883,12 +949,20 @@ function MessagesContent() {
                 >
                   +
                 </button>
-                <input
-                  type="text"
+                <textarea
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      if ((messageInput.trim() || selectedFile) && !sending) {
+                        handleSend(e);
+                      }
+                    }
+                  }}
                   placeholder="Type a message..."
-                  className="flex-1 border rounded px-3 py-2"
+                  className="flex-1 border rounded px-3 py-2 resize-none"
+                  rows={1}
                   disabled={sending}
                 />
                 <button
