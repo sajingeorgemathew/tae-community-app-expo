@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/src/lib/supabaseClient";
 
 interface Profile {
@@ -13,11 +13,12 @@ interface Profile {
   role: string | null;
 }
 
-export default function DirectoryPage() {
+function DirectoryContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("query") ?? "");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [messagingProfileId, setMessagingProfileId] = useState<string | null>(null);
 
@@ -154,5 +155,19 @@ export default function DirectoryPage() {
         </ul>
       )}
     </main>
+  );
+}
+
+export default function DirectoryPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen flex items-center justify-center">
+          <p>Loading...</p>
+        </main>
+      }
+    >
+      <DirectoryContent />
+    </Suspense>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/src/lib/supabaseClient";
@@ -14,6 +14,13 @@ interface FeedPreviewPost {
   has_media: boolean;
 }
 
+interface SearchResult {
+  id: string;
+  full_name: string | null;
+  role: string | null;
+  program: string | null;
+}
+
 export default function AppPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -21,6 +28,14 @@ export default function AppPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [posts, setPosts] = useState<FeedPreviewPost[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
+
+  // Quick search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     async function checkSession() {
@@ -103,6 +118,47 @@ export default function AppPage() {
 
     return () => subscription.unsubscribe();
   }, [router]);
+
+  // Debounced search
+  const handleSearch = useCallback(
+    (query: string) => {
+      setSearchQuery(query);
+
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+
+      if (!query.trim()) {
+        setSearchResults([]);
+        setShowDropdown(false);
+        return;
+      }
+
+      debounceRef.current = setTimeout(async () => {
+        setSearchLoading(true);
+        const pattern = `%${query.trim()}%`;
+        const { data } = await supabase
+          .from("profiles")
+          .select("id, full_name, role, program")
+          .or(`full_name.ilike.${pattern},program.ilike.${pattern}`)
+          .limit(6);
+
+        setSearchResults(data ?? []);
+        setShowDropdown(true);
+        setSearchLoading(false);
+      }, 350);
+    },
+    []
+  );
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -188,6 +244,62 @@ export default function AppPage() {
         {/* Main Panel */}
         <div className="flex-1 min-w-0">
           <h2 className="text-xl font-semibold mb-4">Welcome</h2>
+
+          {/* Quick Search */}
+          <div ref={searchRef} className="relative mb-6 max-w-md">
+            <input
+              type="text"
+              placeholder="Search members..."
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              onFocus={() => {
+                if (searchQuery.trim() && searchResults.length > 0) setShowDropdown(true);
+              }}
+              className="w-full border rounded px-3 py-2"
+            />
+            {showDropdown && searchQuery.trim() && (
+              <div className="absolute z-10 mt-1 w-full bg-white border rounded shadow-lg max-h-80 overflow-y-auto">
+                {searchLoading ? (
+                  <p className="px-4 py-3 text-sm text-gray-400">Searching...</p>
+                ) : searchResults.length === 0 ? (
+                  <p className="px-4 py-3 text-sm text-gray-500">No matching members.</p>
+                ) : (
+                  <ul>
+                    {searchResults.map((result) => (
+                      <li key={result.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowDropdown(false);
+                            router.push(`/app/profile/${result.id}`);
+                          }}
+                          className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-2"
+                        >
+                          <span className="font-medium text-sm">
+                            {result.full_name || "Unnamed Member"}
+                          </span>
+                          {result.role && (
+                            <span className="text-xs bg-gray-200 px-2 py-0.5 rounded">
+                              {result.role}
+                            </span>
+                          )}
+                          {result.program && (
+                            <span className="text-xs text-gray-500">{result.program}</span>
+                          )}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <Link
+                  href={`/app/directory?query=${encodeURIComponent(searchQuery.trim())}`}
+                  className="block px-4 py-2 text-sm text-blue-600 hover:bg-gray-50 border-t text-center"
+                >
+                  See all results
+                </Link>
+              </div>
+            )}
+          </div>
 
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-medium text-gray-700">Recent Posts</h3>
