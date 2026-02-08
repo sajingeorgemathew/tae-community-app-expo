@@ -24,3 +24,102 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ── Ticket 34: Global theme (scoped to authenticated app shell) ── */
+
+.app-shell {
+  /* Brand tokens */
+  --brand-navy: #1e293b;
+  --brand-white: #ffffff;
+  --brand-muted: #64748b;
+  --card-bg: #ffffff;
+  --border: #e2e8f0;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --radius: 0.5rem;
+
+  /* Subtle background gradient */
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  color: var(--brand-navy);
+
+  /* Typography defaults */
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Utility classes (opt-in only, never forced) ── */
+
+.app-shell .app-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.app-shell .app-panel {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.25rem;
+}
+
+.app-shell .app-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  cursor: pointer;
+  transition: background-color 0.15s, box-shadow 0.15s;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--brand-navy);
+}
+
+.app-shell .app-btn:hover {
+  box-shadow: var(--shadow);
+}
+
+.app-shell .app-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  cursor: pointer;
+  transition: background-color 0.15s, box-shadow 0.15s;
+  border: none;
+  background: var(--brand-navy);
+  color: var(--brand-white);
+}
+
+.app-shell .app-btn-primary:hover {
+  background: #334155;
+}
+
+.app-shell .app-input {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  background: var(--card-bg);
+  color: var(--brand-navy);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.app-shell .app-input:focus {
+  outline: none;
+  border-color: var(--brand-navy);
+  box-shadow: 0 0 0 2px rgba(30, 41, 59, 0.15);
+}
