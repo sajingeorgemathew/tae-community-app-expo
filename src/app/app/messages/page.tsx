@@ -4,6 +4,8 @@ import { Suspense, useEffect, useState, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/src/lib/supabaseClient";
+import Avatar from "@/src/components/Avatar";
+import { useAvatarUrls } from "@/src/lib/avatarUrl";
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_VIDEO_SIZE = 35 * 1024 * 1024; // 35MB
@@ -17,6 +19,7 @@ interface Conversation {
   conversation_id: string;
   other_user_id: string;
   other_user_name: string;
+  other_user_avatar_path: string | null;
   last_message_content: string | null;
   last_message_at: string | null;
   unread_count: number;
@@ -76,6 +79,10 @@ function MessagesContent() {
   const lastAutoReadMsgIdRef = useRef<string | null>(null);
   const lastAutoReadTimeRef = useRef<number>(0);
   const AUTO_READ_COOLDOWN = 5000; // 5 seconds
+
+  // Ticket 38.1: avatar signed URL resolution (cached per page session)
+  const { resolveAvatarUrls } = useAvatarUrls();
+  const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({});
 
   // Ref to track currently-open conversation for use inside stable callbacks
   const conversationIdRef = useRef<string | null>(conversationId);
@@ -196,6 +203,18 @@ function MessagesContent() {
   useEffect(() => {
     fetchConversations(true);
   }, [fetchConversations]);
+
+  // Ticket 38.1: resolve signed avatar URLs whenever conversation list changes
+  useEffect(() => {
+    if (conversations.length === 0) return;
+    const profiles = conversations
+      .filter((c) => c.other_user_avatar_path)
+      .map((c) => ({ id: c.other_user_id, avatar_path: c.other_user_avatar_path }));
+    if (profiles.length === 0) return;
+    resolveAvatarUrls(profiles as { id: string; avatar_path: string }[]).then(
+      setAvatarUrls
+    );
+  }, [conversations, resolveAvatarUrls]);
 
   // Fetch messages (reusable for initial load + polling)
   const fetchMessages = useCallback(async (convId: string, isInitial = false) => {
@@ -731,6 +750,11 @@ function MessagesContent() {
                     }`}
                   >
                     <div className="flex items-center gap-2">
+                      <Avatar
+                        fullName={convo.other_user_name}
+                        avatarUrl={avatarUrls[convo.other_user_id] ?? null}
+                        size="sm"
+                      />
                       {convo.is_unread && (
                         <span className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0" />
                       )}
