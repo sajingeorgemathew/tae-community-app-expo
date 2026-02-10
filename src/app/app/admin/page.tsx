@@ -3,10 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/src/lib/supabaseClient";
+import { useAvatarUrls } from "@/src/lib/avatarUrl";
+import Avatar from "@/src/components/Avatar";
 import PostCard, { Attachment, Emoji, ReactionCounts } from "@/src/components/PostCard";
 
 interface ProfileJoin {
   full_name: string | null;
+  avatar_path: string | null;
 }
 
 interface PostRow {
@@ -39,6 +42,7 @@ interface Post {
   audience: string;
   created_at: string;
   author_name: string;
+  author_avatar_path: string | null;
   attachments: Attachment[];
   reactionCounts: ReactionCounts;
   userReactions: Emoji[];
@@ -47,6 +51,7 @@ interface Post {
 interface UserProfile {
   id: string;
   full_name: string | null;
+  avatar_path: string | null;
   program: string | null;
   grad_year: number | null;
   role: string | null;
@@ -83,6 +88,10 @@ export default function AdminPage() {
   const [togglingUser, setTogglingUser] = useState<string | null>(null);
   const [bulkDisabling, setBulkDisabling] = useState(false);
   const [deletingUserPosts, setDeletingUserPosts] = useState(false);
+
+  // Avatar signed URL cache + resolver
+  const { resolveAvatarUrls } = useAvatarUrls();
+  const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function init() {
@@ -123,7 +132,7 @@ export default function AdminPage() {
 
     const { data, error } = await supabase
       .from("posts")
-      .select("id, author_id, content, audience, created_at, profiles(full_name)")
+      .select("id, author_id, content, audience, created_at, profiles(full_name, avatar_path)")
       .gte("created_at", cutoff)
       .order("created_at", { ascending: false })
       .limit(100);
@@ -209,6 +218,7 @@ export default function AdminPage() {
         audience: row.audience,
         created_at: row.created_at,
         author_name: profile?.full_name ?? "Unknown Author",
+        author_avatar_path: profile?.avatar_path ?? null,
         attachments: attachmentsByPost[row.id] ?? [],
         reactionCounts,
         userReactions,
@@ -217,12 +227,21 @@ export default function AdminPage() {
 
     setPosts(allPosts);
     setSelectedPosts(new Set());
+
+    // Resolve avatar URLs for post authors
+    const authorProfiles = allPosts
+      .filter((p) => p.author_avatar_path)
+      .map((p) => ({ id: p.author_id, avatar_path: p.author_avatar_path }));
+    if (authorProfiles.length > 0) {
+      const urls = await resolveAvatarUrls(authorProfiles);
+      setAvatarUrls((prev) => ({ ...prev, ...urls }));
+    }
   }
 
   async function fetchUsers() {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, full_name, program, grad_year, role, is_disabled, created_at")
+      .select("id, full_name, avatar_path, program, grad_year, role, is_disabled, created_at")
       .order("created_at", { ascending: false })
       .limit(50);
 
@@ -231,18 +250,28 @@ export default function AdminPage() {
       return;
     }
 
-    setUsers(
-      (data ?? []).map((p) => ({
-        id: p.id,
-        full_name: p.full_name,
-        program: p.program,
-        grad_year: p.grad_year,
-        role: p.role,
-        is_disabled: p.is_disabled ?? false,
-        created_at: p.created_at,
-      }))
-    );
+    const userRows = (data ?? []).map((p) => ({
+      id: p.id,
+      full_name: p.full_name,
+      avatar_path: p.avatar_path ?? null,
+      program: p.program,
+      grad_year: p.grad_year,
+      role: p.role,
+      is_disabled: p.is_disabled ?? false,
+      created_at: p.created_at,
+    }));
+
+    setUsers(userRows);
     setSelectedUsers(new Set());
+
+    // Resolve avatar URLs for users
+    const withAvatars = userRows
+      .filter((u) => u.avatar_path)
+      .map((u) => ({ id: u.id, avatar_path: u.avatar_path }));
+    if (withAvatars.length > 0) {
+      const urls = await resolveAvatarUrls(withAvatars);
+      setAvatarUrls((prev) => ({ ...prev, ...urls }));
+    }
   }
 
   // Re-fetch posts when time filter changes
@@ -691,6 +720,7 @@ export default function AdminPage() {
                     content={post.content}
                     audience={post.audience}
                     authorName={post.author_name}
+                    authorAvatarUrl={avatarUrls[post.author_id]}
                     authorId={post.author_id}
                     createdAt={post.created_at}
                     attachments={post.attachments}
@@ -790,12 +820,19 @@ export default function AdminPage() {
                       />
                     </td>
                     <td className="px-4 py-2">
-                      <Link
-                        href={`/app/profile/${user.id}`}
-                        className="text-blue-600 hover:underline"
-                      >
-                        {user.full_name ?? "No name"}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Avatar
+                          fullName={user.full_name ?? "?"}
+                          avatarUrl={avatarUrls[user.id]}
+                          size="sm"
+                        />
+                        <Link
+                          href={`/app/profile/${user.id}`}
+                          className="text-blue-600 hover:underline"
+                        >
+                          {user.full_name ?? "No name"}
+                        </Link>
+                      </div>
                     </td>
                     <td className="px-4 py-2">{user.program ?? "-"}</td>
                     <td className="px-4 py-2">{user.grad_year ?? "-"}</td>
