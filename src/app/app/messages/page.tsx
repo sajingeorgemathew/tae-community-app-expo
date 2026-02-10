@@ -793,8 +793,15 @@ function MessagesContent() {
           </div>
         ) : (
           <>
-            {/* Thread header */}
-            <div className="p-3 border-b bg-gray-50 font-medium">
+            {/* Thread header — Ticket 38.2: avatar + name */}
+            <div className="p-3 border-b bg-gray-50 font-medium flex items-center gap-2">
+              {selectedConvo && (
+                <Avatar
+                  fullName={selectedConvo.other_user_name}
+                  avatarUrl={avatarUrls[selectedConvo.other_user_id] ?? null}
+                  size="sm"
+                />
+              )}
               {selectedConvo?.other_user_name || "Conversation"}
             </div>
 
@@ -824,8 +831,17 @@ function MessagesContent() {
                           </div>
                         )}
                         <div
-                          className={`group flex items-center gap-1 ${isOwn ? "justify-end" : "justify-start"}`}
+                          className={`group flex items-end gap-1 ${isOwn ? "justify-end" : "justify-start"}`}
                         >
+                          {/* Ticket 38.2: avatar next to incoming messages */}
+                          {!isOwn && selectedConvo && (
+                            <Avatar
+                              fullName={selectedConvo.other_user_name}
+                              avatarUrl={avatarUrls[selectedConvo.other_user_id] ?? null}
+                              size="sm"
+                              className="mb-1"
+                            />
+                          )}
                           {/* Ticket 30: Edit/Delete actions for own messages (show on hover) */}
                           {isOwn && editingMessageId !== msg.id && (
                             <div className="hidden group-hover:flex items-center gap-1 mr-1">
