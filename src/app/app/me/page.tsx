@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/src/lib/supabaseClient";
 import PostCard, { Attachment, Emoji, ReactionCounts } from "@/src/components/PostCard";
+
+const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp"];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_TAGS = 12;
+const MAX_TAG_LEN = 24;
 
 interface Profile {
   id: string;
@@ -12,6 +17,9 @@ interface Profile {
   program: string | null;
   grad_year: number | null;
   role: string | null;
+  avatar_path: string | null;
+  headline: string | null;
+  skills: string[];
 }
 
 interface PostRow {
@@ -60,6 +68,15 @@ export default function MyProfilePage() {
   const [fullName, setFullName] = useState("");
   const [program, setProgram] = useState("");
   const [gradYear, setGradYear] = useState("");
+  const [headline, setHeadline] = useState("");
+  const [skills, setSkills] = useState<string[]>([]);
+  const [skillInput, setSkillInput] = useState("");
+
+  // Avatar state
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarSignedUrl, setAvatarSignedUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     async function fetchMyProfile() {
@@ -76,7 +93,7 @@ export default function MyProfilePage() {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, program, grad_year, role")
+        .select("id, full_name, program, grad_year, role, avatar_path, headline, skills")
         .eq("id", session.user.id)
         .single();
 
@@ -86,10 +103,27 @@ export default function MyProfilePage() {
         return;
       }
 
-      setProfile(data);
-      setFullName(data.full_name || "");
-      setProgram(data.program || "");
-      setGradYear(data.grad_year?.toString() || "");
+      const profileData: Profile = {
+        ...data,
+        skills: data.skills ?? [],
+      };
+
+      setProfile(profileData);
+      setFullName(profileData.full_name || "");
+      setProgram(profileData.program || "");
+      setGradYear(profileData.grad_year?.toString() || "");
+      setHeadline(profileData.headline || "");
+      setSkills(profileData.skills);
+
+      // Get signed URL for existing avatar
+      if (profileData.avatar_path) {
+        const { data: signedData } = await supabase.storage
+          .from("profile-avatars")
+          .createSignedUrl(profileData.avatar_path, 3600);
+        if (signedData?.signedUrl) {
+          setAvatarSignedUrl(signedData.signedUrl);
+        }
+      }
 
       // Fetch posts by current user
       const { data: postsData } = await supabase
@@ -197,20 +231,97 @@ export default function MyProfilePage() {
     setFullName(profile?.full_name || "");
     setProgram(profile?.program || "");
     setGradYear(profile?.grad_year?.toString() || "");
+    setHeadline(profile?.headline || "");
+    setSkills(profile?.skills ?? []);
+    setSkillInput("");
+    // Clear avatar selection
+    setAvatarFile(null);
+    setAvatarPreview(null);
     setEditing(false);
     setMessage(null);
   }
 
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!ALLOWED_MIME.includes(file.type)) {
+      setMessage({ type: "error", text: "Only JPEG, PNG, and WebP images are allowed." });
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setMessage({ type: "error", text: "Image must be 5 MB or smaller." });
+      return;
+    }
+
+    setMessage(null);
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  }
+
+  function addSkill() {
+    const tag = skillInput.trim().replace(/\s+/g, " ").slice(0, MAX_TAG_LEN);
+    if (!tag) return;
+
+    if (skills.length >= MAX_TAGS) {
+      setMessage({ type: "error", text: `Maximum ${MAX_TAGS} skills allowed.` });
+      return;
+    }
+
+    const isDuplicate = skills.some((s) => s.toLowerCase() === tag.toLowerCase());
+    if (isDuplicate) {
+      setMessage({ type: "error", text: `"${tag}" is already added.` });
+      return;
+    }
+
+    setSkills((prev) => [...prev, tag]);
+    setSkillInput("");
+    setMessage(null);
+  }
+
+  function removeSkill(index: number) {
+    setSkills((prev) => prev.filter((_, i) => i !== index));
+  }
+
   async function handleSave() {
-    if (!profile) return;
+    if (!profile || !currentUserId) return;
 
     setSaving(true);
     setMessage(null);
+
+    let newAvatarPath = profile.avatar_path;
+
+    // Upload avatar if a new file was selected
+    if (avatarFile) {
+      const ext = avatarFile.name.split(".").pop() || "jpg";
+      // Path convention: avatars/{user_uuid}/{filename}
+      const storagePath = `avatars/${currentUserId}/avatar.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("profile-avatars")
+        .upload(storagePath, avatarFile, { upsert: true });
+
+      if (uploadError) {
+        setMessage({ type: "error", text: `Avatar upload failed: ${uploadError.message}` });
+        setSaving(false);
+        return;
+      }
+
+      // If replacing and old path differs, try to delete old object (best-effort)
+      if (profile.avatar_path && profile.avatar_path !== storagePath) {
+        await supabase.storage.from("profile-avatars").remove([profile.avatar_path]);
+      }
+
+      newAvatarPath = storagePath;
+    }
 
     const updates = {
       full_name: fullName.trim() || null,
       program: program.trim() || null,
       grad_year: gradYear ? parseInt(gradYear, 10) : null,
+      headline: headline.trim() || null,
+      skills,
+      avatar_path: newAvatarPath,
     };
 
     const { error } = await supabase
@@ -221,13 +332,30 @@ export default function MyProfilePage() {
     if (error) {
       setMessage({ type: "error", text: "Failed to save changes" });
     } else {
-      // Update local state with new values
-      setProfile({
+      const updatedProfile: Profile = {
         ...profile,
         full_name: updates.full_name,
         program: updates.program,
         grad_year: updates.grad_year,
-      });
+        headline: updates.headline,
+        skills: updates.skills,
+        avatar_path: updates.avatar_path,
+      };
+      setProfile(updatedProfile);
+
+      // Refresh signed URL for the (possibly new) avatar
+      if (updatedProfile.avatar_path) {
+        const { data: signedData } = await supabase.storage
+          .from("profile-avatars")
+          .createSignedUrl(updatedProfile.avatar_path, 3600);
+        if (signedData?.signedUrl) {
+          setAvatarSignedUrl(signedData.signedUrl);
+        }
+      }
+
+      // Clear file selection
+      setAvatarFile(null);
+      setAvatarPreview(null);
       setEditing(false);
       setMessage({ type: "success", text: "Profile updated successfully" });
     }
@@ -336,6 +464,9 @@ export default function MyProfilePage() {
     }
   }
 
+  // Determine which avatar image to show
+  const displayAvatarUrl = avatarPreview || avatarSignedUrl;
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
@@ -377,6 +508,40 @@ export default function MyProfilePage() {
           </div>
         )}
 
+        {/* Avatar */}
+        <div className="flex items-center gap-4 mb-6">
+          <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
+            {displayAvatarUrl ? (
+              <img
+                src={displayAvatarUrl}
+                alt="Avatar"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-gray-400 text-2xl">?</span>
+            )}
+          </div>
+          {editing && (
+            <div>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded"
+              >
+                Choose Photo
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+              <p className="text-xs text-gray-400 mt-1">JPEG, PNG, or WebP — 5 MB max</p>
+            </div>
+          )}
+        </div>
+
         {editing ? (
           <div className="space-y-4">
             <div>
@@ -388,6 +553,19 @@ export default function MyProfilePage() {
                 className="w-full border rounded px-3 py-2"
               />
             </div>
+
+            <div>
+              <label className="block text-sm text-gray-500 mb-1">Headline</label>
+              <input
+                type="text"
+                value={headline}
+                onChange={(e) => setHeadline(e.target.value)}
+                maxLength={160}
+                className="w-full border rounded px-3 py-2"
+              />
+              <p className="text-xs text-gray-400 mt-1">160 chars max</p>
+            </div>
+
             <div>
               <label className="block text-sm text-gray-500 mb-1">Program</label>
               <input
@@ -406,6 +584,56 @@ export default function MyProfilePage() {
                 className="w-full border rounded px-3 py-2"
               />
             </div>
+
+            {/* Skills tags */}
+            <div>
+              <label className="block text-sm text-gray-500 mb-1">
+                Skills ({skills.length}/{MAX_TAGS})
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={skillInput}
+                  onChange={(e) => setSkillInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addSkill();
+                    }
+                  }}
+                  maxLength={MAX_TAG_LEN}
+                  placeholder="Add a skill"
+                  className="flex-1 border rounded px-3 py-2"
+                />
+                <button
+                  type="button"
+                  onClick={addSkill}
+                  className="bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded text-sm"
+                >
+                  Add
+                </button>
+              </div>
+              {skills.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {skills.map((skill, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded"
+                    >
+                      {skill}
+                      <button
+                        type="button"
+                        onClick={() => removeSkill(i)}
+                        className="ml-1 hover:text-red-600"
+                      >
+                        &times;
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="flex gap-3 pt-2">
               <button
                 onClick={handleSave}
@@ -429,6 +657,12 @@ export default function MyProfilePage() {
               <p className="text-sm text-gray-500">Full Name</p>
               <p>{profile?.full_name || "Not specified"}</p>
             </div>
+            {profile?.headline && (
+              <div>
+                <p className="text-sm text-gray-500">Headline</p>
+                <p>{profile.headline}</p>
+              </div>
+            )}
             <div>
               <p className="text-sm text-gray-500">Program</p>
               <p>{profile?.program || "Not specified"}</p>
@@ -443,6 +677,21 @@ export default function MyProfilePage() {
                 <span className="text-xs bg-gray-200 px-2 py-1 rounded">
                   {profile.role}
                 </span>
+              </div>
+            )}
+            {profile?.skills && profile.skills.length > 0 && (
+              <div>
+                <p className="text-sm text-gray-500">Skills</p>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {profile.skills.map((skill, i) => (
+                    <span
+                      key={i}
+                      className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
           </div>
