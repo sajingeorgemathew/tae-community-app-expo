@@ -12,6 +12,9 @@ interface Profile {
   program: string | null;
   grad_year: number | null;
   role: string | null;
+  avatar_path: string | null;
+  headline: string | null;
+  skills: string[];
 }
 
 interface PostRow {
@@ -58,6 +61,7 @@ export default function ProfilePage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [messagingLoading, setMessagingLoading] = useState(false);
+  const [avatarSignedUrl, setAvatarSignedUrl] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -88,7 +92,7 @@ export default function ProfilePage() {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, program, grad_year, role")
+        .select("id, full_name, program, grad_year, role, avatar_path, headline, skills")
         .eq("id", id)
         .single();
 
@@ -98,7 +102,18 @@ export default function ProfilePage() {
         return;
       }
 
-      setProfile(data);
+      const profileData: Profile = { ...data, skills: data.skills ?? [] };
+      setProfile(profileData);
+
+      // Generate signed URL for avatar (private bucket)
+      if (profileData.avatar_path) {
+        const { data: signedData } = await supabase.storage
+          .from("profile-avatars")
+          .createSignedUrl(profileData.avatar_path, 3600);
+        if (signedData?.signedUrl) {
+          setAvatarSignedUrl(signedData.signedUrl);
+        }
+      }
 
       // Fetch posts by this author
       const { data: postsData } = await supabase
@@ -352,15 +367,34 @@ export default function ProfilePage() {
       </div>
 
       <div className="max-w-md">
-        <div className="flex items-center gap-3 mb-6">
-          <h1 className="text-2xl font-semibold">
-            {profile?.full_name || "Unnamed Member"}
-          </h1>
-          {profile?.role && (
-            <span className="text-xs bg-gray-200 px-2 py-1 rounded">
-              {profile.role}
-            </span>
-          )}
+        {/* Avatar */}
+        <div className="flex items-center gap-4 mb-6">
+          <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
+            {avatarSignedUrl ? (
+              <img
+                src={avatarSignedUrl}
+                alt="Avatar"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-gray-400 text-2xl">?</span>
+            )}
+          </div>
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-semibold">
+                {profile?.full_name || "Unnamed Member"}
+              </h1>
+              {profile?.role && (
+                <span className="text-xs bg-gray-200 px-2 py-1 rounded">
+                  {profile.role}
+                </span>
+              )}
+            </div>
+            {profile?.headline && (
+              <p className="text-gray-600 mt-1">{profile.headline}</p>
+            )}
+          </div>
         </div>
 
         <div className="space-y-3">
@@ -372,6 +406,21 @@ export default function ProfilePage() {
             <p className="text-sm text-gray-500">Graduation Year</p>
             <p>{profile?.grad_year || "Not specified"}</p>
           </div>
+          {profile?.skills && profile.skills.length > 0 && (
+            <div>
+              <p className="text-sm text-gray-500">Skills</p>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {profile.skills.map((skill, i) => (
+                  <span
+                    key={i}
+                    className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {currentUserId && currentUserId !== id && (

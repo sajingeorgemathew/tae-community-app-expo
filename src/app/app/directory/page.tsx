@@ -11,6 +11,9 @@ interface Profile {
   program: string | null;
   grad_year: number | null;
   role: string | null;
+  avatar_path: string | null;
+  headline: string | null;
+  skills: string[];
 }
 
 function DirectoryContent() {
@@ -21,6 +24,7 @@ function DirectoryContent() {
   const [searchQuery, setSearchQuery] = useState(searchParams.get("query") ?? "");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [messagingProfileId, setMessagingProfileId] = useState<string | null>(null);
+  const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function fetchData() {
@@ -34,14 +38,39 @@ function DirectoryContent() {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, program, grad_year, role")
+        .select("id, full_name, program, grad_year, role, avatar_path, headline, skills")
         .limit(50);
 
       if (error) {
         console.error("Error fetching profiles:", error.message);
-      } else {
-        setProfiles(data || []);
+        setLoading(false);
+        return;
       }
+
+      const profileRows: Profile[] = (data || []).map((d) => ({
+        ...d,
+        skills: d.skills ?? [],
+      }));
+      setProfiles(profileRows);
+
+      // Generate signed URLs for all avatars in parallel
+      const withAvatars = profileRows.filter((p) => p.avatar_path);
+      if (withAvatars.length > 0) {
+        const results = await Promise.all(
+          withAvatars.map(async (p) => {
+            const { data: signedData } = await supabase.storage
+              .from("profile-avatars")
+              .createSignedUrl(p.avatar_path!, 3600);
+            return { id: p.id, url: signedData?.signedUrl ?? null };
+          })
+        );
+        const urls: Record<string, string> = {};
+        for (const r of results) {
+          if (r.url) urls[r.id] = r.url;
+        }
+        setAvatarUrls(urls);
+      }
+
       setLoading(false);
     }
 
@@ -55,8 +84,10 @@ function DirectoryContent() {
     const nameMatch = profile.full_name?.toLowerCase().includes(query);
     const programMatch = profile.program?.toLowerCase().includes(query);
     const yearMatch = profile.grad_year?.toString().includes(query);
+    const headlineMatch = profile.headline?.toLowerCase().includes(query);
+    const skillsMatch = profile.skills?.some((s) => s.toLowerCase().includes(query));
 
-    return nameMatch || programMatch || yearMatch;
+    return nameMatch || programMatch || yearMatch || headlineMatch || skillsMatch;
   });
 
   async function handleMessage(profileId: string, e: React.MouseEvent) {
@@ -121,18 +152,32 @@ function DirectoryContent() {
                 href={`/app/profile/${profile.id}`}
                 className="block border rounded p-4 hover:bg-gray-50 transition-colors"
               >
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
+                    {avatarUrls[profile.id] ? (
+                      <img
+                        src={avatarUrls[profile.id]}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-gray-400 text-sm">?</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
                     <p className="font-medium">
                       {profile.full_name || "Unnamed Member"}
                     </p>
-                    <p className="text-sm text-gray-600">
+                    {profile.headline && (
+                      <p className="text-sm text-gray-600 truncate">{profile.headline}</p>
+                    )}
+                    <p className="text-sm text-gray-500">
                       {[profile.program, profile.grad_year]
                         .filter(Boolean)
                         .join(" · ") || "No details"}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     {currentUserId && currentUserId !== profile.id && (
                       <button
                         onClick={(e) => handleMessage(profile.id, e)}
