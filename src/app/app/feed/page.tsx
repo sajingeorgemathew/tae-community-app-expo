@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/src/lib/supabaseClient";
+import { useAvatarUrls } from "@/src/lib/avatarUrl";
 import PostCard, { Attachment, Emoji, EMOJI_SET, ReactionCounts } from "@/src/components/PostCard";
 
 interface ProfileJoin {
   full_name: string | null;
+  avatar_path: string | null;
 }
 
 interface PostRow {
@@ -39,6 +41,7 @@ interface Post {
   audience: string;
   created_at: string;
   author_name: string;
+  author_avatar_url: string | null;
   attachments: Attachment[];
   reactionCounts: ReactionCounts;
   userReactions: Emoji[];
@@ -83,6 +86,7 @@ export default function FeedPage() {
   const [filter, setFilter] = useState<AudienceFilter>("all");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { resolveAvatarUrls } = useAvatarUrls();
 
   useEffect(() => {
     async function fetchData() {
@@ -112,7 +116,7 @@ export default function FeedPage() {
       // Fetch posts within 5-day window
       const { data, error } = await supabase
         .from("posts")
-        .select("id, author_id, content, audience, created_at, profiles(full_name)")
+        .select("id, author_id, content, audience, created_at, profiles(full_name, avatar_path)")
         .gte("created_at", fiveDaysAgo)
         .order("created_at", { ascending: false })
         .limit(100);
@@ -179,6 +183,18 @@ export default function FeedPage() {
         }
       }
 
+      // Collect unique author avatar paths for signing
+      const authorAvatars: { id: string; avatar_path: string | null }[] = [];
+      const seenAuthors = new Set<string>();
+      for (const row of rows) {
+        if (!seenAuthors.has(row.author_id)) {
+          seenAuthors.add(row.author_id);
+          const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+          authorAvatars.push({ id: row.author_id, avatar_path: profile?.avatar_path ?? null });
+        }
+      }
+      const avatarUrlMap = await resolveAvatarUrls(authorAvatars);
+
       // Map rows to Post objects
       const allPosts: Post[] = rows.map((row) => {
         const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
@@ -202,6 +218,7 @@ export default function FeedPage() {
           audience: row.audience,
           created_at: row.created_at,
           author_name: profile?.full_name ?? "Unknown Author",
+          author_avatar_url: avatarUrlMap[row.author_id] ?? null,
           attachments: attachmentsByPost[row.id] ?? [],
           reactionCounts,
           userReactions,
@@ -405,6 +422,7 @@ export default function FeedPage() {
                 audience={post.audience}
                 authorName={post.author_name}
                 authorId={post.author_id}
+                authorAvatarUrl={post.author_avatar_url}
                 createdAt={post.created_at}
                 attachments={post.attachments}
                 canDelete={canDelete(post)}

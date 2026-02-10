@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/src/lib/supabaseClient";
+import { useAvatarUrls } from "@/src/lib/avatarUrl";
+import Avatar from "@/src/components/Avatar";
 import PostCard, { Attachment, Emoji, ReactionCounts } from "@/src/components/PostCard";
 
 interface Profile {
@@ -62,6 +64,7 @@ export default function ProfilePage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [messagingLoading, setMessagingLoading] = useState(false);
   const [avatarSignedUrl, setAvatarSignedUrl] = useState<string | null>(null);
+  const { getAvatarUrl } = useAvatarUrls();
 
   useEffect(() => {
     async function fetchData() {
@@ -105,14 +108,10 @@ export default function ProfilePage() {
       const profileData: Profile = { ...data, skills: data.skills ?? [] };
       setProfile(profileData);
 
-      // Generate signed URL for avatar (private bucket)
+      // Generate signed URL for avatar (private bucket) via cached helper
       if (profileData.avatar_path) {
-        const { data: signedData } = await supabase.storage
-          .from("profile-avatars")
-          .createSignedUrl(profileData.avatar_path, 3600);
-        if (signedData?.signedUrl) {
-          setAvatarSignedUrl(signedData.signedUrl);
-        }
+        const url = await getAvatarUrl(profileData.avatar_path);
+        if (url) setAvatarSignedUrl(url);
       }
 
       // Fetch posts by this author
@@ -369,17 +368,11 @@ export default function ProfilePage() {
       <div className="max-w-md">
         {/* Avatar */}
         <div className="flex items-center gap-4 mb-6">
-          <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
-            {avatarSignedUrl ? (
-              <img
-                src={avatarSignedUrl}
-                alt="Avatar"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-gray-400 text-2xl">?</span>
-            )}
-          </div>
+          <Avatar
+            fullName={profile?.full_name || "?"}
+            avatarUrl={avatarSignedUrl}
+            size="lg"
+          />
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-semibold">

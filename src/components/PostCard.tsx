@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { supabase } from "@/src/lib/supabaseClient";
+import Avatar from "./Avatar";
 
 export interface Attachment {
   id: string;
@@ -31,6 +32,7 @@ export interface PostCardProps {
   audience: string;
   authorName?: string;
   authorId?: string;
+  authorAvatarUrl?: string | null;
   createdAt: string;
   attachments: Attachment[];
   canDelete?: boolean;
@@ -60,6 +62,7 @@ export default function PostCard({
   audience,
   authorName,
   authorId,
+  authorAvatarUrl,
   createdAt,
   attachments,
   canDelete,
@@ -194,13 +197,21 @@ export default function PostCard({
     <div className="border rounded p-4 max-w-full overflow-hidden">
       <div className="flex items-center justify-between mb-2">
         {authorName && (
-          authorId ? (
-            <Link href={`/app/profile/${authorId}`} className="font-medium text-blue-600 hover:underline">
-              {authorName}
-            </Link>
-          ) : (
-            <p className="font-medium">{authorName}</p>
-          )
+          <div className="flex items-center gap-2 min-w-0">
+            {authorId ? (
+              <Link href={`/app/profile/${authorId}`} className="flex items-center gap-2 min-w-0">
+                <Avatar fullName={authorName} avatarUrl={authorAvatarUrl} size="sm" />
+                <span className="font-medium text-blue-600 hover:underline truncate">
+                  {authorName}
+                </span>
+              </Link>
+            ) : (
+              <>
+                <Avatar fullName={authorName} avatarUrl={authorAvatarUrl} size="sm" />
+                <p className="font-medium truncate">{authorName}</p>
+              </>
+            )}
+          </div>
         )}
         <div className={`flex items-center gap-2 ${authorName ? "" : "ml-auto"}`}>
           {audience !== "all" && (

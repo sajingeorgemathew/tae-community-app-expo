@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/src/lib/supabaseClient";
+import { useAvatarUrls } from "@/src/lib/avatarUrl";
+import Avatar from "@/src/components/Avatar";
 import PostCard, { Attachment, Emoji, ReactionCounts } from "@/src/components/PostCard";
 
 const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp"];
@@ -77,6 +79,7 @@ export default function MyProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarSignedUrl, setAvatarSignedUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { getAvatarUrl } = useAvatarUrls();
 
   useEffect(() => {
     async function fetchMyProfile() {
@@ -115,14 +118,10 @@ export default function MyProfilePage() {
       setHeadline(profileData.headline || "");
       setSkills(profileData.skills);
 
-      // Get signed URL for existing avatar
+      // Get signed URL for existing avatar via cached helper
       if (profileData.avatar_path) {
-        const { data: signedData } = await supabase.storage
-          .from("profile-avatars")
-          .createSignedUrl(profileData.avatar_path, 3600);
-        if (signedData?.signedUrl) {
-          setAvatarSignedUrl(signedData.signedUrl);
-        }
+        const url = await getAvatarUrl(profileData.avatar_path);
+        if (url) setAvatarSignedUrl(url);
       }
 
       // Fetch posts by current user
@@ -343,14 +342,10 @@ export default function MyProfilePage() {
       };
       setProfile(updatedProfile);
 
-      // Refresh signed URL for the (possibly new) avatar
+      // Refresh signed URL for the (possibly new) avatar via cached helper
       if (updatedProfile.avatar_path) {
-        const { data: signedData } = await supabase.storage
-          .from("profile-avatars")
-          .createSignedUrl(updatedProfile.avatar_path, 3600);
-        if (signedData?.signedUrl) {
-          setAvatarSignedUrl(signedData.signedUrl);
-        }
+        const url = await getAvatarUrl(updatedProfile.avatar_path);
+        if (url) setAvatarSignedUrl(url);
       }
 
       // Clear file selection
@@ -510,17 +505,11 @@ export default function MyProfilePage() {
 
         {/* Avatar */}
         <div className="flex items-center gap-4 mb-6">
-          <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
-            {displayAvatarUrl ? (
-              <img
-                src={displayAvatarUrl}
-                alt="Avatar"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-gray-400 text-2xl">?</span>
-            )}
-          </div>
+          <Avatar
+            fullName={profile?.full_name || "?"}
+            avatarUrl={displayAvatarUrl}
+            size="lg"
+          />
           {editing && (
             <div>
               <button

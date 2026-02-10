@@ -4,6 +4,8 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/src/lib/supabaseClient";
+import { useAvatarUrls } from "@/src/lib/avatarUrl";
+import Avatar from "@/src/components/Avatar";
 import type { User } from "@supabase/supabase-js";
 
 interface FeedPreviewPost {
@@ -19,6 +21,7 @@ interface SearchResult {
   full_name: string | null;
   role: string | null;
   program: string | null;
+  avatar_path: string | null;
 }
 
 export default function AppPage() {
@@ -32,10 +35,12 @@ export default function AppPage() {
   // Quick search state
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchAvatarUrls, setSearchAvatarUrls] = useState<Record<string, string>>({});
   const [searchLoading, setSearchLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { resolveAvatarUrls } = useAvatarUrls();
 
   useEffect(() => {
     async function checkSession() {
@@ -137,11 +142,17 @@ export default function AppPage() {
         const pattern = `%${query.trim()}%`;
         const { data } = await supabase
           .from("profiles")
-          .select("id, full_name, role, program")
+          .select("id, full_name, role, program, avatar_path")
           .or(`full_name.ilike.${pattern},program.ilike.${pattern}`)
           .limit(6);
 
-        setSearchResults(data ?? []);
+        const results = data ?? [];
+        setSearchResults(results);
+
+        // Resolve avatar URLs
+        const urls = await resolveAvatarUrls(results);
+        setSearchAvatarUrls((prev) => ({ ...prev, ...urls }));
+
         setShowDropdown(true);
         setSearchLoading(false);
       }, 350);
@@ -275,6 +286,11 @@ export default function AppPage() {
                           }}
                           className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-2"
                         >
+                          <Avatar
+                            fullName={result.full_name || "?"}
+                            avatarUrl={searchAvatarUrls[result.id]}
+                            size="sm"
+                          />
                           <span className="font-medium text-sm">
                             {result.full_name || "Unnamed Member"}
                           </span>
