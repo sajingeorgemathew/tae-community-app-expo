@@ -307,7 +307,7 @@ export default function AppPage() {
                             <>
                               <span
                                 title={result.skills[0]}
-                                className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-gray-700 max-w-[140px] truncate"
+                                className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-gray-700 max-w-[140px] truncate whitespace-nowrap overflow-hidden"
                               >
                                 {result.skills[0]}
                               </span>
