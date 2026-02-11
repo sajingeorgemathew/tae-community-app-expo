@@ -32,6 +32,7 @@ export default function AppPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [posts, setPosts] = useState<FeedPreviewPost[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
+  const [profileIncomplete, setProfileIncomplete] = useState(false);
 
   // Quick search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -56,15 +57,25 @@ export default function AppPage() {
 
       setUser(session.user);
 
-      // Check admin role
+      // Check admin role + profile completeness
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, avatar_path, headline, skills, program, grad_year")
         .eq("id", session.user.id)
         .single();
 
       if (profile?.role === "admin") {
         setIsAdmin(true);
+      }
+
+      if (profile) {
+        const hasAvatar = !!profile.avatar_path;
+        const hasHeadline = !!(profile.headline as string | null)?.trim();
+        const hasSkills = Array.isArray(profile.skills) && profile.skills.length > 0;
+        const hasProgramYear = !!(profile.program as string | null)?.trim() && !!profile.grad_year;
+        if (!(hasAvatar && hasHeadline && hasSkills && hasProgramYear)) {
+          setProfileIncomplete(true);
+        }
       }
 
       setLoading(false);
@@ -256,6 +267,16 @@ export default function AppPage() {
         {/* Main Panel */}
         <div className="flex-1 min-w-0">
           <h2 className="text-xl font-semibold mb-4">Welcome</h2>
+
+          {profileIncomplete && (
+            <Link
+              href="/app/me#completeness"
+              className="block mb-4 px-4 py-2.5 rounded border border-blue-200 bg-blue-50 text-sm text-blue-700 hover:bg-blue-100 transition max-w-md"
+            >
+              Your profile is incomplete.{" "}
+              <span className="font-medium underline">Finish your profile &rarr;</span>
+            </Link>
+          )}
 
           {/* Quick Search */}
           <div ref={searchRef} className="relative mb-6 max-w-md">

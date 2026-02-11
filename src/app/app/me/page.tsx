@@ -24,6 +24,21 @@ interface Profile {
   skills: string[];
 }
 
+interface MissingItem {
+  key: "avatar" | "headline" | "skills" | "program_year";
+  label: string;
+}
+
+function computeCompleteness(p: Profile): { percent: number; missing: MissingItem[] } {
+  const missing: MissingItem[] = [];
+  if (!p.avatar_path) missing.push({ key: "avatar", label: "Add a profile photo" });
+  if (!p.headline?.trim()) missing.push({ key: "headline", label: "Write a headline" });
+  if (!p.skills || p.skills.length === 0) missing.push({ key: "skills", label: "Add at least one skill" });
+  if (!p.program?.trim() || !p.grad_year) missing.push({ key: "program_year", label: "Set program & graduation year" });
+  const filled = 4 - missing.length;
+  return { percent: filled * 25, missing };
+}
+
 interface PostRow {
   id: string;
   author_id: string;
@@ -79,6 +94,11 @@ export default function MyProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarSignedUrl, setAvatarSignedUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const headlineRef = useRef<HTMLInputElement>(null);
+  const skillInputRef = useRef<HTMLInputElement>(null);
+  const programRef = useRef<HTMLInputElement>(null);
+  const gradYearRef = useRef<HTMLInputElement>(null);
+  const completenessRef = useRef<HTMLDivElement>(null);
   const { getAvatarUrl } = useAvatarUrls();
 
   useEffect(() => {
@@ -459,6 +479,38 @@ export default function MyProfilePage() {
     }
   }
 
+  // Profile completeness (derived from current profile state)
+  const completeness = profile ? computeCompleteness(profile) : null;
+
+  function handleAddField(key: MissingItem["key"]) {
+    if (!editing) {
+      handleEdit();
+    }
+    // Wait a tick so the form renders before scrolling
+    setTimeout(() => {
+      let target: HTMLElement | null = null;
+      switch (key) {
+        case "avatar":
+          target = fileInputRef.current;
+          fileInputRef.current?.click();
+          break;
+        case "headline":
+          target = headlineRef.current;
+          headlineRef.current?.focus();
+          break;
+        case "skills":
+          target = skillInputRef.current;
+          skillInputRef.current?.focus();
+          break;
+        case "program_year":
+          target = programRef.current;
+          programRef.current?.focus();
+          break;
+      }
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 100);
+  }
+
   // Determine which avatar image to show
   const displayAvatarUrl = avatarPreview || avatarSignedUrl;
 
@@ -500,6 +552,40 @@ export default function MyProfilePage() {
             }`}
           >
             {message.text}
+          </div>
+        )}
+
+        {/* Profile Completeness Card */}
+        {completeness && completeness.percent < 100 && !editing && (
+          <div
+            ref={completenessRef}
+            id="completeness"
+            className="mb-6 border rounded-lg p-4 bg-gray-50"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-gray-700">Profile completeness</h3>
+              <span className="text-sm font-semibold text-blue-600">{completeness.percent}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+              <div
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${completeness.percent}%` }}
+              />
+            </div>
+            <ul className="space-y-1.5">
+              {completeness.missing.map((item) => (
+                <li key={item.key} className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">{item.label}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleAddField(item.key)}
+                    className="text-blue-600 hover:underline text-xs font-medium"
+                  >
+                    Add
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
@@ -546,6 +632,7 @@ export default function MyProfilePage() {
             <div>
               <label className="block text-sm text-gray-500 mb-1">Headline</label>
               <input
+                ref={headlineRef}
                 type="text"
                 value={headline}
                 onChange={(e) => setHeadline(e.target.value)}
@@ -558,6 +645,7 @@ export default function MyProfilePage() {
             <div>
               <label className="block text-sm text-gray-500 mb-1">Program</label>
               <input
+                ref={programRef}
                 type="text"
                 value={program}
                 onChange={(e) => setProgram(e.target.value)}
@@ -567,6 +655,7 @@ export default function MyProfilePage() {
             <div>
               <label className="block text-sm text-gray-500 mb-1">Graduation Year</label>
               <input
+                ref={gradYearRef}
                 type="number"
                 value={gradYear}
                 onChange={(e) => setGradYear(e.target.value)}
@@ -581,6 +670,7 @@ export default function MyProfilePage() {
               </label>
               <div className="flex gap-2">
                 <input
+                  ref={skillInputRef}
                   type="text"
                   value={skillInput}
                   onChange={(e) => setSkillInput(e.target.value)}
