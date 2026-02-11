@@ -22,6 +22,7 @@ interface SearchResult {
   role: string | null;
   program: string | null;
   avatar_path: string | null;
+  skills: string[] | null;
 }
 
 export default function AppPage() {
@@ -142,7 +143,7 @@ export default function AppPage() {
         const pattern = `%${query.trim()}%`;
         const { data } = await supabase
           .from("profiles")
-          .select("id, full_name, role, program, avatar_path")
+          .select("id, full_name, role, program, avatar_path, skills")
           .or(`full_name.ilike.${pattern},program.ilike.${pattern}`)
           .limit(6);
 
@@ -301,6 +302,18 @@ export default function AppPage() {
                           )}
                           {result.program && (
                             <span className="text-xs text-gray-500">{result.program}</span>
+                          )}
+                          {result.skills && result.skills.length > 0 && (
+                            <>
+                              {result.skills.slice(0, 2).map((skill, i) => (
+                                <span
+                                  key={i}
+                                  className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-gray-700"
+                                >
+                                  {skill}
+                                </span>
+                              ))}
+                            </>
                           )}
                         </button>
                       </li>
