@@ -305,14 +305,17 @@ export default function AppPage() {
                           )}
                           {result.skills && result.skills.length > 0 && (
                             <>
-                              {result.skills.slice(0, 2).map((skill, i) => (
-                                <span
-                                  key={i}
-                                  className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-gray-700"
-                                >
-                                  {skill}
+                              <span
+                                title={result.skills[0]}
+                                className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-gray-700 max-w-[140px] truncate"
+                              >
+                                {result.skills[0]}
+                              </span>
+                              {result.skills.length > 1 && (
+                                <span className="text-xs text-gray-400 whitespace-nowrap">
+                                  +{result.skills.length - 1}
                                 </span>
-                              ))}
+                              )}
                             </>
                           )}
                         </button>
