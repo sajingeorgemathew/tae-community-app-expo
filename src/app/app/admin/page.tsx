@@ -55,8 +55,14 @@ interface UserProfile {
   program: string | null;
   grad_year: number | null;
   role: string | null;
+  is_listed_as_tutor: boolean;
   is_disabled: boolean;
   created_at: string;
+}
+
+interface TutorEdit {
+  role: string;
+  is_listed_as_tutor: boolean;
 }
 
 type AudienceFilter = "all" | "students" | "alumni";
@@ -88,6 +94,12 @@ export default function AdminPage() {
   const [togglingUser, setTogglingUser] = useState<string | null>(null);
   const [bulkDisabling, setBulkDisabling] = useState(false);
   const [deletingUserPosts, setDeletingUserPosts] = useState(false);
+
+  // Tutor management state
+  const [tutorSearch, setTutorSearch] = useState("");
+  const [tutorEdits, setTutorEdits] = useState<Record<string, TutorEdit>>({});
+  const [savingTutor, setSavingTutor] = useState<string | null>(null);
+  const [tutorSaveStatus, setTutorSaveStatus] = useState<Record<string, { type: "success" | "error"; message: string }>>({});
 
   // Avatar signed URL cache + resolver
   const { resolveAvatarUrls } = useAvatarUrls();
@@ -241,7 +253,7 @@ export default function AdminPage() {
   async function fetchUsers() {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, full_name, avatar_path, program, grad_year, role, is_disabled, created_at")
+      .select("id, full_name, avatar_path, program, grad_year, role, is_listed_as_tutor, is_disabled, created_at")
       .order("created_at", { ascending: false })
       .limit(50);
 
@@ -257,6 +269,7 @@ export default function AdminPage() {
       program: p.program,
       grad_year: p.grad_year,
       role: p.role,
+      is_listed_as_tutor: p.is_listed_as_tutor ?? false,
       is_disabled: p.is_disabled ?? false,
       created_at: p.created_at,
     }));
@@ -600,6 +613,113 @@ export default function AdminPage() {
     }
   }
 
+  // Tutor management helpers
+  const filteredTutorUsers = users.filter((user) => {
+    if (!tutorSearch.trim()) return true;
+    return user.full_name?.toLowerCase().includes(tutorSearch.toLowerCase());
+  });
+
+  function getTutorEdit(user: UserProfile): TutorEdit {
+    return tutorEdits[user.id] ?? { role: user.role ?? "member", is_listed_as_tutor: user.is_listed_as_tutor };
+  }
+
+  function hasTutorChanges(user: UserProfile): boolean {
+    const edit = tutorEdits[user.id];
+    if (!edit) return false;
+    return edit.role !== (user.role ?? "member") || edit.is_listed_as_tutor !== user.is_listed_as_tutor;
+  }
+
+  function handleTutorRoleChange(userId: string, newRole: string, user: UserProfile) {
+    const current = getTutorEdit(user);
+    setTutorEdits((prev) => ({
+      ...prev,
+      [userId]: {
+        role: newRole,
+        // If demoting to member, force listing off
+        is_listed_as_tutor: newRole === "member" ? false : current.is_listed_as_tutor,
+      },
+    }));
+    // Clear any previous status message
+    setTutorSaveStatus((prev) => {
+      const next = { ...prev };
+      delete next[userId];
+      return next;
+    });
+  }
+
+  function handleTutorListingToggle(userId: string, user: UserProfile) {
+    const current = getTutorEdit(user);
+    setTutorEdits((prev) => ({
+      ...prev,
+      [userId]: { ...current, is_listed_as_tutor: !current.is_listed_as_tutor },
+    }));
+    setTutorSaveStatus((prev) => {
+      const next = { ...prev };
+      delete next[userId];
+      return next;
+    });
+  }
+
+  async function handleTutorSave(userId: string, user: UserProfile) {
+    const edit = getTutorEdit(user);
+    if (!hasTutorChanges(user)) return;
+
+    setSavingTutor(userId);
+    setTutorSaveStatus((prev) => {
+      const next = { ...prev };
+      delete next[userId];
+      return next;
+    });
+
+    // If role is member, ensure listing is false
+    const finalListing = edit.role === "member" ? false : edit.is_listed_as_tutor;
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ role: edit.role, is_listed_as_tutor: finalListing })
+      .eq("id", userId);
+
+    if (error) {
+      console.error("Error updating tutor:", error.message);
+      setTutorSaveStatus((prev) => ({
+        ...prev,
+        [userId]: { type: "error", message: error.message },
+      }));
+      setSavingTutor(null);
+      return;
+    }
+
+    // Update local state
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === userId ? { ...u, role: edit.role, is_listed_as_tutor: finalListing } : u
+      )
+    );
+    // Clear edit state for this user
+    setTutorEdits((prev) => {
+      const next = { ...prev };
+      delete next[userId];
+      return next;
+    });
+    setTutorSaveStatus((prev) => ({
+      ...prev,
+      [userId]: { type: "success", message: "Saved" },
+    }));
+    setSavingTutor(null);
+
+    // Auto-clear success message after 3s
+    setTimeout(() => {
+      setTutorSaveStatus((prev) => {
+        if (prev[userId]?.type === "success") {
+          const next = { ...prev };
+          delete next[userId];
+          return next;
+        }
+        return prev;
+      });
+    }, 3000);
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
@@ -737,6 +857,115 @@ export default function AdminPage() {
               </li>
             ))}
           </ul>
+        )}
+      </section>
+
+      {/* Tutors Section */}
+      <section className="mb-12">
+        <h2 className="text-xl font-medium mb-4">Tutors</h2>
+
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="Search by name..."
+            value={tutorSearch}
+            onChange={(e) => setTutorSearch(e.target.value)}
+            className="w-full max-w-md px-3 py-2 border rounded text-sm"
+          />
+        </div>
+
+        {filteredTutorUsers.length === 0 ? (
+          <p className="text-gray-500">No users found.</p>
+        ) : (
+          <div className="border rounded overflow-hidden overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="text-left px-4 py-2">Name</th>
+                  <th className="text-left px-4 py-2">Program</th>
+                  <th className="text-left px-4 py-2">Grad Year</th>
+                  <th className="text-left px-4 py-2">Role</th>
+                  <th className="text-left px-4 py-2">Listed</th>
+                  <th className="text-left px-4 py-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTutorUsers.map((user) => {
+                  const edit = getTutorEdit(user);
+                  const changed = hasTutorChanges(user);
+                  const isSelf = user.id === currentUserId;
+                  const isAdminRole = (user.role ?? "member") === "admin";
+                  const status = tutorSaveStatus[user.id];
+
+                  return (
+                    <tr key={user.id} className="border-t">
+                      <td className="px-4 py-2">
+                        <div className="flex items-center gap-2">
+                          <Avatar
+                            fullName={user.full_name ?? "?"}
+                            avatarUrl={avatarUrls[user.id]}
+                            size="sm"
+                          />
+                          <span>{user.full_name ?? "No name"}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2">{user.program ?? "-"}</td>
+                      <td className="px-4 py-2">{user.grad_year ?? "-"}</td>
+                      <td className="px-4 py-2">
+                        {isSelf || isAdminRole ? (
+                          <span className="text-gray-500">{user.role ?? "member"}</span>
+                        ) : (
+                          <select
+                            value={edit.role}
+                            onChange={(e) => handleTutorRoleChange(user.id, e.target.value, user)}
+                            className="border rounded px-2 py-1 text-sm"
+                          >
+                            <option value="member">member</option>
+                            <option value="tutor">tutor</option>
+                          </select>
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        {isSelf || isAdminRole ? (
+                          <span className="text-gray-400">-</span>
+                        ) : (
+                          <input
+                            type="checkbox"
+                            checked={edit.is_listed_as_tutor}
+                            disabled={edit.role !== "tutor"}
+                            onChange={() => handleTutorListingToggle(user.id, user)}
+                            className="w-4 h-4"
+                          />
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        <div className="flex items-center gap-2">
+                          {!isSelf && !isAdminRole && (
+                            <button
+                              onClick={() => handleTutorSave(user.id, user)}
+                              disabled={!changed || savingTutor === user.id}
+                              className="px-3 py-1 rounded text-sm bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {savingTutor === user.id ? "Saving..." : "Save"}
+                            </button>
+                          )}
+                          {status && (
+                            <span
+                              className={`text-sm ${
+                                status.type === "success" ? "text-green-600" : "text-red-600"
+                              }`}
+                            >
+                              {status.message}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 
