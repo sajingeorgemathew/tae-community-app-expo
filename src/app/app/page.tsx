@@ -247,6 +247,12 @@ export default function AppPage() {
           >
             Directory
           </Link>
+          <Link
+            href="/app/faculty"
+            className="block px-4 py-2 rounded hover:bg-gray-100 text-gray-800"
+          >
+            Faculty
+          </Link>
           {isAdmin && (
             <Link
               href="/app/admin"
