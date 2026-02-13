@@ -6,18 +6,20 @@ import { supabase } from "@/src/lib/supabaseClient";
 import { useAvatarUrls } from "@/src/lib/avatarUrl";
 import Avatar from "@/src/components/Avatar";
 
-interface ProfileJoin {
-  full_name: string | null;
-  avatar_path: string | null;
-}
-
-interface QuestionRow {
+interface FeedRow {
   id: string;
   title: string;
   body: string;
-  author_id: string;
   created_at: string;
-  author: ProfileJoin | ProfileJoin[] | null;
+  author_id: string;
+  author_name: string | null;
+  author_avatar_path: string | null;
+  answer_count: number;
+  latest_answer_at: string | null;
+  latest_replier_id: string | null;
+  latest_replier_name: string | null;
+  latest_replier_avatar_path: string | null;
+  latest_replier_role: string | null;
 }
 
 interface Question {
@@ -28,6 +30,10 @@ interface Question {
   created_at: string;
   author_name: string;
   author_avatar_url: string | null;
+  answer_count: number;
+  latest_replier_name: string | null;
+  latest_replier_avatar_url: string | null;
+  latest_replier_role: string | null;
 }
 
 export default function QuestionsPage() {
@@ -44,11 +50,10 @@ export default function QuestionsPage() {
   const [submitting, setSubmitting] = useState(false);
 
   async function fetchQuestions() {
-    const { data, error: fetchError } = await supabase
-      .from("questions")
-      .select("id, title, body, author_id, created_at, author:profiles!questions_author_id_fkey(full_name, avatar_path)")
-      .order("created_at", { ascending: false })
-      .limit(30);
+    const { data, error: fetchError } = await supabase.rpc(
+      "get_questions_feed",
+      { limit_count: 30 }
+    );
 
     if (fetchError) {
       console.error("Error fetching questions:", fetchError.message, fetchError.details);
@@ -57,32 +62,38 @@ export default function QuestionsPage() {
       return;
     }
 
-    const rows = (data ?? []) as QuestionRow[];
+    const rows = (data ?? []) as FeedRow[];
 
-    // Resolve avatar URLs
-    const authorAvatars: { id: string; avatar_path: string | null }[] = [];
+    // Collect all unique avatar paths (authors + latest repliers)
+    const avatarProfiles: { id: string; avatar_path: string | null }[] = [];
     const seen = new Set<string>();
     for (const row of rows) {
       if (!seen.has(row.author_id)) {
         seen.add(row.author_id);
-        const profile = Array.isArray(row.author) ? row.author[0] : row.author;
-        authorAvatars.push({ id: row.author_id, avatar_path: profile?.avatar_path ?? null });
+        avatarProfiles.push({ id: row.author_id, avatar_path: row.author_avatar_path });
+      }
+      if (row.latest_replier_id && !seen.has(row.latest_replier_id)) {
+        seen.add(row.latest_replier_id);
+        avatarProfiles.push({ id: row.latest_replier_id, avatar_path: row.latest_replier_avatar_path });
       }
     }
-    const avatarUrlMap = await resolveAvatarUrls(authorAvatars);
+    const avatarUrlMap = await resolveAvatarUrls(avatarProfiles);
 
-    const mapped: Question[] = rows.map((row) => {
-      const profile = Array.isArray(row.author) ? row.author[0] : row.author;
-      return {
-        id: row.id,
-        title: row.title,
-        body: row.body,
-        author_id: row.author_id,
-        created_at: row.created_at,
-        author_name: profile?.full_name ?? "Unknown",
-        author_avatar_url: avatarUrlMap[row.author_id] ?? null,
-      };
-    });
+    const mapped: Question[] = rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      body: row.body,
+      author_id: row.author_id,
+      created_at: row.created_at,
+      author_name: row.author_name ?? "Unknown",
+      author_avatar_url: avatarUrlMap[row.author_id] ?? null,
+      answer_count: row.answer_count,
+      latest_replier_name: row.latest_replier_name ?? null,
+      latest_replier_avatar_url: row.latest_replier_id
+        ? avatarUrlMap[row.latest_replier_id] ?? null
+        : null,
+      latest_replier_role: row.latest_replier_role ?? null,
+    }));
 
     setQuestions(mapped);
     setLoading(false);
@@ -137,6 +148,47 @@ export default function QuestionsPage() {
   function truncate(text: string, max: number): string {
     if (text.length <= max) return text;
     return text.slice(0, max).trimEnd() + "…";
+  }
+
+  function renderReplyPreview(q: Question) {
+    if (q.answer_count === 0) {
+      return (
+        <span className="text-gray-400 italic">No replies yet</span>
+      );
+    }
+
+    const replierName = q.latest_replier_name ?? "Unknown";
+    const showBadge =
+      q.latest_replier_role === "tutor" || q.latest_replier_role === "admin";
+
+    if (q.answer_count === 1) {
+      return (
+        <span>
+          1 reply · Replied by{" "}
+          <span className="font-medium">{replierName}</span>
+          {showBadge && (
+            <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700 capitalize">
+              {q.latest_replier_role}
+            </span>
+          )}
+        </span>
+      );
+    }
+
+    return (
+      <span>
+        {q.answer_count} replies · Latest:{" "}
+        <span className="font-medium">{replierName}</span>
+        {showBadge && (
+          <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700 capitalize">
+            {q.latest_replier_role}
+          </span>
+        )}
+        {q.answer_count > 2 && (
+          <span className="text-gray-400"> + {q.answer_count - 1} more</span>
+        )}
+      </span>
+    );
   }
 
   if (loading) {
@@ -225,6 +277,9 @@ export default function QuestionsPage() {
                     </p>
                     <p className="text-xs text-gray-400 mt-2">
                       {q.author_name} · {formatDate(q.created_at)}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {renderReplyPreview(q)}
                     </p>
                   </div>
                 </div>
