@@ -36,7 +36,7 @@ interface AnswerRow {
   body: string;
   author_id: string;
   created_at: string;
-  profiles: ProfileJoin | ProfileJoin[] | null;
+  author: ProfileJoin | ProfileJoin[] | null;
 }
 
 export default function QuestionDetailPage() {
@@ -60,12 +60,12 @@ export default function QuestionDetailPage() {
   async function fetchAnswers() {
     const { data, error: fetchError } = await supabase
       .from("answers")
-      .select("id, body, author_id, created_at, profiles(full_name, avatar_path)")
+      .select("id, body, author_id, created_at, author:profiles!answers_author_id_fkey(full_name, avatar_path)")
       .eq("question_id", questionId)
       .order("created_at", { ascending: true });
 
     if (fetchError) {
-      console.error("Error fetching answers:", fetchError.message);
+      console.error("Error fetching answers:", fetchError.message, fetchError.details);
       return;
     }
 
@@ -76,7 +76,7 @@ export default function QuestionDetailPage() {
     for (const row of rows) {
       if (!seen.has(row.author_id)) {
         seen.add(row.author_id);
-        const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+        const profile = Array.isArray(row.author) ? row.author[0] : row.author;
         authorAvatars.push({ id: row.author_id, avatar_path: profile?.avatar_path ?? null });
       }
     }
@@ -84,7 +84,7 @@ export default function QuestionDetailPage() {
 
     setAnswers(
       rows.map((row) => {
-        const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+        const profile = Array.isArray(row.author) ? row.author[0] : row.author;
         return {
           id: row.id,
           body: row.body,
@@ -118,7 +118,7 @@ export default function QuestionDetailPage() {
       // Fetch question
       const { data: qData, error: qError } = await supabase
         .from("questions")
-        .select("id, title, body, author_id, created_at, profiles(full_name, avatar_path)")
+        .select("id, title, body, author_id, created_at, author:profiles!questions_author_id_fkey(full_name, avatar_path)")
         .eq("id", questionId)
         .single();
 
@@ -126,7 +126,7 @@ export default function QuestionDetailPage() {
         if (qError?.code === "PGRST116") {
           setNotFound(true);
         } else {
-          console.error("Error fetching question:", qError?.message);
+          console.error("Error fetching question:", qError?.message, qError?.details);
           setError("Failed to load question.");
         }
         setLoading(false);
@@ -139,10 +139,10 @@ export default function QuestionDetailPage() {
         body: string;
         author_id: string;
         created_at: string;
-        profiles: ProfileJoin | ProfileJoin[] | null;
+        author: ProfileJoin | ProfileJoin[] | null;
       };
 
-      const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+      const profile = Array.isArray(row.author) ? row.author[0] : row.author;
       const avatarUrlMap = await resolveAvatarUrls([
         { id: row.author_id, avatar_path: profile?.avatar_path ?? null },
       ]);

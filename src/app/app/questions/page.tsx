@@ -17,7 +17,7 @@ interface QuestionRow {
   body: string;
   author_id: string;
   created_at: string;
-  profiles: ProfileJoin | ProfileJoin[] | null;
+  author: ProfileJoin | ProfileJoin[] | null;
 }
 
 interface Question {
@@ -46,12 +46,12 @@ export default function QuestionsPage() {
   async function fetchQuestions() {
     const { data, error: fetchError } = await supabase
       .from("questions")
-      .select("id, title, body, author_id, created_at, profiles(full_name, avatar_path)")
+      .select("id, title, body, author_id, created_at, author:profiles!questions_author_id_fkey(full_name, avatar_path)")
       .order("created_at", { ascending: false })
       .limit(30);
 
     if (fetchError) {
-      console.error("Error fetching questions:", fetchError.message);
+      console.error("Error fetching questions:", fetchError.message, fetchError.details);
       setError("Failed to load questions.");
       setLoading(false);
       return;
@@ -65,14 +65,14 @@ export default function QuestionsPage() {
     for (const row of rows) {
       if (!seen.has(row.author_id)) {
         seen.add(row.author_id);
-        const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+        const profile = Array.isArray(row.author) ? row.author[0] : row.author;
         authorAvatars.push({ id: row.author_id, avatar_path: profile?.avatar_path ?? null });
       }
     }
     const avatarUrlMap = await resolveAvatarUrls(authorAvatars);
 
     const mapped: Question[] = rows.map((row) => {
-      const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+      const profile = Array.isArray(row.author) ? row.author[0] : row.author;
       return {
         id: row.id,
         title: row.title,
@@ -147,19 +147,6 @@ export default function QuestionsPage() {
     );
   }
 
-  if (error) {
-    return (
-      <main className="min-h-screen p-8">
-        <div className="mb-6">
-          <Link href="/app" className="text-blue-600 hover:underline text-sm">
-            &larr; Back to App
-          </Link>
-        </div>
-        <p className="text-red-600">{error}</p>
-      </main>
-    );
-  }
-
   return (
     <main className="min-h-screen p-8">
       <div className="mb-6">
@@ -167,6 +154,8 @@ export default function QuestionsPage() {
           &larr; Back to App
         </Link>
       </div>
+
+      {error && <p className="text-red-600 mb-4">{error}</p>}
 
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Questions</h1>
