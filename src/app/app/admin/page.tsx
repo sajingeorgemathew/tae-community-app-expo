@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/src/lib/supabaseClient";
 import { useAvatarUrls } from "@/src/lib/avatarUrl";
@@ -65,6 +65,12 @@ interface TutorEdit {
   is_listed_as_tutor: boolean;
 }
 
+interface Course {
+  id: string;
+  code: string;
+  title: string;
+}
+
 type AudienceFilter = "all" | "students" | "alumni";
 type TimeFilter = "1h" | "2h" | "3h" | "24h";
 
@@ -101,6 +107,14 @@ export default function AdminPage() {
   const [savingTutor, setSavingTutor] = useState<string | null>(null);
   const [tutorSaveStatus, setTutorSaveStatus] = useState<Record<string, { type: "success" | "error"; message: string }>>({});
 
+  // Course assignment state
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [tutorAssignments, setTutorAssignments] = useState<Record<string, string[]>>({}); // tutor_id -> course_id[]
+  const [tutorCourseEdits, setTutorCourseEdits] = useState<Record<string, string[]>>({}); // tutor_id -> selected course_id[]
+  const [savingCourses, setSavingCourses] = useState<string | null>(null);
+  const [courseSaveStatus, setCourseSaveStatus] = useState<Record<string, { type: "success" | "error"; message: string }>>({});
+  const [courseDropdownOpen, setCourseDropdownOpen] = useState<string | null>(null);
+
   // Avatar signed URL cache + resolver
   const { resolveAvatarUrls } = useAvatarUrls();
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({});
@@ -131,7 +145,7 @@ export default function AdminPage() {
       }
 
       setIsAdmin(true);
-      await Promise.all([fetchPosts(session.user.id), fetchUsers()]);
+      await Promise.all([fetchPosts(session.user.id), fetchUsers(), fetchCourses(), fetchTutorAssignments()]);
       setLoading(false);
     }
 
@@ -285,6 +299,41 @@ export default function AdminPage() {
       const urls = await resolveAvatarUrls(withAvatars);
       setAvatarUrls((prev) => ({ ...prev, ...urls }));
     }
+  }
+
+  async function fetchCourses() {
+    const { data, error } = await supabase
+      .from("courses")
+      .select("id, code, title")
+      .eq("is_active", true)
+      .order("code", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching courses:", error.message);
+      return;
+    }
+
+    setCourses((data ?? []) as Course[]);
+  }
+
+  async function fetchTutorAssignments() {
+    const { data, error } = await supabase
+      .from("tutor_course_assignments")
+      .select("tutor_id, course_id");
+
+    if (error) {
+      console.error("Error fetching tutor assignments:", error.message);
+      return;
+    }
+
+    const assignments: Record<string, string[]> = {};
+    for (const row of data ?? []) {
+      if (!assignments[row.tutor_id]) {
+        assignments[row.tutor_id] = [];
+      }
+      assignments[row.tutor_id].push(row.course_id);
+    }
+    setTutorAssignments(assignments);
   }
 
   // Re-fetch posts when time filter changes
@@ -720,6 +769,103 @@ export default function AdminPage() {
     }, 3000);
   }
 
+  // Course assignment helpers
+  function getTutorCourses(userId: string): string[] {
+    return tutorCourseEdits[userId] ?? tutorAssignments[userId] ?? [];
+  }
+
+  function hasCourseChanges(userId: string): boolean {
+    const edited = tutorCourseEdits[userId];
+    if (!edited) return false;
+    const original = tutorAssignments[userId] ?? [];
+    if (edited.length !== original.length) return true;
+    const sortedEdited = [...edited].sort();
+    const sortedOriginal = [...original].sort();
+    return sortedEdited.some((id, i) => id !== sortedOriginal[i]);
+  }
+
+  function handleCourseToggle(userId: string, courseId: string) {
+    const current = getTutorCourses(userId);
+    const updated = current.includes(courseId)
+      ? current.filter((id) => id !== courseId)
+      : [...current, courseId];
+    setTutorCourseEdits((prev) => ({ ...prev, [userId]: updated }));
+    setCourseSaveStatus((prev) => {
+      const next = { ...prev };
+      delete next[userId];
+      return next;
+    });
+  }
+
+  async function handleCourseSave(userId: string) {
+    if (!hasCourseChanges(userId)) return;
+
+    setSavingCourses(userId);
+    setCourseSaveStatus((prev) => {
+      const next = { ...prev };
+      delete next[userId];
+      return next;
+    });
+
+    const selected = getTutorCourses(userId);
+    const original = tutorAssignments[userId] ?? [];
+    const toAdd = selected.filter((id) => !original.includes(id));
+    const toRemove = original.filter((id) => !selected.includes(id));
+
+    try {
+      if (toAdd.length > 0) {
+        const { error } = await supabase
+          .from("tutor_course_assignments")
+          .upsert(
+            toAdd.map((course_id) => ({ tutor_id: userId, course_id })),
+            { onConflict: "tutor_id,course_id" }
+          );
+        if (error) throw error;
+      }
+
+      if (toRemove.length > 0) {
+        const { error } = await supabase
+          .from("tutor_course_assignments")
+          .delete()
+          .eq("tutor_id", userId)
+          .in("course_id", toRemove);
+        if (error) throw error;
+      }
+
+      // Update local state
+      setTutorAssignments((prev) => ({ ...prev, [userId]: selected }));
+      setTutorCourseEdits((prev) => {
+        const next = { ...prev };
+        delete next[userId];
+        return next;
+      });
+      setCourseSaveStatus((prev) => ({
+        ...prev,
+        [userId]: { type: "success", message: "Courses saved" },
+      }));
+
+      setTimeout(() => {
+        setCourseSaveStatus((prev) => {
+          if (prev[userId]?.type === "success") {
+            const next = { ...prev };
+            delete next[userId];
+            return next;
+          }
+          return prev;
+        });
+      }, 3000);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to save courses";
+      console.error("Error saving course assignments:", message);
+      setCourseSaveStatus((prev) => ({
+        ...prev,
+        [userId]: { type: "error", message },
+      }));
+    } finally {
+      setSavingCourses(null);
+    }
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
@@ -886,6 +1032,7 @@ export default function AdminPage() {
                   <th className="text-left px-4 py-2">Grad Year</th>
                   <th className="text-left px-4 py-2">Role</th>
                   <th className="text-left px-4 py-2">Listed</th>
+                  <th className="text-left px-4 py-2">Courses</th>
                   <th className="text-left px-4 py-2">Actions</th>
                 </tr>
               </thead>
@@ -896,6 +1043,11 @@ export default function AdminPage() {
                   const isSelf = user.id === currentUserId;
                   const isAdminRole = (user.role ?? "member") === "admin";
                   const status = tutorSaveStatus[user.id];
+                  const effectiveRole = edit.role;
+                  const isTutor = effectiveRole === "tutor";
+                  const selectedCourses = getTutorCourses(user.id);
+                  const courseChanged = hasCourseChanges(user.id);
+                  const cStatus = courseSaveStatus[user.id];
 
                   return (
                     <tr key={user.id} className="border-t">
@@ -936,6 +1088,68 @@ export default function AdminPage() {
                             onChange={() => handleTutorListingToggle(user.id, user)}
                             className="w-4 h-4"
                           />
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        {isSelf || isAdminRole ? (
+                          <span className="text-gray-400">-</span>
+                        ) : !isTutor ? (
+                          <span className="text-xs text-gray-400 italic">Promote to tutor to assign courses</span>
+                        ) : (
+                          <div className="flex flex-col gap-1">
+                            <div className="relative">
+                              <button
+                                onClick={() => setCourseDropdownOpen(courseDropdownOpen === user.id ? null : user.id)}
+                                className="border rounded px-2 py-1 text-sm text-left min-w-[160px] bg-white hover:bg-gray-50"
+                              >
+                                {selectedCourses.length === 0
+                                  ? "Select courses..."
+                                  : `${selectedCourses.length} course${selectedCourses.length > 1 ? "s" : ""} selected`}
+                              </button>
+                              {courseDropdownOpen === user.id && (
+                                <CourseDropdown
+                                  courses={courses}
+                                  selected={selectedCourses}
+                                  onToggle={(courseId) => handleCourseToggle(user.id, courseId)}
+                                  onClose={() => setCourseDropdownOpen(null)}
+                                />
+                              )}
+                            </div>
+                            {selectedCourses.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {selectedCourses.map((cid) => {
+                                  const c = courses.find((co) => co.id === cid);
+                                  return c ? (
+                                    <span key={cid} className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
+                                      {c.code}
+                                      <button
+                                        onClick={() => handleCourseToggle(user.id, cid)}
+                                        className="hover:text-blue-600"
+                                      >
+                                        x
+                                      </button>
+                                    </span>
+                                  ) : null;
+                                })}
+                              </div>
+                            )}
+                            {courseChanged && (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => handleCourseSave(user.id)}
+                                  disabled={savingCourses === user.id}
+                                  className="px-2 py-0.5 rounded text-xs bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                                >
+                                  {savingCourses === user.id ? "Saving..." : "Save Courses"}
+                                </button>
+                              </div>
+                            )}
+                            {cStatus && (
+                              <span className={`text-xs ${cStatus.type === "success" ? "text-green-600" : "text-red-600"}`}>
+                                {cStatus.message}
+                              </span>
+                            )}
+                          </div>
                         )}
                       </td>
                       <td className="px-4 py-2">
@@ -1100,5 +1314,56 @@ export default function AdminPage() {
         )}
       </section>
     </main>
+  );
+}
+
+function CourseDropdown({
+  courses,
+  selected,
+  onToggle,
+  onClose,
+}: {
+  courses: Course[];
+  selected: string[];
+  onToggle: (courseId: string) => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        onClose();
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={ref}
+      className="absolute z-10 mt-1 bg-white border rounded shadow-lg max-h-48 overflow-y-auto min-w-[200px]"
+    >
+      {courses.length === 0 ? (
+        <div className="px-3 py-2 text-sm text-gray-400">No courses available</div>
+      ) : (
+        courses.map((course) => (
+          <label
+            key={course.id}
+            className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-sm"
+          >
+            <input
+              type="checkbox"
+              checked={selected.includes(course.id)}
+              onChange={() => onToggle(course.id)}
+              className="w-4 h-4"
+            />
+            <span className="font-medium">{course.code}</span>
+            <span className="text-gray-500">{course.title}</span>
+          </label>
+        ))
+      )}
+    </div>
   );
 }
