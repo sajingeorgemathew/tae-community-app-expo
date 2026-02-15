@@ -236,7 +236,7 @@ export default function AppPage() {
             Messages
           </Link>
           <Link
-            href="/app/feed?new=1"
+            href="/app/feed/new"
             className="block px-4 py-2 rounded hover:bg-gray-100 text-gray-800"
           >
             New Post
