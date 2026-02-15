@@ -33,6 +33,7 @@ export default function AppPage() {
   const [posts, setPosts] = useState<FeedPreviewPost[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
   const [profileIncomplete, setProfileIncomplete] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Quick search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -119,6 +120,22 @@ export default function AppPage() {
       }
 
       setPostsLoading(false);
+
+      // Fetch unread messages count
+      try {
+        const { data: convos } = await supabase.rpc("get_my_conversations");
+        if (Array.isArray(convos)) {
+          const total = convos.reduce(
+            (sum: number, c: { unread_count?: number }) => sum + (c.unread_count ?? 0),
+            0
+          );
+          setUnreadCount(total);
+        }
+      } catch (err) {
+        if (process.env.NODE_ENV === "development") {
+          console.error("Failed to fetch unread count", err);
+        }
+      }
     }
 
     checkSession();
@@ -231,9 +248,14 @@ export default function AppPage() {
           </Link>
           <Link
             href="/app/messages"
-            className="block px-4 py-2 rounded hover:bg-gray-100 text-gray-800"
+            className="block px-4 py-2 rounded hover:bg-gray-100 text-gray-800 flex items-center justify-between"
           >
             Messages
+            {unreadCount > 0 && (
+              <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-red-500 rounded-full">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
           </Link>
           <Link
             href="/app/feed/new"
