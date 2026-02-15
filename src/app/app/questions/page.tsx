@@ -106,6 +106,18 @@ export default function QuestionsPage() {
       } = await supabase.auth.getSession();
       if (session) {
         setCurrentUserId(session.user.id);
+
+        // Mark Q&A activity as seen for badge tracking
+        try {
+          await supabase
+            .from("qa_activity_reads")
+            .upsert(
+              { user_id: session.user.id, last_seen_at: new Date().toISOString() },
+              { onConflict: "user_id" }
+            );
+        } catch (err) {
+          console.error("Failed to update qa_activity_reads", err);
+        }
       }
       await fetchQuestions();
     }

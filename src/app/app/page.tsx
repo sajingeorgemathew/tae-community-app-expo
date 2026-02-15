@@ -34,6 +34,7 @@ export default function AppPage() {
   const [postsLoading, setPostsLoading] = useState(true);
   const [profileIncomplete, setProfileIncomplete] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [qaActivityCount, setQaActivityCount] = useState(0);
 
   // Quick search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -61,7 +62,7 @@ export default function AppPage() {
       // Check admin role + profile completeness
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, avatar_path, headline, skills, program, grad_year")
+        .select("role, avatar_path, headline, skills, program, grad_year, created_at")
         .eq("id", session.user.id)
         .single();
 
@@ -134,6 +135,39 @@ export default function AppPage() {
       } catch (err) {
         if (process.env.NODE_ENV === "development") {
           console.error("Failed to fetch unread count", err);
+        }
+      }
+
+      // Fetch Q&A activity badge count
+      try {
+        const { data: readRow } = await supabase
+          .from("qa_activity_reads")
+          .select("last_seen_at")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+
+        // If no row, user has never visited questions — use profile created_at or now()
+        const lastSeen = readRow?.last_seen_at
+          ?? profile?.created_at
+          ?? new Date().toISOString();
+
+        const [questionsResult, answersResult] = await Promise.all([
+          supabase
+            .from("questions")
+            .select("id", { count: "exact", head: true })
+            .gt("created_at", lastSeen),
+          supabase
+            .from("answers")
+            .select("id", { count: "exact", head: true })
+            .gt("created_at", lastSeen),
+        ]);
+
+        const newQuestions = questionsResult.count ?? 0;
+        const newAnswers = answersResult.count ?? 0;
+        setQaActivityCount(newQuestions + newAnswers);
+      } catch (err) {
+        if (process.env.NODE_ENV === "development") {
+          console.error("Failed to fetch Q&A activity count", err);
         }
       }
     }
@@ -277,9 +311,14 @@ export default function AppPage() {
           </Link>
           <Link
             href="/app/questions"
-            className="block px-4 py-2 rounded hover:bg-gray-100 text-gray-800"
+            className="block px-4 py-2 rounded hover:bg-gray-100 text-gray-800 flex items-center justify-between"
           >
             Questions
+            {qaActivityCount > 0 && (
+              <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-red-500 rounded-full">
+                {qaActivityCount > 99 ? "99+" : qaActivityCount}
+              </span>
+            )}
           </Link>
           {isAdmin && (
             <Link
