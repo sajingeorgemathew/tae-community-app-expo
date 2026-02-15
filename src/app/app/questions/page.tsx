@@ -6,6 +6,8 @@ import { supabase } from "@/src/lib/supabaseClient";
 import { useAvatarUrls } from "@/src/lib/avatarUrl";
 import Avatar from "@/src/components/Avatar";
 
+const ONLINE_THRESHOLD_MS = 3 * 60 * 1000; // 3 minutes
+
 interface FeedRow {
   id: string;
   title: string;
@@ -42,6 +44,7 @@ export default function QuestionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { resolveAvatarUrls } = useAvatarUrls();
+  const [onlineSet, setOnlineSet] = useState<Set<string>>(new Set());
 
   // Form state
   const [showForm, setShowForm] = useState(false);
@@ -78,6 +81,27 @@ export default function QuestionsPage() {
       }
     }
     const avatarUrlMap = await resolveAvatarUrls(avatarProfiles);
+
+    // Ticket 53: fetch presence for authors
+    const authorIds = [...seen];
+    try {
+      const { data: presenceData } = await supabase
+        .from("presence")
+        .select("user_id, last_seen_at")
+        .in("user_id", authorIds);
+      if (presenceData) {
+        const now = Date.now();
+        const online = new Set<string>();
+        for (const row of presenceData) {
+          if (now - new Date(row.last_seen_at).getTime() <= ONLINE_THRESHOLD_MS) {
+            online.add(row.user_id);
+          }
+        }
+        setOnlineSet(online);
+      }
+    } catch {
+      // Presence fetch failed — show no dots
+    }
 
     const mapped: Question[] = rows.map((row) => ({
       id: row.id,
@@ -277,11 +301,19 @@ export default function QuestionsPage() {
                 className="block border rounded p-4 hover:bg-gray-50 transition-colors"
               >
                 <div className="flex items-start gap-3">
-                  <Avatar
-                    fullName={q.author_name}
-                    avatarUrl={q.author_avatar_url}
-                    size="md"
-                  />
+                  <div className="relative">
+                    <Avatar
+                      fullName={q.author_name}
+                      avatarUrl={q.author_avatar_url}
+                      size="md"
+                    />
+                    {onlineSet.has(q.author_id) && (
+                      <span
+                        className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
+                        title="Online"
+                      />
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium">{q.title}</p>
                     <p className="text-sm text-gray-600 mt-1">

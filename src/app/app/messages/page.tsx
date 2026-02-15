@@ -14,6 +14,7 @@ const ACCEPTED_VIDEO_TYPES = ["video/mp4", "video/webm"];
 
 const CONVERSATION_POLL_INTERVAL = 6000; // 6 seconds
 const MESSAGES_POLL_INTERVAL = 3000; // 3 seconds
+const ONLINE_THRESHOLD_MS = 3 * 60 * 1000; // 3 minutes
 
 interface Conversation {
   conversation_id: string;
@@ -83,6 +84,9 @@ function MessagesContent() {
   // Ticket 38.1: avatar signed URL resolution (cached per page session)
   const { resolveAvatarUrls } = useAvatarUrls();
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({});
+
+  // Ticket 53: online presence for conversation partners
+  const [onlineSet, setOnlineSet] = useState<Set<string>>(new Set());
 
   // Ref to track currently-open conversation for use inside stable callbacks
   const conversationIdRef = useRef<string | null>(conversationId);
@@ -215,6 +219,27 @@ function MessagesContent() {
       setAvatarUrls
     );
   }, [conversations, resolveAvatarUrls]);
+
+  // Ticket 53: fetch presence for conversation partners
+  useEffect(() => {
+    if (conversations.length === 0) return;
+    const ids = conversations.map((c) => c.other_user_id);
+    supabase
+      .from("presence")
+      .select("user_id, last_seen_at")
+      .in("user_id", ids)
+      .then(({ data }) => {
+        if (!data) return;
+        const now = Date.now();
+        const online = new Set<string>();
+        for (const row of data) {
+          if (now - new Date(row.last_seen_at).getTime() <= ONLINE_THRESHOLD_MS) {
+            online.add(row.user_id);
+          }
+        }
+        setOnlineSet(online);
+      });
+  }, [conversations]);
 
   // Fetch messages (reusable for initial load + polling)
   const fetchMessages = useCallback(async (convId: string, isInitial = false) => {
@@ -750,11 +775,19 @@ function MessagesContent() {
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <Avatar
-                        fullName={convo.other_user_name}
-                        avatarUrl={avatarUrls[convo.other_user_id] ?? null}
-                        size="sm"
-                      />
+                      <div className="relative">
+                        <Avatar
+                          fullName={convo.other_user_name}
+                          avatarUrl={avatarUrls[convo.other_user_id] ?? null}
+                          size="sm"
+                        />
+                        {onlineSet.has(convo.other_user_id) && (
+                          <span
+                            className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
+                            title="Online"
+                          />
+                        )}
+                      </div>
                       {convo.is_unread && (
                         <span className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0" />
                       )}
@@ -796,11 +829,19 @@ function MessagesContent() {
             {/* Thread header — Ticket 38.2: avatar + name */}
             <div className="p-3 border-b bg-gray-50 font-medium flex items-center gap-2">
               {selectedConvo && (
-                <Avatar
-                  fullName={selectedConvo.other_user_name}
-                  avatarUrl={avatarUrls[selectedConvo.other_user_id] ?? null}
-                  size="sm"
-                />
+                <div className="relative">
+                  <Avatar
+                    fullName={selectedConvo.other_user_name}
+                    avatarUrl={avatarUrls[selectedConvo.other_user_id] ?? null}
+                    size="sm"
+                  />
+                  {onlineSet.has(selectedConvo.other_user_id) && (
+                    <span
+                      className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
+                      title="Online"
+                    />
+                  )}
+                </div>
               )}
               {selectedConvo?.other_user_name || "Conversation"}
             </div>

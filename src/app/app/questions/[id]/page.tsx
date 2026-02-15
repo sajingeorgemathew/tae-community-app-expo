@@ -7,6 +7,8 @@ import { supabase } from "@/src/lib/supabaseClient";
 import { useAvatarUrls } from "@/src/lib/avatarUrl";
 import Avatar from "@/src/components/Avatar";
 
+const ONLINE_THRESHOLD_MS = 3 * 60 * 1000; // 3 minutes
+
 interface ProfileJoin {
   full_name: string | null;
   avatar_path: string | null;
@@ -52,6 +54,7 @@ export default function QuestionDetailPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const { resolveAvatarUrls } = useAvatarUrls();
+  const [onlineSet, setOnlineSet] = useState<Set<string>>(new Set());
 
   // Answer form
   const [answerBody, setAnswerBody] = useState("");
@@ -164,6 +167,31 @@ export default function QuestionDetailPage() {
     init();
   }, [questionId]);
 
+  // Ticket 53: fetch presence for question + answer authors
+  useEffect(() => {
+    if (!question) return;
+    const ids = new Set<string>([question.author_id]);
+    for (const a of answers) ids.add(a.author_id);
+    const idArray = [...ids];
+    if (idArray.length === 0) return;
+
+    supabase
+      .from("presence")
+      .select("user_id, last_seen_at")
+      .in("user_id", idArray)
+      .then(({ data }) => {
+        if (!data) return;
+        const now = Date.now();
+        const online = new Set<string>();
+        for (const row of data) {
+          if (now - new Date(row.last_seen_at).getTime() <= ONLINE_THRESHOLD_MS) {
+            online.add(row.user_id);
+          }
+        }
+        setOnlineSet(online);
+      });
+  }, [question, answers]);
+
   async function handleSubmitAnswer(e: React.FormEvent) {
     e.preventDefault();
     if (!currentUserId || !answerBody.trim()) return;
@@ -242,11 +270,19 @@ export default function QuestionDetailPage() {
       <div className="border rounded p-6 mb-8">
         <h1 className="text-2xl font-semibold mb-3">{question.title}</h1>
         <div className="flex items-center gap-3 mb-4">
-          <Avatar
-            fullName={question.author_name}
-            avatarUrl={question.author_avatar_url}
-            size="sm"
-          />
+          <div className="relative">
+            <Avatar
+              fullName={question.author_name}
+              avatarUrl={question.author_avatar_url}
+              size="sm"
+            />
+            {onlineSet.has(question.author_id) && (
+              <span
+                className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
+                title="Online"
+              />
+            )}
+          </div>
           <span className="text-sm text-gray-600">
             {question.author_name} · {formatDate(question.created_at)}
           </span>
@@ -266,11 +302,19 @@ export default function QuestionDetailPage() {
           {answers.map((a) => (
             <li key={a.id} className="border rounded p-4">
               <div className="flex items-center gap-3 mb-2">
-                <Avatar
-                  fullName={a.author_name}
-                  avatarUrl={a.author_avatar_url}
-                  size="sm"
-                />
+                <div className="relative">
+                  <Avatar
+                    fullName={a.author_name}
+                    avatarUrl={a.author_avatar_url}
+                    size="sm"
+                  />
+                  {onlineSet.has(a.author_id) && (
+                    <span
+                      className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
+                      title="Online"
+                    />
+                  )}
+                </div>
                 <span className="text-sm text-gray-600">
                   {a.author_name} · {formatDate(a.created_at)}
                 </span>
