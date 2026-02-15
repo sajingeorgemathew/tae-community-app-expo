@@ -7,6 +7,8 @@ import { supabase } from "@/src/lib/supabaseClient";
 import { useAvatarUrls } from "@/src/lib/avatarUrl";
 import Avatar from "@/src/components/Avatar";
 
+const ONLINE_THRESHOLD_MS = 3 * 60 * 1000; // 3 minutes
+
 interface Profile {
   id: string;
   full_name: string | null;
@@ -27,6 +29,7 @@ function DirectoryContent() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [messagingProfileId, setMessagingProfileId] = useState<string | null>(null);
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({});
+  const [onlineSet, setOnlineSet] = useState<Set<string>>(new Set());
   const { resolveAvatarUrls } = useAvatarUrls();
 
   useEffect(() => {
@@ -59,6 +62,24 @@ function DirectoryContent() {
       // Resolve signed avatar URLs via cached helper
       const urls = await resolveAvatarUrls(profileRows);
       setAvatarUrls(urls);
+
+      // Fetch presence for these profiles
+      const ids = profileRows.map((p) => p.id);
+      const { data: presenceData } = await supabase
+        .from("presence")
+        .select("user_id, last_seen_at")
+        .in("user_id", ids);
+
+      if (presenceData) {
+        const now = Date.now();
+        const online = new Set<string>();
+        for (const row of presenceData) {
+          if (now - new Date(row.last_seen_at).getTime() <= ONLINE_THRESHOLD_MS) {
+            online.add(row.user_id);
+          }
+        }
+        setOnlineSet(online);
+      }
 
       setLoading(false);
     }
@@ -142,11 +163,19 @@ function DirectoryContent() {
                 className="block border rounded p-4 hover:bg-gray-50 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <Avatar
-                    fullName={profile.full_name || "?"}
-                    avatarUrl={avatarUrls[profile.id]}
-                    size="md"
-                  />
+                  <div className="relative">
+                    <Avatar
+                      fullName={profile.full_name || "?"}
+                      avatarUrl={avatarUrls[profile.id]}
+                      size="md"
+                    />
+                    {onlineSet.has(profile.id) && (
+                      <span
+                        className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
+                        title="Online"
+                      />
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium">
                       {profile.full_name || "Unnamed Member"}
