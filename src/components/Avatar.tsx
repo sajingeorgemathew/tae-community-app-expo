@@ -1,7 +1,7 @@
 interface AvatarProps {
   fullName: string;
   avatarUrl?: string | null;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
   className?: string;
 }
 
@@ -9,6 +9,7 @@ const SIZE_CLASSES = {
   sm: "w-8 h-8 text-xs",
   md: "w-10 h-10 text-sm",
   lg: "w-20 h-20 text-2xl",
+  xl: "w-28 h-28 text-3xl",
 } as const;
 
 function getInitials(name: string): string {
