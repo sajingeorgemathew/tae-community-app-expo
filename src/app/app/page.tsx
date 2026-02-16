@@ -112,6 +112,7 @@ export default function AppPage() {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(true);
   const [profileIncomplete, setProfileIncomplete] = useState(false);
+  const [missingFields, setMissingFields] = useState<string[]>([]);
 
   /* ---------- recent posts ---------- */
   const [posts, setPosts] = useState<RecentPost[]>([]);
@@ -164,6 +165,12 @@ export default function AppPage() {
         const hasProgramYear = !!(profile.program as string | null)?.trim() && !!profile.grad_year;
         if (!(hasAvatar && hasHeadline && hasSkills && hasProgramYear)) {
           setProfileIncomplete(true);
+          const missing: string[] = [];
+          if (!hasAvatar) missing.push("Profile photo");
+          if (!hasHeadline) missing.push("Headline");
+          if (!hasSkills) missing.push("Skills");
+          if (!hasProgramYear) missing.push("Program & grad year");
+          setMissingFields(missing);
         }
       }
 
@@ -342,14 +349,6 @@ export default function AppPage() {
             Here&apos;s what&apos;s happening in your community today.
           </p>
 
-          {profileIncomplete && (
-            <Link
-              href="/app/me#completeness"
-              className="mt-3 inline-block text-sm text-blue-300 hover:text-white underline transition"
-            >
-              Your profile is incomplete &mdash; finish it &rarr;
-            </Link>
-          )}
         </div>
 
         <div className="flex gap-3">
@@ -367,6 +366,53 @@ export default function AppPage() {
           </Link>
         </div>
       </section>
+
+      {/* ---- Profile Completion Banner ---- */}
+      {profileIncomplete && (
+        <section className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="flex">
+            {/* Navy accent stripe */}
+            <div className="w-1.5 bg-slate-800 shrink-0" />
+
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 px-6 py-5 flex-1">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                  </svg>
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Finish setting up your profile
+                  </h3>
+                </div>
+                <p className="text-sm text-gray-500">
+                  A complete profile helps others find and connect with you.
+                </p>
+
+                {missingFields.length > 0 && (
+                  <ul className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+                    {missingFields.map((field) => (
+                      <li key={field} className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                        {field}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <Link
+                href="/app/me"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-800 text-white px-5 py-2.5 text-sm font-medium hover:bg-slate-700 transition whitespace-nowrap shrink-0"
+              >
+                Complete Profile
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                </svg>
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ---- Quick Search ---- */}
       <div ref={searchRef} className="relative max-w-md">
