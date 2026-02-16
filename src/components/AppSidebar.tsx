@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { supabase } from "@/src/lib/supabaseClient";
 
 export default function AppSidebar() {
@@ -106,40 +107,75 @@ export default function AppSidebar() {
   }
 
   return (
-    <nav className="hidden md:flex w-56 flex-shrink-0 flex-col space-y-2 p-4">
-      {links.map((link) => (
-        <Link
-          key={link.href}
-          href={link.href}
-          className={`block px-4 py-2 rounded hover:bg-gray-100 text-gray-800 flex items-center justify-between ${
-            isActive(link.href) ? "bg-gray-100 font-medium" : ""
-          }`}
-        >
-          {link.label}
-          {link.badge != null && link.badge > 0 && (
-            <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-red-500 rounded-full">
-              {link.badge > 99 ? "99+" : link.badge}
-            </span>
-          )}
+    <nav className="hidden md:flex w-60 flex-shrink-0 flex-col bg-white border-r border-gray-200">
+      {/* Logo */}
+      <div className="px-5 pt-6 pb-4">
+        <Link href="/app" className="flex items-center gap-3">
+          <Image
+            src="/tae-logo.jpg"
+            alt="TAE Logo"
+            width={36}
+            height={36}
+            className="rounded-lg"
+          />
+          <span className="text-lg font-bold text-slate-900 tracking-tight">
+            TAE Community
+          </span>
         </Link>
-      ))}
-      {isAdmin && (
-        <Link
-          href="/app/admin"
-          className={`block px-4 py-2 rounded hover:bg-gray-100 text-red-600 ${
-            isActive("/app/admin") ? "bg-gray-100 font-medium" : ""
-          }`}
+      </div>
+
+      <div className="border-b border-gray-100 mx-4" />
+
+      {/* Nav links */}
+      <div className="flex-1 flex flex-col gap-1 px-3 py-4">
+        {links.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
+              isActive(link.href)
+                ? "bg-slate-900 text-white font-medium"
+                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+            }`}
+          >
+            {link.label}
+            {link.badge != null && link.badge > 0 && (
+              <span
+                className={`ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold rounded-full ${
+                  isActive(link.href)
+                    ? "bg-white text-slate-900"
+                    : "bg-red-500 text-white"
+                }`}
+              >
+                {link.badge > 99 ? "99+" : link.badge}
+              </span>
+            )}
+          </Link>
+        ))}
+        {isAdmin && (
+          <Link
+            href="/app/admin"
+            className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+              isActive("/app/admin")
+                ? "bg-slate-900 text-white font-medium"
+                : "text-red-600 hover:bg-red-50"
+            }`}
+          >
+            Admin Dashboard
+          </Link>
+        )}
+      </div>
+
+      {/* Logout */}
+      <div className="border-t border-gray-100 mx-4" />
+      <div className="px-3 py-4">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
         >
-          Admin Dashboard
-        </Link>
-      )}
-      <hr className="my-3" />
-      <button
-        onClick={handleLogout}
-        className="block w-full text-left px-4 py-2 rounded hover:bg-gray-100 text-gray-500 text-sm"
-      >
-        Log Out
-      </button>
+          Log Out
+        </button>
+      </div>
     </nav>
   );
 }

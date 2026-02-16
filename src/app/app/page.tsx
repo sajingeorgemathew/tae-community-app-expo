@@ -407,7 +407,7 @@ export default function AppPage() {
   const firstName = displayName.split(" ")[0];
 
   return (
-    <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-8">
+    <div className="p-6 md:p-8 space-y-8">
       {/* ---- Hero Banner ---- */}
       <section className="rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-blue-900 px-8 py-10 text-white flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
