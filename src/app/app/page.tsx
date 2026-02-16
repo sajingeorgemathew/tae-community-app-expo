@@ -7,6 +7,7 @@ import { supabase } from "@/src/lib/supabaseClient";
 import { useAvatarUrls } from "@/src/lib/avatarUrl";
 import Avatar from "@/src/components/Avatar";
 import StatCard from "@/src/components/StatCard";
+import { useAppMetrics } from "@/src/lib/AppMetricsContext";
 import type { User } from "@supabase/supabase-js";
 
 /* ------------------------------------------------------------------ */
@@ -44,8 +45,6 @@ interface SearchResult {
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
-
-const ONLINE_THRESHOLD_MS = 3 * 60 * 1000; // 3 minutes
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -106,17 +105,13 @@ function UsersIcon() {
 export default function AppPage() {
   const router = useRouter();
   const { resolveAvatarUrls } = useAvatarUrls();
+  const { unreadMessagesCount, qaActivityCount, onlineMembersCount } = useAppMetrics();
 
   /* ---------- auth / profile ---------- */
   const [user, setUser] = useState<User | null>(null);
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(true);
   const [profileIncomplete, setProfileIncomplete] = useState(false);
-
-  /* ---------- stat cards ---------- */
-  const [unreadCount, setUnreadCount] = useState<number | null>(null);
-  const [qaActivityCount, setQaActivityCount] = useState<number | null>(null);
-  const [onlineCount, setOnlineCount] = useState<number | null>(null);
 
   /* ---------- recent posts ---------- */
   const [posts, setPosts] = useState<RecentPost[]>([]);
@@ -173,77 +168,6 @@ export default function AppPage() {
       }
 
       setLoading(false);
-
-      // --- Stat cards (fire in parallel, each independent) ---
-
-      // Unread messages
-      (async () => {
-        try {
-          const { data: convos } = await supabase.rpc("get_my_conversations");
-          if (Array.isArray(convos)) {
-            const total = convos.reduce(
-              (sum: number, c: { unread_count?: number }) => sum + (c.unread_count ?? 0),
-              0
-            );
-            setUnreadCount(total);
-          } else {
-            setUnreadCount(0);
-          }
-        } catch {
-          setUnreadCount(0);
-        }
-      })();
-
-      // Q&A activity
-      (async () => {
-        try {
-          const { data: readRow } = await supabase
-            .from("qa_activity_reads")
-            .select("last_seen_at")
-            .eq("user_id", session.user.id)
-            .maybeSingle();
-
-          const lastSeen =
-            readRow?.last_seen_at ?? profile?.created_at ?? new Date().toISOString();
-
-          const [qRes, aRes] = await Promise.all([
-            supabase
-              .from("questions")
-              .select("id", { count: "exact", head: true })
-              .gt("created_at", lastSeen),
-            supabase
-              .from("answers")
-              .select("id", { count: "exact", head: true })
-              .gt("created_at", lastSeen),
-          ]);
-
-          setQaActivityCount((qRes.count ?? 0) + (aRes.count ?? 0));
-        } catch {
-          setQaActivityCount(0);
-        }
-      })();
-
-      // Online members
-      (async () => {
-        try {
-          const { data: presenceRows } = await supabase
-            .from("presence")
-            .select("user_id, last_seen_at");
-
-          if (presenceRows) {
-            const now = Date.now();
-            const count = presenceRows.filter(
-              (r: { last_seen_at: string }) =>
-                now - new Date(r.last_seen_at).getTime() <= ONLINE_THRESHOLD_MS
-            ).length;
-            setOnlineCount(count);
-          } else {
-            setOnlineCount(0);
-          }
-        } catch {
-          setOnlineCount(0);
-        }
-      })();
 
       // --- Recent Posts (3) ---
       (async () => {
@@ -524,19 +448,19 @@ export default function AppPage() {
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="Unread Messages"
-          value={unreadCount ?? "\u2014"}
+          value={unreadMessagesCount}
           icon={<MailIcon />}
           href="/app/messages"
         />
         <StatCard
           label="New Q&A Activity"
-          value={qaActivityCount ?? "\u2014"}
+          value={qaActivityCount}
           icon={<QaIcon />}
           href="/app/questions"
         />
         <StatCard
           label="Online Members"
-          value={onlineCount ?? "\u2014"}
+          value={onlineMembersCount}
           icon={<WifiIcon />}
         />
         <StatCard

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/src/lib/supabaseClient";
 import { useAvatarUrls } from "@/src/lib/avatarUrl";
 import Avatar from "@/src/components/Avatar";
+import { useAppMetrics } from "@/src/lib/AppMetricsContext";
 
 const ONLINE_THRESHOLD_MS = 3 * 60 * 1000; // 3 minutes
 
@@ -45,6 +46,7 @@ export default function QuestionsPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { resolveAvatarUrls } = useAvatarUrls();
   const [onlineSet, setOnlineSet] = useState<Set<string>>(new Set());
+  const { refreshMetrics } = useAppMetrics();
 
   // Form state
   const [showForm, setShowForm] = useState(false);
@@ -139,6 +141,8 @@ export default function QuestionsPage() {
               { user_id: session.user.id, last_seen_at: new Date().toISOString() },
               { onConflict: "user_id" }
             );
+          // Refresh shared metrics so sidebar badge updates immediately
+          refreshMetrics();
         } catch (err) {
           console.error("Failed to update qa_activity_reads", err);
         }

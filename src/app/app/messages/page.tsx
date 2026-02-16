@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase } from "@/src/lib/supabaseClient";
 import Avatar from "@/src/components/Avatar";
 import { useAvatarUrls } from "@/src/lib/avatarUrl";
+import { useAppMetrics } from "@/src/lib/AppMetricsContext";
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_VIDEO_SIZE = 35 * 1024 * 1024; // 35MB
@@ -48,6 +49,7 @@ function MessagesContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const conversationId = searchParams.get("c");
+  const { refreshMetrics } = useAppMetrics();
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -123,6 +125,9 @@ function MessagesContent() {
 
     // Mark this conversation as processed to prevent re-runs
     lastMarkedRef.current = convId;
+
+    // Refresh shared metrics so sidebar badge updates
+    refreshMetrics();
 
     // Update local state to reflect read status
     setConversations((prev) =>

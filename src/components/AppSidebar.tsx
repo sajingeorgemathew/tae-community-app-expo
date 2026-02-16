@@ -7,6 +7,7 @@ import Image from "next/image";
 import { supabase } from "@/src/lib/supabaseClient";
 import { useAvatarUrls } from "@/src/lib/avatarUrl";
 import Avatar from "@/src/components/Avatar";
+import { useAppMetrics } from "@/src/lib/AppMetricsContext";
 
 interface UserInfo {
   full_name: string;
@@ -18,10 +19,9 @@ export default function AppSidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const [isAdmin, setIsAdmin] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [qaActivityCount, setQaActivityCount] = useState(0);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const { getAvatarUrl } = useAvatarUrls();
+  const { unreadMessagesCount, qaActivityCount } = useAppMetrics();
 
   useEffect(() => {
     async function loadSidebarData() {
@@ -33,7 +33,7 @@ export default function AppSidebar() {
       // Fetch profile (role, name, avatar)
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, created_at, full_name, avatar_path")
+        .select("role, full_name, avatar_path")
         .eq("id", session.user.id)
         .single();
 
@@ -53,49 +53,6 @@ export default function AppSidebar() {
           avatarUrl,
         });
       }
-
-      // Fetch unread messages count
-      try {
-        const { data: convos } = await supabase.rpc("get_my_conversations");
-        if (Array.isArray(convos)) {
-          const total = convos.reduce(
-            (sum: number, c: { unread_count?: number }) => sum + (c.unread_count ?? 0),
-            0
-          );
-          setUnreadCount(total);
-        }
-      } catch {
-        // silent
-      }
-
-      // Fetch Q&A activity badge count
-      try {
-        const { data: readRow } = await supabase
-          .from("qa_activity_reads")
-          .select("last_seen_at")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-
-        const lastSeen =
-          readRow?.last_seen_at ?? profile?.created_at ?? new Date().toISOString();
-
-        const [questionsResult, answersResult] = await Promise.all([
-          supabase
-            .from("questions")
-            .select("id", { count: "exact", head: true })
-            .gt("created_at", lastSeen),
-          supabase
-            .from("answers")
-            .select("id", { count: "exact", head: true })
-            .gt("created_at", lastSeen),
-        ]);
-
-        const newQuestions = questionsResult.count ?? 0;
-        const newAnswers = answersResult.count ?? 0;
-        setQaActivityCount(newQuestions + newAnswers);
-      } catch {
-        // silent
-      }
     }
 
     loadSidebarData();
@@ -112,7 +69,7 @@ export default function AppSidebar() {
     {
       href: "/app/messages",
       label: "Messages",
-      badge: unreadCount,
+      badge: unreadMessagesCount,
     },
     { href: "/app/feed", label: "New Post", linkTo: "/app/feed/new" },
     { href: "/app/directory", label: "Directory" },
