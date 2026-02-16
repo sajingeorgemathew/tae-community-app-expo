@@ -5,6 +5,14 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { supabase } from "@/src/lib/supabaseClient";
+import { useAvatarUrls } from "@/src/lib/avatarUrl";
+import Avatar from "@/src/components/Avatar";
+
+interface UserInfo {
+  full_name: string;
+  role: string;
+  avatarUrl: string | null;
+}
 
 export default function AppSidebar() {
   const router = useRouter();
@@ -12,6 +20,8 @@ export default function AppSidebar() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [qaActivityCount, setQaActivityCount] = useState(0);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const { getAvatarUrl } = useAvatarUrls();
 
   useEffect(() => {
     async function loadSidebarData() {
@@ -20,15 +30,28 @@ export default function AppSidebar() {
       } = await supabase.auth.getSession();
       if (!session) return;
 
-      // Check admin role
+      // Fetch profile (role, name, avatar)
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, created_at")
+        .select("role, created_at, full_name, avatar_path")
         .eq("id", session.user.id)
         .single();
 
       if (profile?.role === "admin") {
         setIsAdmin(true);
+      }
+
+      // Build user info for sidebar block
+      if (profile) {
+        let avatarUrl: string | null = null;
+        if (profile.avatar_path) {
+          avatarUrl = await getAvatarUrl(profile.avatar_path);
+        }
+        setUserInfo({
+          full_name: profile.full_name ?? "User",
+          role: profile.role ?? "member",
+          avatarUrl,
+        });
       }
 
       // Fetch unread messages count
@@ -84,14 +107,14 @@ export default function AppSidebar() {
   }
 
   const links = [
-    { href: "/app", label: "Dashboard" },
-    { href: "/app/me", label: "My Profile" },
+    { href: "/app", label: "Dashboard", exact: true },
+    { href: "/app/me", label: "My Profile", exact: true },
     {
       href: "/app/messages",
       label: "Messages",
       badge: unreadCount,
     },
-    { href: "/app/feed/new", label: "New Post" },
+    { href: "/app/feed", label: "New Post", linkTo: "/app/feed/new" },
     { href: "/app/directory", label: "Directory" },
     { href: "/app/faculty", label: "Faculty" },
     {
@@ -101,9 +124,9 @@ export default function AppSidebar() {
     },
   ];
 
-  function isActive(href: string) {
-    if (href === "/app") return pathname === "/app";
-    return pathname.startsWith(href);
+  function isActive(href: string, exact?: boolean) {
+    if (exact) return pathname === href;
+    return pathname === href || pathname.startsWith(href + "/");
   }
 
   return (
@@ -128,30 +151,33 @@ export default function AppSidebar() {
 
       {/* Nav links */}
       <div className="flex-1 flex flex-col gap-1 px-3 py-4">
-        {links.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
-              isActive(link.href)
-                ? "bg-slate-900 text-white font-medium"
-                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-            }`}
-          >
-            {link.label}
-            {link.badge != null && link.badge > 0 && (
-              <span
-                className={`ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold rounded-full ${
-                  isActive(link.href)
-                    ? "bg-white text-slate-900"
-                    : "bg-red-500 text-white"
-                }`}
-              >
-                {link.badge > 99 ? "99+" : link.badge}
-              </span>
-            )}
-          </Link>
-        ))}
+        {links.map((link) => {
+          const active = isActive(link.href, link.exact);
+          return (
+            <Link
+              key={link.href}
+              href={link.linkTo ?? link.href}
+              className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
+                active
+                  ? "bg-slate-900 text-white font-medium"
+                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+              }`}
+            >
+              {link.label}
+              {link.badge != null && link.badge > 0 && (
+                <span
+                  className={`ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold rounded-full ${
+                    active
+                      ? "bg-white text-slate-900"
+                      : "bg-red-500 text-white"
+                  }`}
+                >
+                  {link.badge > 99 ? "99+" : link.badge}
+                </span>
+              )}
+            </Link>
+          );
+        })}
         {isAdmin && (
           <Link
             href="/app/admin"
@@ -166,9 +192,26 @@ export default function AppSidebar() {
         )}
       </div>
 
-      {/* Logout */}
+      {/* User block + Logout */}
       <div className="border-t border-gray-100 mx-4" />
-      <div className="px-3 py-4">
+      <div className="px-3 py-4 flex flex-col gap-2">
+        {userInfo && (
+          <div className="flex items-center gap-3 px-3 py-2">
+            <Avatar
+              fullName={userInfo.full_name}
+              avatarUrl={userInfo.avatarUrl}
+              size="sm"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-slate-900 truncate">
+                {userInfo.full_name}
+              </p>
+              <p className="text-xs text-gray-500 capitalize">
+                {userInfo.role}
+              </p>
+            </div>
+          </div>
+        )}
         <button
           onClick={handleLogout}
           className="w-full flex items-center px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
