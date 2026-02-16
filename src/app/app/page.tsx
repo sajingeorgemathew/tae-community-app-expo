@@ -29,12 +29,9 @@ export default function AppPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [posts, setPosts] = useState<FeedPreviewPost[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
   const [profileIncomplete, setProfileIncomplete] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [qaActivityCount, setQaActivityCount] = useState(0);
 
   // Quick search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,16 +56,12 @@ export default function AppPage() {
 
       setUser(session.user);
 
-      // Check admin role + profile completeness
+      // Check profile completeness
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, avatar_path, headline, skills, program, grad_year, created_at")
+        .select("avatar_path, headline, skills, program, grad_year")
         .eq("id", session.user.id)
         .single();
-
-      if (profile?.role === "admin") {
-        setIsAdmin(true);
-      }
 
       if (profile) {
         const hasAvatar = !!profile.avatar_path;
@@ -121,55 +114,6 @@ export default function AppPage() {
       }
 
       setPostsLoading(false);
-
-      // Fetch unread messages count
-      try {
-        const { data: convos } = await supabase.rpc("get_my_conversations");
-        if (Array.isArray(convos)) {
-          const total = convos.reduce(
-            (sum: number, c: { unread_count?: number }) => sum + (c.unread_count ?? 0),
-            0
-          );
-          setUnreadCount(total);
-        }
-      } catch (err) {
-        if (process.env.NODE_ENV === "development") {
-          console.error("Failed to fetch unread count", err);
-        }
-      }
-
-      // Fetch Q&A activity badge count
-      try {
-        const { data: readRow } = await supabase
-          .from("qa_activity_reads")
-          .select("last_seen_at")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-
-        // If no row, user has never visited questions — use profile created_at or now()
-        const lastSeen = readRow?.last_seen_at
-          ?? profile?.created_at
-          ?? new Date().toISOString();
-
-        const [questionsResult, answersResult] = await Promise.all([
-          supabase
-            .from("questions")
-            .select("id", { count: "exact", head: true })
-            .gt("created_at", lastSeen),
-          supabase
-            .from("answers")
-            .select("id", { count: "exact", head: true })
-            .gt("created_at", lastSeen),
-        ]);
-
-        const newQuestions = questionsResult.count ?? 0;
-        const newAnswers = answersResult.count ?? 0;
-        setQaActivityCount(newQuestions + newAnswers);
-      } catch (err) {
-        if (process.env.NODE_ENV === "development") {
-          console.error("Failed to fetch Q&A activity count", err);
-        }
-      }
     }
 
     checkSession();
@@ -234,11 +178,6 @@ export default function AppPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    router.push("/login");
-  }
-
   function formatDate(iso: string): string {
     const d = new Date(iso);
     return d.toLocaleDateString(undefined, {
@@ -251,19 +190,19 @@ export default function AppPage() {
 
   function truncate(text: string, max: number): string {
     if (text.length <= max) return text;
-    return text.slice(0, max).trimEnd() + "…";
+    return text.slice(0, max).trimEnd() + "\u2026";
   }
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <p>Loading...</p>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen p-8">
+    <div className="p-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-semibold">TAE Community App</h1>
         <span className="text-sm text-gray-500">
@@ -271,214 +210,144 @@ export default function AppPage() {
         </span>
       </div>
 
-      <div className="flex gap-8">
-        {/* Left Rail */}
-        <nav className="w-56 flex-shrink-0 space-y-2">
-          <Link
-            href="/app/me"
-            className="block px-4 py-2 rounded hover:bg-gray-100 text-gray-800"
-          >
-            My Profile
-          </Link>
-          <Link
-            href="/app/messages"
-            className="block px-4 py-2 rounded hover:bg-gray-100 text-gray-800 flex items-center justify-between"
-          >
-            Messages
-            {unreadCount > 0 && (
-              <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-red-500 rounded-full">
-                {unreadCount > 99 ? "99+" : unreadCount}
-              </span>
-            )}
-          </Link>
-          <Link
-            href="/app/feed/new"
-            className="block px-4 py-2 rounded hover:bg-gray-100 text-gray-800"
-          >
-            New Post
-          </Link>
-          <Link
-            href="/app/directory"
-            className="block px-4 py-2 rounded hover:bg-gray-100 text-gray-800"
-          >
-            Directory
-          </Link>
-          <Link
-            href="/app/faculty"
-            className="block px-4 py-2 rounded hover:bg-gray-100 text-gray-800"
-          >
-            Faculty
-          </Link>
-          <Link
-            href="/app/questions"
-            className="block px-4 py-2 rounded hover:bg-gray-100 text-gray-800 flex items-center justify-between"
-          >
-            Questions
-            {qaActivityCount > 0 && (
-              <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-red-500 rounded-full">
-                {qaActivityCount > 99 ? "99+" : qaActivityCount}
-              </span>
-            )}
-          </Link>
-          {isAdmin && (
-            <Link
-              href="/app/admin"
-              className="block px-4 py-2 rounded hover:bg-gray-100 text-red-600"
-            >
-              Admin Dashboard
-            </Link>
-          )}
-          <hr className="my-3" />
-          <button
-            onClick={handleLogout}
-            className="block w-full text-left px-4 py-2 rounded hover:bg-gray-100 text-gray-500 text-sm"
-          >
-            Log Out
-          </button>
-        </nav>
+      <h2 className="text-xl font-semibold mb-4">Welcome</h2>
 
-        {/* Main Panel */}
-        <div className="flex-1 min-w-0">
-          <h2 className="text-xl font-semibold mb-4">Welcome</h2>
+      {profileIncomplete && (
+        <Link
+          href="/app/me#completeness"
+          className="block mb-4 px-4 py-2.5 rounded border border-blue-200 bg-blue-50 text-sm text-blue-700 hover:bg-blue-100 transition max-w-md"
+        >
+          Your profile is incomplete.{" "}
+          <span className="font-medium underline">Finish your profile &rarr;</span>
+        </Link>
+      )}
 
-          {profileIncomplete && (
-            <Link
-              href="/app/me#completeness"
-              className="block mb-4 px-4 py-2.5 rounded border border-blue-200 bg-blue-50 text-sm text-blue-700 hover:bg-blue-100 transition max-w-md"
-            >
-              Your profile is incomplete.{" "}
-              <span className="font-medium underline">Finish your profile &rarr;</span>
-            </Link>
-          )}
-
-          {/* Quick Search */}
-          <div ref={searchRef} className="relative mb-6 max-w-md">
-            <input
-              type="text"
-              placeholder="Search members..."
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              onFocus={() => {
-                if (searchQuery.trim() && searchResults.length > 0) setShowDropdown(true);
-              }}
-              className="w-full border rounded px-3 py-2"
-            />
-            {showDropdown && searchQuery.trim() && (
-              <div className="absolute z-10 mt-1 w-full bg-white border rounded shadow-lg max-h-80 overflow-y-auto">
-                {searchLoading ? (
-                  <p className="px-4 py-3 text-sm text-gray-400">Searching...</p>
-                ) : searchResults.length === 0 ? (
-                  <p className="px-4 py-3 text-sm text-gray-500">No matching members.</p>
-                ) : (
-                  <ul>
-                    {searchResults.map((result) => (
-                      <li key={result.id}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowDropdown(false);
-                            router.push(`/app/profile/${result.id}`);
-                          }}
-                          className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-2"
-                        >
-                          <Avatar
-                            fullName={result.full_name || "?"}
-                            avatarUrl={searchAvatarUrls[result.id]}
-                            size="sm"
-                          />
-                          <span className="font-medium text-sm">
-                            {result.full_name || "Unnamed Member"}
+      {/* Quick Search */}
+      <div ref={searchRef} className="relative mb-6 max-w-md">
+        <input
+          type="text"
+          placeholder="Search members..."
+          value={searchQuery}
+          onChange={(e) => handleSearch(e.target.value)}
+          onFocus={() => {
+            if (searchQuery.trim() && searchResults.length > 0) setShowDropdown(true);
+          }}
+          className="w-full border rounded px-3 py-2"
+        />
+        {showDropdown && searchQuery.trim() && (
+          <div className="absolute z-10 mt-1 w-full bg-white border rounded shadow-lg max-h-80 overflow-y-auto">
+            {searchLoading ? (
+              <p className="px-4 py-3 text-sm text-gray-400">Searching...</p>
+            ) : searchResults.length === 0 ? (
+              <p className="px-4 py-3 text-sm text-gray-500">No matching members.</p>
+            ) : (
+              <ul>
+                {searchResults.map((result) => (
+                  <li key={result.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowDropdown(false);
+                        router.push(`/app/profile/${result.id}`);
+                      }}
+                      className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <Avatar
+                        fullName={result.full_name || "?"}
+                        avatarUrl={searchAvatarUrls[result.id]}
+                        size="sm"
+                      />
+                      <span className="font-medium text-sm">
+                        {result.full_name || "Unnamed Member"}
+                      </span>
+                      {result.role && (
+                        <span className="text-xs bg-gray-200 px-2 py-0.5 rounded">
+                          {result.role}
+                        </span>
+                      )}
+                      {result.program && (
+                        <span className="text-xs text-gray-500">{result.program}</span>
+                      )}
+                      {result.skills && result.skills.length > 0 && (
+                        <>
+                          <span
+                            title={result.skills[0]}
+                            className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-gray-700 max-w-[140px] truncate whitespace-nowrap overflow-hidden"
+                          >
+                            {result.skills[0]}
                           </span>
-                          {result.role && (
-                            <span className="text-xs bg-gray-200 px-2 py-0.5 rounded">
-                              {result.role}
+                          {result.skills.length > 1 && (
+                            <span className="text-xs text-gray-400 whitespace-nowrap">
+                              +{result.skills.length - 1}
                             </span>
                           )}
-                          {result.program && (
-                            <span className="text-xs text-gray-500">{result.program}</span>
-                          )}
-                          {result.skills && result.skills.length > 0 && (
-                            <>
-                              <span
-                                title={result.skills[0]}
-                                className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-gray-700 max-w-[140px] truncate whitespace-nowrap overflow-hidden"
-                              >
-                                {result.skills[0]}
-                              </span>
-                              {result.skills.length > 1 && (
-                                <span className="text-xs text-gray-400 whitespace-nowrap">
-                                  +{result.skills.length - 1}
-                                </span>
-                              )}
-                            </>
-                          )}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <Link
-                  href={`/app/directory?query=${encodeURIComponent(searchQuery.trim())}`}
-                  className="block px-4 py-2 text-sm text-blue-600 hover:bg-gray-50 border-t text-center"
-                >
-                  See all results
-                </Link>
-              </div>
+                        </>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
-          </div>
-
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-700">Recent Posts</h3>
             <Link
-              href="/app/feed"
-              className="text-blue-600 hover:underline text-sm"
+              href={`/app/directory?query=${encodeURIComponent(searchQuery.trim())}`}
+              className="block px-4 py-2 text-sm text-blue-600 hover:bg-gray-50 border-t text-center"
             >
-              Go to Feed &rarr;
+              See all results
             </Link>
           </div>
-
-          {postsLoading ? (
-            <p className="text-gray-400 text-sm">Loading posts...</p>
-          ) : posts.length === 0 ? (
-            <p className="text-gray-500">No posts yet.</p>
-          ) : (
-            <ul className="space-y-3">
-              {posts.map((post) => (
-                <li
-                  key={post.id}
-                  className="border rounded p-4 hover:bg-gray-50"
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium text-sm">
-                      {post.author_name}
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      {formatDate(post.created_at)}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-700">
-                    {truncate(post.content, 150)}
-                  </p>
-                  {post.has_media && (
-                    <span className="text-xs text-gray-400 mt-1 inline-block">
-                      📎 Media
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <div className="mt-6">
-            <Link
-              href="/app/feed"
-              className="inline-block bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700 transition"
-            >
-              Go to Feed
-            </Link>
-          </div>
-        </div>
+        )}
       </div>
-    </main>
+
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-lg font-medium text-gray-700">Recent Posts</h3>
+        <Link
+          href="/app/feed"
+          className="text-blue-600 hover:underline text-sm"
+        >
+          Go to Feed &rarr;
+        </Link>
+      </div>
+
+      {postsLoading ? (
+        <p className="text-gray-400 text-sm">Loading posts...</p>
+      ) : posts.length === 0 ? (
+        <p className="text-gray-500">No posts yet.</p>
+      ) : (
+        <ul className="space-y-3">
+          {posts.map((post) => (
+            <li
+              key={post.id}
+              className="border rounded p-4 hover:bg-gray-50"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-medium text-sm">
+                  {post.author_name}
+                </span>
+                <span className="text-xs text-gray-400">
+                  {formatDate(post.created_at)}
+                </span>
+              </div>
+              <p className="text-sm text-gray-700">
+                {truncate(post.content, 150)}
+              </p>
+              {post.has_media && (
+                <span className="text-xs text-gray-400 mt-1 inline-block">
+                  📎 Media
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="mt-6">
+        <Link
+          href="/app/feed"
+          className="inline-block bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700 transition"
+        >
+          Go to Feed
+        </Link>
+      </div>
+    </div>
   );
 }
