@@ -45,6 +45,342 @@ interface Message {
   attachments?: Attachment[];
 }
 
+/* ── Extracted sub-components ── */
+
+function ConversationItem({
+  convo,
+  isActive,
+  avatarUrl,
+  isOnline,
+  onClick,
+  formatTimestamp,
+}: {
+  convo: Conversation;
+  isActive: boolean;
+  avatarUrl: string | null;
+  isOnline: boolean;
+  onClick: () => void;
+  formatTimestamp: (d: string | null) => string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full text-left px-4 py-3 transition-colors duration-150 ${
+        isActive
+          ? "bg-[#1e293b]/10 border-l-[3px] border-l-[#1e293b]"
+          : "hover:bg-slate-50 border-l-[3px] border-l-transparent"
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <div className="relative shrink-0">
+          <Avatar
+            fullName={convo.other_user_name}
+            avatarUrl={avatarUrl}
+            size="sm"
+          />
+          {isOnline && (
+            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <p
+              className={`truncate text-sm ${
+                convo.is_unread ? "font-semibold text-[#1e293b]" : "font-medium text-slate-700"
+              }`}
+            >
+              {convo.other_user_name}
+            </p>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {convo.last_message_at && (
+                <span className={`text-[11px] ${convo.is_unread ? "text-[#1e293b] font-medium" : "text-slate-400"}`}>
+                  {formatTimestamp(convo.last_message_at)}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p
+              className={`text-xs truncate flex-1 ${
+                convo.is_unread ? "font-medium text-slate-600" : "text-slate-400"
+              }`}
+            >
+              {convo.last_message_content ||
+                (convo.last_message_at ? "Attachment" : "No messages yet")}
+            </p>
+            {convo.is_unread && convo.unread_count > 0 && (
+              <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-[#1e293b] rounded-full">
+                {convo.unread_count > 99 ? "99+" : convo.unread_count}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function MessageBubble({
+  msg,
+  isOwn,
+  selectedConvo,
+  avatarUrl,
+  editingMessageId,
+  editContent,
+  setEditContent,
+  startEdit,
+  cancelEdit,
+  saveEdit,
+  handleDelete,
+  formatMessageTime,
+  getTickStatus,
+  handleMediaLoad,
+}: {
+  msg: Message;
+  isOwn: boolean;
+  selectedConvo: Conversation | undefined;
+  avatarUrl: string | null;
+  editingMessageId: string | null;
+  editContent: string;
+  setEditContent: (v: string) => void;
+  startEdit: (msg: Message) => void;
+  cancelEdit: () => void;
+  saveEdit: (id: string) => void;
+  handleDelete: (id: string) => void;
+  formatMessageTime: (d: string) => string;
+  getTickStatus: (msg: Message) => "sent" | "delivered" | "read";
+  handleMediaLoad: () => void;
+}) {
+  return (
+    <div className={`group flex items-end gap-2 ${isOwn ? "justify-end" : "justify-start"}`}>
+      {/* Avatar for incoming messages */}
+      {!isOwn && selectedConvo && (
+        <Avatar
+          fullName={selectedConvo.other_user_name}
+          avatarUrl={avatarUrl}
+          size="sm"
+          className="mb-1"
+        />
+      )}
+
+      {/* Edit/Delete actions for own messages (show on hover) */}
+      {isOwn && editingMessageId !== msg.id && (
+        <div className="hidden group-hover:flex items-center gap-1 mr-1">
+          <button
+            onClick={() => startEdit(msg)}
+            className="text-slate-400 hover:text-slate-600 p-1 rounded"
+            title="Edit"
+          >
+            &#9998;
+          </button>
+          <button
+            onClick={() => handleDelete(msg.id)}
+            className="text-slate-400 hover:text-red-500 p-1 rounded"
+            title="Delete"
+          >
+            &#128465;
+          </button>
+        </div>
+      )}
+
+      <div
+        className={`max-w-[70%] px-4 py-2.5 ${
+          isOwn
+            ? "bg-[#1e293b] text-white rounded-2xl rounded-br-md"
+            : "bg-slate-100 text-slate-900 rounded-2xl rounded-bl-md"
+        }`}
+      >
+        {/* Inline edit mode */}
+        {editingMessageId === msg.id ? (
+          <div>
+            <textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              className="w-full rounded-lg p-2 text-slate-900 text-sm resize-none border border-slate-200 focus:outline-none focus:border-[#1e293b]"
+              rows={3}
+              autoFocus
+            />
+            <div className="flex gap-2 mt-1.5 justify-end">
+              <button
+                onClick={cancelEdit}
+                className="text-xs px-3 py-1 rounded-lg bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => saveEdit(msg.id)}
+                disabled={!editContent.trim()}
+                className="text-xs px-3 py-1 rounded-lg bg-white text-[#1e293b] font-medium hover:bg-slate-50 disabled:opacity-50 transition-colors"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {msg.content && (
+              <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                {msg.content}
+              </p>
+            )}
+            {msg.attachments?.map((att) => (
+              <div key={att.id} className="mt-2">
+                {att.type === "image" && att.signedUrl && (
+                  <img
+                    src={att.signedUrl}
+                    alt="attachment"
+                    className="max-w-full rounded-lg"
+                    style={{ maxWidth: 300 }}
+                    onLoad={handleMediaLoad}
+                  />
+                )}
+                {att.type === "video" && att.signedUrl && (
+                  <video
+                    src={att.signedUrl}
+                    controls
+                    className="max-w-full rounded-lg"
+                    style={{ maxWidth: 300, maxHeight: 200 }}
+                    onLoadedMetadata={handleMediaLoad}
+                  />
+                )}
+              </div>
+            ))}
+          </>
+        )}
+        <p
+          className={`text-[11px] mt-1 flex items-center gap-1 ${
+            isOwn ? "text-slate-400 justify-end" : "text-slate-400"
+          }`}
+        >
+          {formatMessageTime(msg.created_at)}
+          {msg.updated_at && (
+            <span className="opacity-70" title="Edited">(edited)</span>
+          )}
+          {isOwn && (() => {
+            const tick = getTickStatus(msg);
+            if (tick === "read")
+              return <span className="text-emerald-400" title="Read">{"✓✓"}</span>;
+            if (tick === "delivered")
+              return <span className="opacity-70" title="Delivered">{"✓✓"}</span>;
+            return <span className="opacity-70" title="Sent">{"✓"}</span>;
+          })()}
+        </p>
+      </div>
+
+      {/* Avatar for own messages */}
+      {isOwn && selectedConvo && (
+        <div className="w-8 shrink-0" />
+      )}
+    </div>
+  );
+}
+
+function Composer({
+  messageInput,
+  setMessageInput,
+  sending,
+  selectedFile,
+  fileError,
+  fileInputRef,
+  handleSend,
+  handleFileSelect,
+  clearSelectedFile,
+  formatFileSize,
+}: {
+  messageInput: string;
+  setMessageInput: (v: string) => void;
+  sending: boolean;
+  selectedFile: File | null;
+  fileError: string | null;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  handleSend: (e: React.FormEvent) => void;
+  handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  clearSelectedFile: () => void;
+  formatFileSize: (b: number) => string;
+}) {
+  return (
+    <div className="p-4 border-t border-slate-200 bg-white">
+      {selectedFile && (
+        <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-slate-50 rounded-lg text-sm border border-slate-200">
+          <span className="truncate flex-1 text-slate-600">
+            {selectedFile.name} ({formatFileSize(selectedFile.size)})
+          </span>
+          <button
+            type="button"
+            onClick={clearSelectedFile}
+            className="text-slate-400 hover:text-red-500 transition-colors"
+          >
+            &times;
+          </button>
+        </div>
+      )}
+      {fileError && (
+        <p className="text-red-500 text-xs mb-2 px-1">{fileError}</p>
+      )}
+      <form onSubmit={handleSend} className="flex items-end gap-2">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={sending}
+          className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-slate-400 hover:text-[#1e293b] hover:bg-slate-100 disabled:opacity-50 transition-colors"
+          title="Attach file"
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <line x1="10" y1="4" x2="10" y2="16" />
+            <line x1="4" y1="10" x2="16" y2="10" />
+          </svg>
+        </button>
+        <div className="flex-1 relative">
+          <textarea
+            value={messageInput}
+            onChange={(e) => setMessageInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                if ((messageInput.trim() || selectedFile) && !sending) {
+                  handleSend(e);
+                }
+              }
+            }}
+            placeholder="Type a message..."
+            className="w-full border border-slate-200 rounded-2xl px-4 py-2.5 pr-12 resize-none text-sm focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b]/20 transition-colors placeholder:text-slate-400"
+            rows={1}
+            disabled={sending}
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={(!messageInput.trim() && !selectedFile) || sending}
+          className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-[#1e293b] text-white hover:bg-[#334155] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          {sending ? (
+            <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="40" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
+          )}
+        </button>
+      </form>
+      <p className="text-[11px] text-slate-400 mt-1.5 text-center">
+        Press Enter to send, Shift + Enter for new line
+      </p>
+    </div>
+  );
+}
+
+/* ── Main component ── */
+
 function MessagesContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -752,113 +1088,116 @@ function MessagesContent() {
   );
 
   if (loadingConvos) {
-    return <p className="text-gray-500">Loading...</p>;
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+        <div className="flex items-center gap-3 text-slate-400">
+          <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="40" strokeLinecap="round" />
+          </svg>
+          <span className="text-sm">Loading conversations...</span>
+        </div>
+      </div>
+    );
   }
 
   if (!currentUserId) {
-    return <p className="text-gray-500">Please sign in to view messages.</p>;
+    return <p className="text-slate-500">Please sign in to view messages.</p>;
   }
 
   return (
-    <div className="flex h-[calc(100vh-200px)] min-h-[400px] border rounded overflow-hidden">
+    <div className="app-card flex h-[calc(100vh-200px)] min-h-[400px] overflow-hidden">
       {/* Left pane: Conversation list */}
-      <div className="w-1/3 min-w-[200px] max-w-[300px] border-r flex flex-col">
-        <div className="p-3 border-b bg-gray-50 font-medium">Conversations</div>
+      <div className="w-[340px] min-w-[280px] border-r border-slate-200 flex flex-col bg-white">
+        <div className="px-5 py-4 border-b border-slate-200">
+          <h2 className="text-base font-semibold text-[#1e293b]">Conversations</h2>
+        </div>
         <div className="flex-1 overflow-y-auto">
           {conversations.length === 0 ? (
-            <p className="p-4 text-gray-500 text-sm">No conversations yet.</p>
+            <div className="p-6 text-center">
+              <p className="text-slate-400 text-sm">No conversations yet.</p>
+            </div>
           ) : (
-            <ul>
+            <div className="divide-y divide-slate-100">
               {conversations.map((convo) => (
-                <li key={convo.conversation_id}>
-                  <button
-                    onClick={() => selectConversation(convo.conversation_id)}
-                    className={`w-full text-left p-3 border-b hover:bg-gray-50 transition-colors ${
-                      convo.conversation_id === conversationId
-                        ? "bg-blue-50"
-                        : ""
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="relative">
-                        <Avatar
-                          fullName={convo.other_user_name}
-                          avatarUrl={avatarUrls[convo.other_user_id] ?? null}
-                          size="sm"
-                        />
-                        {onlineSet.has(convo.other_user_id) && (
-                          <span
-                            className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
-                            title="Online"
-                          />
-                        )}
-                      </div>
-                      {convo.is_unread && (
-                        <span className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0" />
-                      )}
-                      <p className={`truncate flex-1 ${convo.is_unread ? "font-bold" : "font-medium"}`}>
-                        {convo.other_user_name}
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between mt-1">
-                      <p className={`text-sm truncate flex-1 ${convo.is_unread ? "font-semibold text-gray-700" : "text-gray-500"}`}>
-                        {convo.last_message_content ||
-                          (convo.last_message_at ? "📎 Attachment" : "No messages yet")}
-                      </p>
-                      {convo.last_message_at && (
-                        <span className="text-xs text-gray-400 ml-2">
-                          {formatConversationTimestamp(convo.last_message_at)}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                </li>
+                <ConversationItem
+                  key={convo.conversation_id}
+                  convo={convo}
+                  isActive={convo.conversation_id === conversationId}
+                  avatarUrl={avatarUrls[convo.other_user_id] ?? null}
+                  isOnline={onlineSet.has(convo.other_user_id)}
+                  onClick={() => selectConversation(convo.conversation_id)}
+                  formatTimestamp={formatConversationTimestamp}
+                />
               ))}
-            </ul>
+            </div>
           )}
         </div>
       </div>
 
       {/* Right pane: Thread */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col bg-white">
         {!conversationId ? (
-          <div className="flex-1 flex items-center justify-center text-gray-500">
-            Select a conversation to start messaging
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-3">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-slate-300">
+              <path d="M8 36V12a4 4 0 0 1 4-4h24a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H16l-8 8Z" />
+              <line x1="16" y1="18" x2="32" y2="18" />
+              <line x1="16" y1="24" x2="26" y2="24" />
+            </svg>
+            <p className="text-sm">Select a conversation to start messaging</p>
           </div>
         ) : threadError ? (
-          <div className="flex-1 flex items-center justify-center text-red-500">
+          <div className="flex-1 flex items-center justify-center text-red-500 text-sm">
             {threadError}
           </div>
         ) : (
           <>
-            {/* Thread header — Ticket 38.2: avatar + name */}
-            <div className="p-3 border-b bg-gray-50 font-medium flex items-center gap-2">
+            {/* Thread header */}
+            <div className="px-5 py-3 border-b border-slate-200 bg-white flex items-center gap-3">
               {selectedConvo && (
-                <div className="relative">
-                  <Avatar
-                    fullName={selectedConvo.other_user_name}
-                    avatarUrl={avatarUrls[selectedConvo.other_user_id] ?? null}
-                    size="sm"
-                  />
-                  {onlineSet.has(selectedConvo.other_user_id) && (
-                    <span
-                      className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
-                      title="Online"
+                <>
+                  <div className="relative">
+                    <Avatar
+                      fullName={selectedConvo.other_user_name}
+                      avatarUrl={avatarUrls[selectedConvo.other_user_id] ?? null}
+                      size="sm"
                     />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-[#1e293b] text-sm truncate">
+                      {selectedConvo.other_user_name}
+                    </p>
+                  </div>
+                  {onlineSet.has(selectedConvo.other_user_id) && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                      Online
+                    </span>
                   )}
-                </div>
+                </>
               )}
-              {selectedConvo?.other_user_name || "Conversation"}
             </div>
 
             {/* Messages */}
-            <div ref={messagesContainerRef} onScroll={handleContainerScroll} className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div
+              ref={messagesContainerRef}
+              onScroll={handleContainerScroll}
+              className="flex-1 overflow-y-auto px-5 py-4 space-y-4 bg-slate-50/50"
+            >
               {loadingMessages ? (
-                <p className="text-gray-500">Loading messages...</p>
+                <div className="flex items-center justify-center h-full">
+                  <div className="flex items-center gap-3 text-slate-400">
+                    <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="40" strokeLinecap="round" />
+                    </svg>
+                    <span className="text-sm">Loading messages...</span>
+                  </div>
+                </div>
               ) : messages.length === 0 ? (
-                <p className="text-gray-500 text-center">
-                  No messages yet. Start the conversation!
-                </p>
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-slate-400 text-sm">
+                    No messages yet. Start the conversation!
+                  </p>
+                </div>
               ) : (
                 (() => {
                   let lastDateKey = "";
@@ -870,127 +1209,28 @@ function MessagesContent() {
                     return (
                       <div key={msg.id}>
                         {showSeparator && (
-                          <div className="flex items-center justify-center my-3">
-                            <span className="px-3 py-1 text-xs text-gray-500 bg-gray-100 rounded-full">
+                          <div className="flex items-center justify-center my-4">
+                            <span className="px-3 py-1 text-[11px] font-medium text-slate-500 bg-white rounded-full shadow-sm border border-slate-100">
                               {formatDayLabel(msg.created_at)}
                             </span>
                           </div>
                         )}
-                        <div
-                          className={`group flex items-end gap-1 ${isOwn ? "justify-end" : "justify-start"}`}
-                        >
-                          {/* Ticket 38.2: avatar next to incoming messages */}
-                          {!isOwn && selectedConvo && (
-                            <Avatar
-                              fullName={selectedConvo.other_user_name}
-                              avatarUrl={avatarUrls[selectedConvo.other_user_id] ?? null}
-                              size="sm"
-                              className="mb-1"
-                            />
-                          )}
-                          {/* Ticket 30: Edit/Delete actions for own messages (show on hover) */}
-                          {isOwn && editingMessageId !== msg.id && (
-                            <div className="hidden group-hover:flex items-center gap-1 mr-1">
-                              <button
-                                onClick={() => startEdit(msg)}
-                                className="text-gray-400 hover:text-gray-600 p-1 rounded"
-                                title="Edit"
-                              >
-                                &#9998;
-                              </button>
-                              <button
-                                onClick={() => handleDelete(msg.id)}
-                                className="text-gray-400 hover:text-red-500 p-1 rounded"
-                                title="Delete"
-                              >
-                                &#128465;
-                              </button>
-                            </div>
-                          )}
-                          <div
-                            className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                              isOwn
-                                ? "bg-blue-600 text-white"
-                                : "bg-gray-200 text-gray-900"
-                            }`}
-                          >
-                            {/* Ticket 30: Inline edit mode */}
-                            {editingMessageId === msg.id ? (
-                              <div>
-                                <textarea
-                                  value={editContent}
-                                  onChange={(e) => setEditContent(e.target.value)}
-                                  className="w-full rounded p-1 text-gray-900 text-sm resize-none"
-                                  rows={3}
-                                  autoFocus
-                                />
-                                <div className="flex gap-2 mt-1 justify-end">
-                                  <button
-                                    onClick={cancelEdit}
-                                    className="text-xs px-2 py-1 rounded bg-gray-300 text-gray-700 hover:bg-gray-400"
-                                  >
-                                    Cancel
-                                  </button>
-                                  <button
-                                    onClick={() => saveEdit(msg.id)}
-                                    disabled={!editContent.trim()}
-                                    className="text-xs px-2 py-1 rounded bg-white text-blue-600 hover:bg-blue-50 disabled:opacity-50"
-                                  >
-                                    Save
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <>
-                                {msg.content && (
-                                  <p className="whitespace-pre-wrap break-words">
-                                    {msg.content}
-                                  </p>
-                                )}
-                                {msg.attachments?.map((att) => (
-                                  <div key={att.id} className="mt-2">
-                                    {att.type === "image" && att.signedUrl && (
-                                      <img
-                                        src={att.signedUrl}
-                                        alt="attachment"
-                                        className="max-w-full rounded"
-                                        style={{ maxWidth: 300 }}
-                                        onLoad={handleMediaLoad}
-                                      />
-                                    )}
-                                    {att.type === "video" && att.signedUrl && (
-                                      <video
-                                        src={att.signedUrl}
-                                        controls
-                                        className="max-w-full rounded"
-                                        style={{ maxWidth: 300, maxHeight: 200 }}
-                                        onLoadedMetadata={handleMediaLoad}
-                                      />
-                                    )}
-                                  </div>
-                                ))}
-                              </>
-                            )}
-                            <p
-                              className={`text-xs mt-1 flex items-center gap-1 ${
-                                isOwn ? "text-blue-200 justify-end" : "text-gray-500"
-                              }`}
-                            >
-                              {formatMessageTime(msg.created_at)}
-                              {msg.updated_at && (
-                                <span className={isOwn ? "text-blue-200" : "text-gray-400"} title="Edited">(edited)</span>
-                              )}
-                              {isOwn && (() => {
-                                const tick = getTickStatus(msg);
-                                if (tick === "read")
-                                  return <span className="text-blue-300" title="Read">{"✓✓"}</span>;
-                                if (tick === "delivered")
-                                  return <span className="opacity-70" title="Delivered">{"✓✓"}</span>;
-                                return <span className="opacity-70" title="Sent">{"✓"}</span>;
-                              })()}
-                            </p>
-                          </div>
-                        </div>
+                        <MessageBubble
+                          msg={msg}
+                          isOwn={isOwn}
+                          selectedConvo={selectedConvo}
+                          avatarUrl={avatarUrls[selectedConvo?.other_user_id ?? ""] ?? null}
+                          editingMessageId={editingMessageId}
+                          editContent={editContent}
+                          setEditContent={setEditContent}
+                          startEdit={startEdit}
+                          cancelEdit={cancelEdit}
+                          saveEdit={saveEdit}
+                          handleDelete={handleDelete}
+                          formatMessageTime={formatMessageTime}
+                          getTickStatus={getTickStatus}
+                          handleMediaLoad={handleMediaLoad}
+                        />
                       </div>
                     );
                   });
@@ -999,67 +1239,19 @@ function MessagesContent() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Message input */}
-            <form onSubmit={handleSend} className="p-3 border-t">
-              {selectedFile && (
-                <div className="flex items-center gap-2 mb-2 p-2 bg-gray-100 rounded text-sm">
-                  <span className="truncate flex-1">
-                    {selectedFile.name} ({formatFileSize(selectedFile.size)})
-                  </span>
-                  <button
-                    type="button"
-                    onClick={clearSelectedFile}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    &times;
-                  </button>
-                </div>
-              )}
-              {fileError && (
-                <p className="text-red-500 text-sm mb-2">{fileError}</p>
-              )}
-              <div className="flex gap-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={sending}
-                  className="border rounded px-3 py-2 hover:bg-gray-50 disabled:opacity-50"
-                  title="Attach file"
-                >
-                  +
-                </button>
-                <textarea
-                  value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      if ((messageInput.trim() || selectedFile) && !sending) {
-                        handleSend(e);
-                      }
-                    }
-                  }}
-                  placeholder="Type a message..."
-                  className="flex-1 border rounded px-3 py-2 resize-none"
-                  rows={1}
-                  disabled={sending}
-                />
-                <button
-                  type="submit"
-                  disabled={(!messageInput.trim() && !selectedFile) || sending}
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {sending ? "..." : "Send"}
-                </button>
-              </div>
-            </form>
+            {/* Composer */}
+            <Composer
+              messageInput={messageInput}
+              setMessageInput={setMessageInput}
+              sending={sending}
+              selectedFile={selectedFile}
+              fileError={fileError}
+              fileInputRef={fileInputRef}
+              handleSend={handleSend}
+              handleFileSelect={handleFileSelect}
+              clearSelectedFile={clearSelectedFile}
+              formatFileSize={formatFileSize}
+            />
           </>
         )}
       </div>
@@ -1071,14 +1263,18 @@ export default function MessagesPage() {
   return (
     <main className="min-h-screen p-8">
       <div className="mb-6">
-        <Link href="/app" className="text-blue-600 hover:underline text-sm">
+        <Link href="/app" className="text-[#1e293b] hover:text-[#334155] text-sm font-medium transition-colors">
           &larr; Back to App
         </Link>
       </div>
 
-      <h1 className="text-2xl font-semibold mb-6">Messages</h1>
+      <h1 className="text-2xl font-semibold text-[#1e293b] mb-6">Messages</h1>
 
-      <Suspense fallback={<p className="text-gray-500">Loading...</p>}>
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-64">
+          <p className="text-slate-400 text-sm">Loading...</p>
+        </div>
+      }>
         <MessagesContent />
       </Suspense>
     </main>
