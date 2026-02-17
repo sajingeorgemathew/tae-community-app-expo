@@ -224,128 +224,209 @@ export default function QuestionDetailPage() {
 
   const canAnswer = currentUserRole === "admin" || currentUserRole === "tutor";
 
+  /* ── Loading skeleton ── */
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center">
-        <p>Loading...</p>
+      <main className="min-h-screen p-6 md:p-10">
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-6">
+            <div className="h-4 w-32 bg-slate-200 rounded animate-pulse" />
+          </div>
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm mb-8">
+            <div className="h-7 w-3/4 bg-slate-200 rounded animate-pulse mb-4" />
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 bg-slate-200 rounded-full animate-pulse" />
+              <div className="h-4 w-40 bg-slate-100 rounded animate-pulse" />
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 w-full bg-slate-100 rounded animate-pulse" />
+              <div className="h-4 w-2/3 bg-slate-100 rounded animate-pulse" />
+            </div>
+          </div>
+          <div className="h-6 w-28 bg-slate-200 rounded animate-pulse mb-4" />
+          <div className="space-y-4">
+            {[1, 2].map((i) => (
+              <div key={i} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-8 h-8 bg-slate-200 rounded-full animate-pulse" />
+                  <div className="h-4 w-36 bg-slate-100 rounded animate-pulse" />
+                </div>
+                <div className="h-4 w-full bg-slate-100 rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
+        </div>
       </main>
     );
   }
 
+  /* ── Not found ── */
   if (notFound) {
     return (
-      <main className="min-h-screen p-8">
-        <div className="mb-6">
-          <Link href="/app/questions" className="text-blue-600 hover:underline text-sm">
-            &larr; Back to Questions
-          </Link>
+      <main className="min-h-screen p-6 md:p-10">
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-6">
+            <Link
+              href="/app/questions"
+              className="text-[#1e293b] font-medium hover:underline text-sm inline-flex items-center gap-1"
+            >
+              &larr; Back to Questions
+            </Link>
+          </div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center">
+            <div className="w-14 h-14 mx-auto rounded-full bg-slate-100 flex items-center justify-center mb-4">
+              <svg className="w-7 h-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+              </svg>
+            </div>
+            <p className="text-sm text-slate-400 italic">Question not found.</p>
+          </div>
         </div>
-        <p className="text-gray-500">Question not found.</p>
       </main>
     );
   }
 
+  /* ── Error ── */
   if (error || !question) {
     return (
-      <main className="min-h-screen p-8">
-        <div className="mb-6">
-          <Link href="/app/questions" className="text-blue-600 hover:underline text-sm">
-            &larr; Back to Questions
-          </Link>
+      <main className="min-h-screen p-6 md:p-10">
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-6">
+            <Link
+              href="/app/questions"
+              className="text-[#1e293b] font-medium hover:underline text-sm inline-flex items-center gap-1"
+            >
+              &larr; Back to Questions
+            </Link>
+          </div>
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-12 text-center">
+            <div className="w-14 h-14 mx-auto rounded-full bg-red-100 flex items-center justify-center mb-4">
+              <svg className="w-7 h-7 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
+            </div>
+            <p className="text-sm text-red-600 font-medium">{error ?? "Something went wrong."}</p>
+          </div>
         </div>
-        <p className="text-red-600">{error ?? "Something went wrong."}</p>
       </main>
     );
   }
 
+  /* ── Main view ── */
   return (
-    <main className="min-h-screen p-8">
-      <div className="mb-6">
-        <Link href="/app/questions" className="text-blue-600 hover:underline text-sm">
-          &larr; Back to Questions
-        </Link>
-      </div>
-
-      {/* Question */}
-      <div className="border rounded p-6 mb-8">
-        <h1 className="text-2xl font-semibold mb-3">{question.title}</h1>
-        <div className="flex items-center gap-3 mb-4">
-          <div className="relative">
-            <Avatar
-              fullName={question.author_name}
-              avatarUrl={question.author_avatar_url}
-              size="sm"
-            />
-            {onlineSet.has(question.author_id) && (
-              <span
-                className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
-                title="Online"
-              />
-            )}
-          </div>
-          <span className="text-sm text-gray-600">
-            {question.author_name} · {formatDate(question.created_at)}
-          </span>
-        </div>
-        <p className="text-gray-800 whitespace-pre-wrap">{question.body}</p>
-      </div>
-
-      {/* Answers */}
-      <h2 className="text-lg font-semibold mb-4">
-        Answers ({answers.length})
-      </h2>
-
-      {answers.length === 0 ? (
-        <p className="text-gray-500 mb-6">No answers yet.</p>
-      ) : (
-        <ul className="space-y-4 mb-6">
-          {answers.map((a) => (
-            <li key={a.id} className="border rounded p-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="relative">
-                  <Avatar
-                    fullName={a.author_name}
-                    avatarUrl={a.author_avatar_url}
-                    size="sm"
-                  />
-                  {onlineSet.has(a.author_id) && (
-                    <span
-                      className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
-                      title="Online"
-                    />
-                  )}
-                </div>
-                <span className="text-sm text-gray-600">
-                  {a.author_name} · {formatDate(a.created_at)}
-                </span>
-              </div>
-              <p className="text-gray-800 whitespace-pre-wrap">{a.body}</p>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {/* Answer form — tutor/admin only */}
-      {canAnswer && (
-        <form onSubmit={handleSubmitAnswer} className="border rounded p-4 space-y-3">
-          <label className="block text-sm font-medium">Your Answer</label>
-          <textarea
-            value={answerBody}
-            onChange={(e) => setAnswerBody(e.target.value)}
-            required
-            rows={4}
-            className="w-full border rounded px-3 py-2"
-            placeholder="Write your answer..."
-          />
-          <button
-            type="submit"
-            disabled={submitting || !answerBody.trim()}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+    <main className="min-h-screen p-6 md:p-10">
+      <div className="max-w-4xl mx-auto">
+        {/* Back link */}
+        <div className="mb-6">
+          <Link
+            href="/app/questions"
+            className="text-[#1e293b] font-medium hover:underline text-sm inline-flex items-center gap-1"
           >
-            {submitting ? "Posting..." : "Post Answer"}
-          </button>
-        </form>
-      )}
+            &larr; Back to Questions
+          </Link>
+        </div>
+
+        {/* ── Question card ── */}
+        <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm mb-8">
+          <h1 className="text-2xl font-bold text-[#1e293b] mb-4">{question.title}</h1>
+
+          <div className="flex items-center gap-3 mb-5">
+            <div className="relative">
+              <Avatar
+                fullName={question.author_name}
+                avatarUrl={question.author_avatar_url}
+                size="sm"
+              />
+              {onlineSet.has(question.author_id) && (
+                <span
+                  className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"
+                  title="Online"
+                />
+              )}
+            </div>
+            <span className="text-sm font-medium text-[#1e293b]">{question.author_name}</span>
+            <span className="text-slate-300">·</span>
+            <span className="text-xs text-slate-400">{formatDate(question.created_at)}</span>
+          </div>
+
+          <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">{question.body}</p>
+        </div>
+
+        {/* ── Answers section ── */}
+        <div className="flex items-center gap-2 mb-5">
+          <h2 className="text-lg font-semibold text-[#1e293b]">Answers</h2>
+          <span className="text-sm text-slate-400">({answers.length})</span>
+        </div>
+
+        {answers.length === 0 ? (
+          <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center mb-8">
+            <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 flex items-center justify-center mb-4">
+              <svg className="w-7 h-7 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+              </svg>
+            </div>
+            <p className="text-sm text-slate-400 italic">No answers yet.</p>
+          </div>
+        ) : (
+          <ul className="space-y-4 mb-8">
+            {answers.map((a) => (
+              <li
+                key={a.id}
+                className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="relative">
+                    <Avatar
+                      fullName={a.author_name}
+                      avatarUrl={a.author_avatar_url}
+                      size="sm"
+                    />
+                    {onlineSet.has(a.author_id) && (
+                      <span
+                        className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"
+                        title="Online"
+                      />
+                    )}
+                  </div>
+                  <span className="text-sm font-medium text-[#1e293b]">{a.author_name}</span>
+                  <span className="text-slate-300">·</span>
+                  <span className="text-xs text-slate-400">{formatDate(a.created_at)}</span>
+                </div>
+                <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">{a.body}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* ── Answer form — tutor/admin only ── */}
+        {canAnswer && (
+          <form
+            onSubmit={handleSubmitAnswer}
+            className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
+          >
+            <label className="block text-sm font-medium text-[#1e293b] mb-3">
+              Your Answer
+            </label>
+            <textarea
+              value={answerBody}
+              onChange={(e) => setAnswerBody(e.target.value)}
+              required
+              rows={5}
+              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b]/20 transition-colors resize-none"
+              placeholder="Write your answer..."
+            />
+            <div className="mt-4">
+              <button
+                type="submit"
+                disabled={submitting || !answerBody.trim()}
+                className="text-white bg-[#1e293b] rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-[#334155] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? "Posting..." : "Post Answer"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </main>
   );
 }
