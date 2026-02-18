@@ -368,55 +368,97 @@ export default function FeedPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center">
-        <p>Loading...</p>
+      <main className="min-h-screen flex items-center justify-center bg-gray-50/50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-slate-800 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-gray-500">Loading feed...</p>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen p-8">
-      <div className="mb-6">
-        <Link href="/app" className="text-blue-600 hover:underline text-sm">
-          &larr; Back to App
-        </Link>
+    <main className="min-h-screen bg-gray-50/50">
+      {/* Page Header */}
+      <div className="border-b border-gray-200 bg-white px-6 py-5 md:px-8">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex items-center gap-3 mb-1">
+            <Link
+              href="/app"
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </Link>
+            <h1 className="text-xl font-semibold text-gray-900">Feed</h1>
+          </div>
+          <p className="text-sm text-gray-500 ml-8">Stay connected with the community</p>
+        </div>
       </div>
 
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Feed</h1>
-        <Link
-          href="/app/feed/new"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          New Post
-        </Link>
-      </div>
-
-      <div className="mb-6 flex gap-2">
-        {(["all", "students", "alumni"] as AudienceFilter[]).map((option) => (
-          <button
-            key={option}
-            onClick={() => setFilter(option)}
-            className={`px-3 py-1 rounded text-sm capitalize ${
-              filter === option
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 hover:bg-gray-300"
-            }`}
+      {/* Controls: Filters + New Post */}
+      <div className="border-b border-gray-200 bg-white px-6 py-3 md:px-8">
+        <div className="max-w-3xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            {(["all", "students", "alumni"] as AudienceFilter[]).map((option) => (
+              <button
+                key={option}
+                onClick={() => setFilter(option)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium capitalize transition-colors ${
+                  filter === option
+                    ? "bg-slate-800 text-white"
+                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+          <Link
+            href="/app/feed/new"
+            className="inline-flex items-center gap-2 rounded-lg bg-slate-800 text-white px-5 py-2 text-sm font-medium hover:bg-slate-700 transition shadow-sm"
           >
-            {option}
-          </button>
-        ))}
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            New Post
+          </Link>
+        </div>
       </div>
 
-      {filteredPosts.length === 0 ? (
-        <p className="text-gray-500">
-          {posts.length === 0 ? "No posts yet." : "No posts for this filter."}
-        </p>
-      ) : (
-        <ul className="space-y-4">
-          {filteredPosts.map((post) => (
-            <li key={post.id}>
+      {/* Posts List */}
+      <div className="max-w-3xl mx-auto px-6 py-6 md:px-8">
+        {filteredPosts.length === 0 ? (
+          <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
+            <svg className="w-12 h-12 text-gray-200 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+            </svg>
+            <p className="text-sm font-medium text-gray-500 mb-1">
+              {posts.length === 0 ? "No posts yet" : "No posts for this filter"}
+            </p>
+            <p className="text-xs text-gray-400 mb-4">
+              {posts.length === 0
+                ? "Be the first to share something with the community."
+                : "Try a different filter to see more posts."}
+            </p>
+            {posts.length === 0 && (
+              <Link
+                href="/app/feed/new"
+                className="inline-flex items-center gap-2 rounded-lg bg-slate-800 text-white px-5 py-2 text-sm font-medium hover:bg-slate-700 transition"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Create First Post
+              </Link>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {filteredPosts.map((post) => (
               <PostCard
+                key={post.id}
                 postId={post.id}
                 content={post.content}
                 audience={post.audience}
@@ -434,10 +476,10 @@ export default function FeedPage() {
                 isAdmin={isAdmin}
                 mediaSize="feed"
               />
-            </li>
-          ))}
-        </ul>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </main>
   );
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/src/lib/supabaseClient";
 import Avatar from "./Avatar";
 
@@ -81,6 +81,8 @@ export default function PostCard({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [showComments, setShowComments] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!postId || !showComments) return;
@@ -116,6 +118,19 @@ export default function PostCard({
 
     fetchComments();
   }, [postId, showComments]);
+
+  // Close menu on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    }
+    if (showMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showMenu]);
 
   async function handleAddComment() {
     if (!postId || !currentUserId || !newComment.trim()) return;
@@ -193,38 +208,87 @@ export default function PostCard({
     return currentUserId === comment.author_id || isAdmin;
   }
 
+  const totalReactions = Object.values(reactionCounts).reduce((sum, c) => sum + c, 0);
+
   return (
-    <div className="border rounded p-4 max-w-full overflow-hidden">
-      <div className="flex items-center justify-between mb-2">
-        {authorName && (
-          <div className="flex items-center gap-2 min-w-0">
-            {authorId ? (
-              <Link href={`/app/profile/${authorId}`} className="flex items-center gap-2 min-w-0">
-                <Avatar fullName={authorName} avatarUrl={authorAvatarUrl} size="sm" />
-                <span className="font-medium text-blue-600 hover:underline truncate">
-                  {authorName}
-                </span>
-              </Link>
-            ) : (
-              <>
-                <Avatar fullName={authorName} avatarUrl={authorAvatarUrl} size="sm" />
-                <p className="font-medium truncate">{authorName}</p>
-              </>
-            )}
-          </div>
-        )}
-        <div className={`flex items-center gap-2 ${authorName ? "" : "ml-auto"}`}>
-          {audience !== "all" && (
-            <span className="text-xs bg-gray-200 px-2 py-1 rounded capitalize">
-              {audience}
-            </span>
+    <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      {/* Author Header */}
+      <div className="px-5 pt-5 pb-0">
+        <div className="flex items-start justify-between">
+          {authorName && (
+            <div className="flex items-center gap-3 min-w-0">
+              {authorId ? (
+                <Link href={`/app/profile/${authorId}`} className="shrink-0">
+                  <Avatar fullName={authorName} avatarUrl={authorAvatarUrl} size="md" />
+                </Link>
+              ) : (
+                <Avatar fullName={authorName} avatarUrl={authorAvatarUrl} size="md" />
+              )}
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {authorId ? (
+                    <Link
+                      href={`/app/profile/${authorId}`}
+                      className="font-semibold text-gray-900 hover:text-slate-700 transition-colors truncate"
+                    >
+                      {authorName}
+                    </Link>
+                  ) : (
+                    <span className="font-semibold text-gray-900 truncate">{authorName}</span>
+                  )}
+                  {audience !== "all" && (
+                    <span className="inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-2 py-0.5 text-xs font-medium capitalize">
+                      {audience}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400 mt-0.5">{formatDate(createdAt)}</p>
+              </div>
+            </div>
           )}
-          <span className="text-xs text-gray-500">{formatDate(createdAt)}</span>
+
+          {/* Three-dot menu for delete */}
+          {canDelete && onDelete && (
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setShowMenu((v) => !v)}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <circle cx="12" cy="5" r="1.5" />
+                  <circle cx="12" cy="12" r="1.5" />
+                  <circle cx="12" cy="19" r="1.5" />
+                </svg>
+              </button>
+              {showMenu && (
+                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[140px]">
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      onDelete();
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
-      <p className="text-gray-700 whitespace-pre-wrap">{content}</p>
+
+      {/* Content */}
+      <div className="px-5 pt-3 pb-1">
+        <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{content}</p>
+      </div>
+
+      {/* Attachments */}
       {attachments.length > 0 && (
-        <div className="mt-3 space-y-2 max-w-full overflow-hidden">
+        <div className="px-5 pt-2 pb-1 space-y-2 max-w-full overflow-hidden">
           {attachments.map((att) => {
             if (att.type === "image" && att.signedUrl) {
               return (
@@ -234,8 +298,8 @@ export default function PostCard({
                   alt="Attachment"
                   className={
                     mediaSize === "feed"
-                      ? "max-w-[520px] w-full h-auto object-contain rounded"
-                      : "w-full max-w-full h-auto object-contain rounded"
+                      ? "max-w-[520px] w-full h-auto object-contain rounded-lg"
+                      : "w-full max-w-full h-auto object-contain rounded-lg"
                   }
                 />
               );
@@ -248,8 +312,8 @@ export default function PostCard({
                   controls
                   className={
                     mediaSize === "feed"
-                      ? "max-w-[640px] w-full h-auto rounded"
-                      : "w-full max-w-full h-auto rounded"
+                      ? "max-w-[640px] w-full h-auto rounded-lg"
+                      : "w-full max-w-full h-auto rounded-lg"
                   }
                   style={{ maxHeight: mediaSize === "feed" ? "380px" : "420px" }}
                 />
@@ -262,8 +326,11 @@ export default function PostCard({
                   href={att.linkUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline block break-all"
+                  className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 hover:underline text-sm break-all"
                 >
+                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  </svg>
                   {att.linkUrl}
                 </a>
               );
@@ -272,96 +339,135 @@ export default function PostCard({
           })}
         </div>
       )}
-      {onReactionToggle && (
-        <div className="mt-3 pt-3 border-t flex gap-2">
-          {EMOJI_SET.map((emoji) => {
-            const count = reactionCounts[emoji] ?? 0;
-            const isActive = userReactions.includes(emoji);
-            return (
-              <button
-                key={emoji}
-                onClick={() => onReactionToggle(emoji)}
-                className={`px-2 py-1 rounded text-sm flex items-center gap-1 ${
-                  isActive
-                    ? "bg-blue-100 border border-blue-300"
-                    : "bg-gray-100 hover:bg-gray-200 border border-transparent"
-                }`}
-              >
-                <span>{emoji}</span>
-                {count > 0 && <span className="text-gray-600">{count}</span>}
-              </button>
-            );
-          })}
-        </div>
-      )}
-      {canDelete && onDelete && (
-        <div className="mt-3 pt-3 border-t">
-          <button
-            onClick={onDelete}
-            className="text-red-600 hover:text-red-800 text-sm"
-          >
-            Delete
-          </button>
-        </div>
-      )}
-      {postId && currentUserId && (
-        <div className="mt-3 pt-3 border-t">
-          <button
-            onClick={() => setShowComments((v) => !v)}
-            className="text-sm text-gray-600 hover:text-gray-800"
-          >
-            {showComments ? "Hide comments" : `Comments${comments.length > 0 ? ` (${comments.length})` : ""}`}
-          </button>
 
-          {showComments && (
-            <div className="mt-3 space-y-3">
-              {loadingComments ? (
-                <p className="text-sm text-gray-500">Loading comments...</p>
-              ) : (
-                <>
-                  {comments.length === 0 && (
-                    <p className="text-sm text-gray-500">No comments yet.</p>
-                  )}
-                  {comments.map((comment) => (
-                    <div key={comment.id} className="bg-gray-50 rounded p-2 text-sm">
-                      {editingId === comment.id ? (
-                        <div className="space-y-2">
-                          <textarea
-                            value={editContent}
-                            onChange={(e) => setEditContent(e.target.value)}
-                            className="w-full border rounded px-2 py-1 text-sm"
-                            rows={2}
-                          />
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleEditSave(comment.id)}
-                              className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
-                            >
-                              Save
-                            </button>
-                            <button
-                              onClick={() => { setEditingId(null); setEditContent(""); }}
-                              className="text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300"
-                            >
-                              Cancel
-                            </button>
-                          </div>
+      {/* Reactions & Actions Row */}
+      {onReactionToggle && (
+        <div className="px-5 pt-3 pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              {EMOJI_SET.map((emoji) => {
+                const count = reactionCounts[emoji] ?? 0;
+                const isActive = userReactions.includes(emoji);
+                return (
+                  <button
+                    key={emoji}
+                    onClick={() => onReactionToggle(emoji)}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm transition-colors ${
+                      isActive
+                        ? "bg-blue-50 border border-blue-200 text-blue-700"
+                        : "bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    <span>{emoji}</span>
+                    {count > 0 && <span className="text-xs font-medium">{count}</span>}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Comment toggle */}
+            {postId && currentUserId && (
+              <button
+                onClick={() => setShowComments((v) => !v)}
+                className="text-sm text-gray-500 hover:text-gray-700 transition-colors font-medium"
+              >
+                {showComments
+                  ? "Hide comments"
+                  : comments.length > 0
+                    ? `View ${comments.length} comments`
+                    : totalReactions > 0
+                      ? "View comments"
+                      : "Comment"}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Comments Section */}
+      {postId && currentUserId && showComments && (
+        <div className="border-t border-gray-100 px-5 py-4">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Comments</p>
+
+          {/* Comment Input */}
+          <div className="flex gap-3 mb-4">
+            <textarea
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Write a comment..."
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm resize-y min-h-[40px] max-h-[120px] focus:outline-none focus:ring-2 focus:ring-slate-800/20 focus:border-slate-300 placeholder:text-gray-400 transition"
+              rows={1}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleAddComment();
+                }
+              }}
+            />
+            <button
+              onClick={handleAddComment}
+              disabled={submitting || !newComment.trim()}
+              className="self-end rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+            >
+              {submitting ? "..." : "Post Comment"}
+            </button>
+          </div>
+
+          {/* Comments List */}
+          {loadingComments ? (
+            <div className="flex items-center gap-2 py-3">
+              <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-gray-400">Loading comments...</p>
+            </div>
+          ) : (
+            <>
+              {comments.length === 0 && (
+                <p className="text-sm text-gray-400 italic text-center py-3">
+                  No comments yet. Be the first to share your thoughts!
+                </p>
+              )}
+              <div className="space-y-3">
+                {comments.map((comment) => (
+                  <div key={comment.id} className="rounded-lg bg-gray-50 p-3">
+                    {editingId === comment.id ? (
+                      <div className="space-y-2">
+                        <textarea
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-800/20 focus:border-slate-300 transition"
+                          rows={2}
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEditSave(comment.id)}
+                            className="text-xs bg-slate-800 text-white px-3 py-1.5 rounded-lg hover:bg-slate-700 transition font-medium"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => { setEditingId(null); setEditContent(""); }}
+                            className="text-xs bg-gray-200 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-300 transition font-medium"
+                          >
+                            Cancel
+                          </button>
                         </div>
-                      ) : (
-                        <>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-medium text-gray-700">{comment.author_name}</span>
-                            <span className="text-xs text-gray-400">
-                              {formatDate(comment.created_at)}
-                              {comment.updated_at !== comment.created_at && " (edited)"}
-                            </span>
-                          </div>
-                          <p className="text-gray-600 whitespace-pre-wrap">{comment.content}</p>
-                          <div className="mt-1 flex gap-2">
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-medium text-gray-800 text-sm">{comment.author_name}</span>
+                          <span className="text-xs text-gray-400">
+                            {formatDate(comment.created_at)}
+                            {comment.updated_at !== comment.created_at && " (edited)"}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{comment.content}</p>
+                        {(canEditComment(comment) || canDeleteComment(comment)) && (
+                          <div className="mt-2 flex gap-3">
                             {canEditComment(comment) && (
                               <button
                                 onClick={() => { setEditingId(comment.id); setEditContent(comment.content); }}
-                                className="text-xs text-blue-600 hover:underline"
+                                className="text-xs text-gray-500 hover:text-slate-700 font-medium transition-colors"
                               >
                                 Edit
                               </button>
@@ -369,42 +475,19 @@ export default function PostCard({
                             {canDeleteComment(comment) && (
                               <button
                                 onClick={() => handleDeleteComment(comment.id)}
-                                className="text-xs text-red-600 hover:underline"
+                                className="text-xs text-gray-500 hover:text-red-600 font-medium transition-colors"
                               >
                                 Delete
                               </button>
                             )}
                           </div>
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </>
-              )}
-
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Add a comment..."
-                  className="flex-1 border rounded px-2 py-1 text-sm"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleAddComment();
-                    }
-                  }}
-                />
-                <button
-                  onClick={handleAddComment}
-                  disabled={submitting || !newComment.trim()}
-                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {submitting ? "..." : "Post"}
-                </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ))}
               </div>
-            </div>
+            </>
           )}
         </div>
       )}
