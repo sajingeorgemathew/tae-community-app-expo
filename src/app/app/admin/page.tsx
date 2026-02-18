@@ -868,23 +868,33 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center">
-        <p>Loading...</p>
+      <main className="min-h-screen flex items-center justify-center bg-gray-50/50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-slate-800 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-slate-500">Loading admin dashboard...</p>
+        </div>
       </main>
     );
   }
 
   if (!isAdmin) {
     return (
-      <main className="min-h-screen p-8">
-        <div className="max-w-md mx-auto text-center">
-          <h1 className="text-2xl font-semibold mb-4">Not Authorized</h1>
-          <p className="text-gray-600 mb-6">
-            You do not have permission to access this page.
-          </p>
-          <Link href="/app" className="text-blue-600 hover:underline">
-            &larr; Back to App
-          </Link>
+      <main className="min-h-screen p-6 md:p-8 bg-gray-50/50">
+        <div className="max-w-md mx-auto mt-20">
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-8 text-center">
+            <div className="w-14 h-14 mx-auto rounded-full bg-red-50 flex items-center justify-center mb-4">
+              <svg className="w-7 h-7 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+              </svg>
+            </div>
+            <h1 className="text-xl font-bold text-[#1e293b] mb-2">Not Authorized</h1>
+            <p className="text-sm text-gray-500 mb-6">
+              You do not have permission to access this page.
+            </p>
+            <Link href="/app" className="text-sm text-blue-600 hover:underline font-medium">
+              &larr; Back to App
+            </Link>
+          </div>
         </div>
       </main>
     );
@@ -894,425 +904,461 @@ export default function AdminPage() {
   const allUsersSelected = filteredUsers.length > 0 && filteredUsers.every((u) => selectedUsers.has(u.id));
 
   return (
-    <main className="min-h-screen p-8">
-      <div className="mb-6">
-        <Link href="/app" className="text-blue-600 hover:underline text-sm">
-          &larr; Back to App
-        </Link>
-      </div>
-
-      <h1 className="text-2xl font-semibold mb-8">Admin Dashboard</h1>
-
-      {/* Posts Section */}
-      <section className="mb-12">
-        <h2 className="text-xl font-medium mb-4">Posts Moderation</h2>
-
-        <div className="mb-4 flex flex-wrap gap-4">
-          {/* Audience filter */}
-          <div className="flex gap-2">
-            <span className="text-sm text-gray-600 self-center">Audience:</span>
-            {(["all", "students", "alumni"] as AudienceFilter[]).map((option) => (
-              <button
-                key={option}
-                onClick={() => setAudienceFilter(option)}
-                className={`px-3 py-1 rounded text-sm capitalize ${
-                  audienceFilter === option
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 hover:bg-gray-300"
-                }`}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-
-          {/* Time filter */}
-          <div className="flex gap-2">
-            <span className="text-sm text-gray-600 self-center">Time:</span>
-            {TIME_FILTER_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => setTimeFilter(option.value)}
-                className={`px-3 py-1 rounded text-sm ${
-                  timeFilter === option.value
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 hover:bg-gray-300"
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
+    <main className="min-h-screen bg-gray-50/50 p-6 md:p-8">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-6">
+          <Link href="/app" className="text-sm text-blue-600 hover:underline font-medium">
+            &larr; Back to App
+          </Link>
         </div>
 
-        {/* Bulk actions for posts */}
-        <div className="mb-4 flex flex-wrap gap-2 items-center">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={allPostsSelected}
-              onChange={toggleAllPostsSelection}
-              className="w-4 h-4"
-            />
-            Select all visible
-          </label>
-          <span className="text-sm text-gray-500">
-            ({selectedPosts.size} selected)
-          </span>
-          <button
-            onClick={handleBulkDeletePosts}
-            disabled={selectedPosts.size === 0 || bulkDeleting}
-            className="px-3 py-1 rounded text-sm bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {bulkDeleting ? "Deleting..." : "Delete Selected Posts"}
-          </button>
-        </div>
+        <h1 className="text-2xl font-bold text-[#1e293b] mb-8">Admin Dashboard</h1>
 
-        {filteredPosts.length === 0 ? (
-          <p className="text-gray-500">No posts found for selected filters.</p>
-        ) : (
-          <ul className="space-y-4">
-            {filteredPosts.map((post) => (
-              <li key={post.id} className="flex gap-3 items-start">
-                <input
-                  type="checkbox"
-                  checked={selectedPosts.has(post.id)}
-                  onChange={() => togglePostSelection(post.id)}
-                  className="w-4 h-4 mt-4 flex-shrink-0"
-                />
-                <div className="flex-1">
-                  <PostCard
-                    postId={post.id}
-                    content={post.content}
-                    audience={post.audience}
-                    authorName={post.author_name}
-                    authorAvatarUrl={avatarUrls[post.author_id]}
-                    authorId={post.author_id}
-                    createdAt={post.created_at}
-                    attachments={post.attachments}
-                    canDelete={true}
-                    onDelete={() => handleDelete(post.id)}
-                    reactionCounts={post.reactionCounts}
-                    userReactions={post.userReactions}
-                    onReactionToggle={(emoji) => handleReactionToggle(post.id, emoji)}
-                    currentUserId={currentUserId}
-                    isAdmin={true}
-                    mediaSize="feed"
-                  />
+        {/* Posts Section */}
+        <section className="mb-8">
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div className="px-6 py-5 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">Posts Moderation</h2>
+            </div>
+
+            <div className="px-6 py-4">
+              <div className="flex flex-wrap gap-4 mb-4">
+                {/* Audience filter */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Audience:</span>
+                  <div className="flex gap-1.5">
+                    {(["all", "students", "alumni"] as AudienceFilter[]).map((option) => (
+                      <button
+                        key={option}
+                        onClick={() => setAudienceFilter(option)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium capitalize transition-colors ${
+                          audienceFilter === option
+                            ? "bg-slate-800 text-white"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+
+                {/* Time filter */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Time:</span>
+                  <div className="flex gap-1.5">
+                    {TIME_FILTER_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => setTimeFilter(option.value)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                          timeFilter === option.value
+                            ? "bg-slate-800 text-white"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Bulk actions for posts */}
+              <div className="flex flex-wrap gap-3 items-center py-3 px-4 rounded-lg bg-gray-50 border border-gray-100">
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={allPostsSelected}
+                    onChange={toggleAllPostsSelection}
+                    className="w-4 h-4 rounded border-gray-300"
+                  />
+                  Select all visible
+                </label>
+                <span className="text-xs text-gray-400 font-medium">
+                  ({selectedPosts.size} selected)
+                </span>
+                <button
+                  onClick={handleBulkDeletePosts}
+                  disabled={selectedPosts.size === 0 || bulkDeleting}
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {bulkDeleting ? "Deleting..." : "Delete Selected Posts"}
+                </button>
+              </div>
+            </div>
+
+            <div className="px-6 pb-6">
+              {filteredPosts.length === 0 ? (
+                <div className="py-8 text-center">
+                  <p className="text-sm text-gray-400">No posts found for selected filters.</p>
+                </div>
+              ) : (
+                <ul className="space-y-4">
+                  {filteredPosts.map((post) => (
+                    <li key={post.id} className="flex gap-3 items-start">
+                      <input
+                        type="checkbox"
+                        checked={selectedPosts.has(post.id)}
+                        onChange={() => togglePostSelection(post.id)}
+                        className="w-4 h-4 mt-4 flex-shrink-0 rounded border-gray-300"
+                      />
+                      <div className="flex-1">
+                        <PostCard
+                          postId={post.id}
+                          content={post.content}
+                          audience={post.audience}
+                          authorName={post.author_name}
+                          authorAvatarUrl={avatarUrls[post.author_id]}
+                          authorId={post.author_id}
+                          createdAt={post.created_at}
+                          attachments={post.attachments}
+                          canDelete={true}
+                          onDelete={() => handleDelete(post.id)}
+                          reactionCounts={post.reactionCounts}
+                          userReactions={post.userReactions}
+                          onReactionToggle={(emoji) => handleReactionToggle(post.id, emoji)}
+                          currentUserId={currentUserId}
+                          isAdmin={true}
+                          mediaSize="feed"
+                        />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </section>
 
       {/* Tutors Section */}
-      <section className="mb-12">
-        <h2 className="text-xl font-medium mb-4">Tutors</h2>
+      <section className="mb-8">
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="px-6 py-5 border-b border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900">Tutors</h2>
+          </div>
 
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="Search by name..."
-            value={tutorSearch}
-            onChange={(e) => setTutorSearch(e.target.value)}
-            className="w-full max-w-md px-3 py-2 border rounded text-sm"
-          />
-        </div>
+          <div className="px-6 py-4">
+            <input
+              type="text"
+              placeholder="Search by name..."
+              value={tutorSearch}
+              onChange={(e) => setTutorSearch(e.target.value)}
+              className="w-full max-w-md rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b]/20 transition-colors"
+            />
+          </div>
 
-        {filteredTutorUsers.length === 0 ? (
-          <p className="text-gray-500">No users found.</p>
-        ) : (
-          <div className="border rounded overflow-hidden overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="text-left px-4 py-2">Name</th>
-                  <th className="text-left px-4 py-2">Program</th>
-                  <th className="text-left px-4 py-2">Grad Year</th>
-                  <th className="text-left px-4 py-2">Role</th>
-                  <th className="text-left px-4 py-2">Listed</th>
-                  <th className="text-left px-4 py-2">Courses</th>
-                  <th className="text-left px-4 py-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredTutorUsers.map((user) => {
-                  const edit = getTutorEdit(user);
-                  const changed = hasTutorChanges(user);
-                  const isSelf = user.id === currentUserId;
-                  const isAdminRole = (user.role ?? "member") === "admin";
-                  const status = tutorSaveStatus[user.id];
-                  const effectiveRole = edit.role;
-                  const isTutor = effectiveRole === "tutor";
-                  const selectedCourses = getTutorCourses(user.id);
-                  const courseChanged = hasCourseChanges(user.id);
-                  const cStatus = courseSaveStatus[user.id];
+          <div className="px-6 pb-6">
+            {filteredTutorUsers.length === 0 ? (
+              <div className="py-8 text-center">
+                <p className="text-sm text-gray-400">No users found.</p>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-gray-200 overflow-hidden overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Program</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Grad Year</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Listed</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Courses</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredTutorUsers.map((user) => {
+                      const edit = getTutorEdit(user);
+                      const changed = hasTutorChanges(user);
+                      const isSelf = user.id === currentUserId;
+                      const isAdminRole = (user.role ?? "member") === "admin";
+                      const status = tutorSaveStatus[user.id];
+                      const effectiveRole = edit.role;
+                      const isTutor = effectiveRole === "tutor";
+                      const selectedCourses = getTutorCourses(user.id);
+                      const courseChanged = hasCourseChanges(user.id);
+                      const cStatus = courseSaveStatus[user.id];
 
-                  return (
-                    <tr key={user.id} className="border-t">
-                      <td className="px-4 py-2">
-                        <div className="flex items-center gap-2">
-                          <Avatar
-                            fullName={user.full_name ?? "?"}
-                            avatarUrl={avatarUrls[user.id]}
-                            size="sm"
-                          />
-                          <span>{user.full_name ?? "No name"}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-2">{user.program ?? "-"}</td>
-                      <td className="px-4 py-2">{user.grad_year ?? "-"}</td>
-                      <td className="px-4 py-2">
-                        {isSelf || isAdminRole ? (
-                          <span className="text-gray-500">{user.role ?? "member"}</span>
-                        ) : (
-                          <select
-                            value={edit.role}
-                            onChange={(e) => handleTutorRoleChange(user.id, e.target.value, user)}
-                            className="border rounded px-2 py-1 text-sm"
-                          >
-                            <option value="member">member</option>
-                            <option value="tutor">tutor</option>
-                          </select>
-                        )}
-                      </td>
-                      <td className="px-4 py-2">
-                        {isSelf || isAdminRole ? (
-                          <span className="text-gray-400">-</span>
-                        ) : (
-                          <input
-                            type="checkbox"
-                            checked={edit.is_listed_as_tutor}
-                            disabled={edit.role !== "tutor"}
-                            onChange={() => handleTutorListingToggle(user.id, user)}
-                            className="w-4 h-4"
-                          />
-                        )}
-                      </td>
-                      <td className="px-4 py-2">
-                        {isSelf || isAdminRole ? (
-                          <span className="text-gray-400">-</span>
-                        ) : !isTutor ? (
-                          <span className="text-xs text-gray-400 italic">Promote to tutor to assign courses</span>
-                        ) : (
-                          <div className="flex flex-col gap-1">
-                            <div className="relative">
-                              <button
-                                onClick={() => setCourseDropdownOpen(courseDropdownOpen === user.id ? null : user.id)}
-                                className="border rounded px-2 py-1 text-sm text-left min-w-[160px] bg-white hover:bg-gray-50"
+                      return (
+                        <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <Avatar
+                                fullName={user.full_name ?? "?"}
+                                avatarUrl={avatarUrls[user.id]}
+                                size="sm"
+                              />
+                              <span className="font-medium text-gray-900">{user.full_name ?? "No name"}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-gray-600">{user.program ?? "-"}</td>
+                          <td className="px-4 py-3 text-gray-600">{user.grad_year ?? "-"}</td>
+                          <td className="px-4 py-3">
+                            {isSelf || isAdminRole ? (
+                              <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-600 px-2.5 py-0.5 text-xs font-medium capitalize">{user.role ?? "member"}</span>
+                            ) : (
+                              <select
+                                value={edit.role}
+                                onChange={(e) => handleTutorRoleChange(user.id, e.target.value, user)}
+                                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b]/20 transition-colors"
                               >
-                                {selectedCourses.length === 0
-                                  ? "Select courses..."
-                                  : `${selectedCourses.length} course${selectedCourses.length > 1 ? "s" : ""} selected`}
-                              </button>
-                              {courseDropdownOpen === user.id && (
-                                <CourseDropdown
-                                  courses={courses}
-                                  selected={selectedCourses}
-                                  onToggle={(courseId) => handleCourseToggle(user.id, courseId)}
-                                  onClose={() => setCourseDropdownOpen(null)}
-                                />
+                                <option value="member">member</option>
+                                <option value="tutor">tutor</option>
+                              </select>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {isSelf || isAdminRole ? (
+                              <span className="text-gray-400">-</span>
+                            ) : (
+                              <input
+                                type="checkbox"
+                                checked={edit.is_listed_as_tutor}
+                                disabled={edit.role !== "tutor"}
+                                onChange={() => handleTutorListingToggle(user.id, user)}
+                                className="w-4 h-4 rounded border-gray-300"
+                              />
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {isSelf || isAdminRole ? (
+                              <span className="text-gray-400">-</span>
+                            ) : !isTutor ? (
+                              <span className="text-xs text-gray-400 italic">Promote to tutor to assign courses</span>
+                            ) : (
+                              <div className="flex flex-col gap-1.5">
+                                <div className="relative">
+                                  <button
+                                    onClick={() => setCourseDropdownOpen(courseDropdownOpen === user.id ? null : user.id)}
+                                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-left min-w-[160px] bg-white hover:bg-gray-50 transition-colors"
+                                  >
+                                    {selectedCourses.length === 0
+                                      ? "Select courses..."
+                                      : `${selectedCourses.length} course${selectedCourses.length > 1 ? "s" : ""} selected`}
+                                  </button>
+                                  {courseDropdownOpen === user.id && (
+                                    <CourseDropdown
+                                      courses={courses}
+                                      selected={selectedCourses}
+                                      onToggle={(courseId) => handleCourseToggle(user.id, courseId)}
+                                      onClose={() => setCourseDropdownOpen(null)}
+                                    />
+                                  )}
+                                </div>
+                                {selectedCourses.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {selectedCourses.map((cid) => {
+                                      const c = courses.find((co) => co.id === cid);
+                                      return c ? (
+                                        <span key={cid} className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-200 text-xs px-2 py-0.5 rounded-full">
+                                          {c.code}
+                                          <button
+                                            onClick={() => handleCourseToggle(user.id, cid)}
+                                            className="hover:text-blue-900 transition-colors"
+                                          >
+                                            x
+                                          </button>
+                                        </span>
+                                      ) : null;
+                                    })}
+                                  </div>
+                                )}
+                                {courseChanged && (
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => handleCourseSave(user.id)}
+                                      disabled={savingCourses === user.id}
+                                      className="px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                                    >
+                                      {savingCourses === user.id ? "Saving..." : "Save Courses"}
+                                    </button>
+                                  </div>
+                                )}
+                                {cStatus && (
+                                  <span className={`text-xs font-medium ${cStatus.type === "success" ? "text-emerald-600" : "text-red-600"}`}>
+                                    {cStatus.message}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              {!isSelf && !isAdminRole && (
+                                <button
+                                  onClick={() => handleTutorSave(user.id, user)}
+                                  disabled={!changed || savingTutor === user.id}
+                                  className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                  {savingTutor === user.id ? "Saving..." : "Save"}
+                                </button>
+                              )}
+                              {status && (
+                                <span
+                                  className={`text-xs font-medium ${
+                                    status.type === "success" ? "text-emerald-600" : "text-red-600"
+                                  }`}
+                                >
+                                  {status.message}
+                                </span>
                               )}
                             </div>
-                            {selectedCourses.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {selectedCourses.map((cid) => {
-                                  const c = courses.find((co) => co.id === cid);
-                                  return c ? (
-                                    <span key={cid} className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
-                                      {c.code}
-                                      <button
-                                        onClick={() => handleCourseToggle(user.id, cid)}
-                                        className="hover:text-blue-600"
-                                      >
-                                        x
-                                      </button>
-                                    </span>
-                                  ) : null;
-                                })}
-                              </div>
-                            )}
-                            {courseChanged && (
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => handleCourseSave(user.id)}
-                                  disabled={savingCourses === user.id}
-                                  className="px-2 py-0.5 rounded text-xs bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
-                                >
-                                  {savingCourses === user.id ? "Saving..." : "Save Courses"}
-                                </button>
-                              </div>
-                            )}
-                            {cStatus && (
-                              <span className={`text-xs ${cStatus.type === "success" ? "text-green-600" : "text-red-600"}`}>
-                                {cStatus.message}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-2">
-                        <div className="flex items-center gap-2">
-                          {!isSelf && !isAdminRole && (
-                            <button
-                              onClick={() => handleTutorSave(user.id, user)}
-                              disabled={!changed || savingTutor === user.id}
-                              className="px-3 py-1 rounded text-sm bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {savingTutor === user.id ? "Saving..." : "Save"}
-                            </button>
-                          )}
-                          {status && (
-                            <span
-                              className={`text-sm ${
-                                status.type === "success" ? "text-green-600" : "text-red-600"
-                              }`}
-                            >
-                              {status.message}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </section>
 
       {/* Users Section */}
-      <section>
-        <h2 className="text-xl font-medium mb-4">Users Management</h2>
-
-        {/* User search */}
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="Search by name, program, grad year, or role..."
-            value={userSearch}
-            onChange={(e) => setUserSearch(e.target.value)}
-            className="w-full max-w-md px-3 py-2 border rounded text-sm"
-          />
-        </div>
-
-        {/* Bulk actions for users */}
-        <div className="mb-4 flex flex-wrap gap-2 items-center">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={allUsersSelected}
-              onChange={toggleAllUsersSelection}
-              className="w-4 h-4"
-            />
-            Select all visible
-          </label>
-          <span className="text-sm text-gray-500">
-            ({selectedUsers.size} selected)
-          </span>
-          <button
-            onClick={handleBulkDisableUsers}
-            disabled={selectedUsers.size === 0 || bulkDisabling}
-            className="px-3 py-1 rounded text-sm bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {bulkDisabling ? "Disabling..." : "Disable Selected Users"}
-          </button>
-          <button
-            onClick={handleDeletePostsBySelectedUsers}
-            disabled={selectedUsers.size === 0 || deletingUserPosts}
-            className="px-3 py-1 rounded text-sm bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {deletingUserPosts ? "Deleting..." : `Delete Their Posts (${TIME_FILTER_OPTIONS.find(t => t.value === timeFilter)?.label})`}
-          </button>
-        </div>
-
-        {filteredUsers.length === 0 ? (
-          <p className="text-gray-500">No users found.</p>
-        ) : (
-          <div className="border rounded overflow-hidden overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="text-left px-4 py-2 w-8">
-                    <input
-                      type="checkbox"
-                      checked={allUsersSelected}
-                      onChange={toggleAllUsersSelection}
-                      className="w-4 h-4"
-                    />
-                  </th>
-                  <th className="text-left px-4 py-2">Name</th>
-                  <th className="text-left px-4 py-2">Program</th>
-                  <th className="text-left px-4 py-2">Grad Year</th>
-                  <th className="text-left px-4 py-2">Role</th>
-                  <th className="text-left px-4 py-2">Status</th>
-                  <th className="text-left px-4 py-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="border-t">
-                    <td className="px-4 py-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedUsers.has(user.id)}
-                        onChange={() => toggleUserSelection(user.id)}
-                        className="w-4 h-4"
-                      />
-                    </td>
-                    <td className="px-4 py-2">
-                      <div className="flex items-center gap-2">
-                        <Avatar
-                          fullName={user.full_name ?? "?"}
-                          avatarUrl={avatarUrls[user.id]}
-                          size="sm"
-                        />
-                        <Link
-                          href={`/app/profile/${user.id}`}
-                          className="text-blue-600 hover:underline"
-                        >
-                          {user.full_name ?? "No name"}
-                        </Link>
-                      </div>
-                    </td>
-                    <td className="px-4 py-2">{user.program ?? "-"}</td>
-                    <td className="px-4 py-2">{user.grad_year ?? "-"}</td>
-                    <td className="px-4 py-2">{user.role ?? "member"}</td>
-                    <td className="px-4 py-2">
-                      {user.is_disabled ? (
-                        <span className="text-red-600 font-medium">Disabled</span>
-                      ) : (
-                        <span className="text-green-600">Active</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2">
-                      {user.id !== currentUserId && (
-                        <button
-                          onClick={() => handleToggleDisabled(user.id, user.is_disabled)}
-                          disabled={togglingUser === user.id}
-                          className={`px-3 py-1 rounded text-sm ${
-                            user.is_disabled
-                              ? "bg-green-600 text-white hover:bg-green-700"
-                              : "bg-red-600 text-white hover:bg-red-700"
-                          } disabled:opacity-50`}
-                        >
-                          {togglingUser === user.id
-                            ? "..."
-                            : user.is_disabled
-                            ? "Enable"
-                            : "Disable"}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <section className="mb-8">
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="px-6 py-5 border-b border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900">Users Management</h2>
           </div>
-        )}
+
+          <div className="px-6 py-4">
+            {/* User search */}
+            <input
+              type="text"
+              placeholder="Search by name, program, grad year, or role..."
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+              className="w-full max-w-md rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b]/20 transition-colors mb-4"
+            />
+
+            {/* Bulk actions for users */}
+            <div className="flex flex-wrap gap-3 items-center py-3 px-4 rounded-lg bg-gray-50 border border-gray-100">
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={allUsersSelected}
+                  onChange={toggleAllUsersSelection}
+                  className="w-4 h-4 rounded border-gray-300"
+                />
+                Select all visible
+              </label>
+              <span className="text-xs text-gray-400 font-medium">
+                ({selectedUsers.size} selected)
+              </span>
+              <button
+                onClick={handleBulkDisableUsers}
+                disabled={selectedUsers.size === 0 || bulkDisabling}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {bulkDisabling ? "Disabling..." : "Disable Selected Users"}
+              </button>
+              <button
+                onClick={handleDeletePostsBySelectedUsers}
+                disabled={selectedUsers.size === 0 || deletingUserPosts}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {deletingUserPosts ? "Deleting..." : `Delete Their Posts (${TIME_FILTER_OPTIONS.find(t => t.value === timeFilter)?.label})`}
+              </button>
+            </div>
+          </div>
+
+          <div className="px-6 pb-6">
+            {filteredUsers.length === 0 ? (
+              <div className="py-8 text-center">
+                <p className="text-sm text-gray-400">No users found.</p>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-gray-200 overflow-hidden overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="text-left px-4 py-3 w-8">
+                        <input
+                          type="checkbox"
+                          checked={allUsersSelected}
+                          onChange={toggleAllUsersSelection}
+                          className="w-4 h-4 rounded border-gray-300"
+                        />
+                      </th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Program</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Grad Year</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredUsers.map((user) => (
+                      <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-4 py-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedUsers.has(user.id)}
+                            onChange={() => toggleUserSelection(user.id)}
+                            className="w-4 h-4 rounded border-gray-300"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <Avatar
+                              fullName={user.full_name ?? "?"}
+                              avatarUrl={avatarUrls[user.id]}
+                              size="sm"
+                            />
+                            <Link
+                              href={`/app/profile/${user.id}`}
+                              className="text-sm text-blue-600 hover:underline font-medium"
+                            >
+                              {user.full_name ?? "No name"}
+                            </Link>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">{user.program ?? "-"}</td>
+                        <td className="px-4 py-3 text-gray-600">{user.grad_year ?? "-"}</td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-600 px-2.5 py-0.5 text-xs font-medium capitalize">
+                            {user.role ?? "member"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {user.is_disabled ? (
+                            <span className="inline-flex items-center rounded-full bg-red-50 text-red-700 border border-red-200 px-2.5 py-0.5 text-xs font-medium">Disabled</span>
+                          ) : (
+                            <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 text-xs font-medium">Active</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {user.id !== currentUserId && (
+                            <button
+                              onClick={() => handleToggleDisabled(user.id, user.is_disabled)}
+                              disabled={togglingUser === user.id}
+                              className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                user.is_disabled
+                                  ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                                  : "bg-red-600 text-white hover:bg-red-700"
+                              } disabled:opacity-50`}
+                            >
+                              {togglingUser === user.id
+                                ? "..."
+                                : user.is_disabled
+                                ? "Enable"
+                                : "Disable"}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
       </section>
+      </div>
     </main>
   );
 }
@@ -1343,7 +1389,7 @@ function CourseDropdown({
   return (
     <div
       ref={ref}
-      className="absolute z-10 mt-1 bg-white border rounded shadow-lg max-h-48 overflow-y-auto min-w-[200px]"
+      className="absolute z-10 mt-1 bg-white rounded-lg border border-gray-200 shadow-lg max-h-48 overflow-y-auto min-w-[220px]"
     >
       {courses.length === 0 ? (
         <div className="px-3 py-2 text-sm text-gray-400">No courses available</div>
@@ -1351,15 +1397,15 @@ function CourseDropdown({
         courses.map((course) => (
           <label
             key={course.id}
-            className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-sm"
+            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm transition-colors"
           >
             <input
               type="checkbox"
               checked={selected.includes(course.id)}
               onChange={() => onToggle(course.id)}
-              className="w-4 h-4"
+              className="w-4 h-4 rounded border-gray-300"
             />
-            <span className="font-medium">{course.code}</span>
+            <span className="font-medium text-gray-900">{course.code}</span>
             <span className="text-gray-500">{course.title}</span>
           </label>
         ))
