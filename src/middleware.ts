@@ -24,10 +24,10 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // Check if user is disabled
+    // Check if user is disabled (and fetch role for admin gate)
     const { data: profile } = await supabase
       .from("profiles")
-      .select("is_disabled")
+      .select("is_disabled, role")
       .eq("id", user.id)
       .single();
 
@@ -35,6 +35,12 @@ export async function middleware(request: NextRequest) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("disabled", "1");
       return NextResponse.redirect(loginUrl);
+    }
+
+    // Block non-admin users from /app/admin routes
+    if (pathname.startsWith("/app/admin") && profile?.role !== "admin") {
+      const appUrl = new URL("/app", request.url);
+      return NextResponse.redirect(appUrl);
     }
   }
 
