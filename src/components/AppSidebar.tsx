@@ -94,7 +94,7 @@ export default function AppSidebar() {
   }
 
   return (
-    <nav className="hidden md:flex w-60 flex-shrink-0 flex-col bg-white border-r border-gray-200 dark:bg-gray-900 dark:border-gray-700">
+    <nav className="hidden md:flex w-60 flex-shrink-0 flex-col bg-white border-r border-slate-200 dark:bg-slate-950 dark:border-slate-800">
       {/* Logo */}
       <div className="px-5 pt-6 pb-4">
         <Link href="/app" className="flex items-center gap-3">
@@ -105,13 +105,13 @@ export default function AppSidebar() {
             height={36}
             className="rounded-lg"
           />
-          <span className="text-lg font-bold text-slate-900 tracking-tight">
+          <span className="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">
             TAE Community
           </span>
         </Link>
       </div>
 
-      <div className="border-b border-gray-100 mx-4" />
+      <div className="border-b border-slate-200 dark:border-slate-800 mx-4" />
 
       {/* Nav links */}
       <div className="flex-1 flex flex-col gap-1 px-3 py-4">
@@ -121,10 +121,10 @@ export default function AppSidebar() {
             <Link
               key={link.href}
               href={link.linkTo ?? link.href}
-              className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
+              className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 ${
                 active
-                  ? "bg-slate-900 text-white font-medium"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                  ? "bg-slate-900 text-white font-medium dark:bg-slate-700"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
               }`}
             >
               {link.label}
@@ -145,10 +145,10 @@ export default function AppSidebar() {
         {isAdmin && (
           <Link
             href="/app/admin"
-            className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+            className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 ${
               isActive("/app/admin")
-                ? "bg-slate-900 text-white font-medium"
-                : "text-red-600 hover:bg-red-50"
+                ? "bg-slate-900 text-white font-medium dark:bg-slate-700"
+                : "text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-slate-800"
             }`}
           >
             Admin Dashboard
@@ -157,7 +157,7 @@ export default function AppSidebar() {
       </div>
 
       {/* User block + Logout */}
-      <div className="border-t border-gray-100 mx-4" />
+      <div className="border-t border-slate-200 dark:border-slate-800 mx-4" />
       <div className="px-3 py-4 flex flex-col gap-2">
         {userInfo && (
           <div className="flex items-center gap-3 px-3 py-2">
@@ -167,10 +167,10 @@ export default function AppSidebar() {
               size="sm"
             />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-slate-900 truncate">
+              <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
                 {userInfo.full_name}
               </p>
-              <p className="text-xs text-gray-500 capitalize">
+              <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">
                 {userInfo.role}
               </p>
             </div>
@@ -179,7 +179,7 @@ export default function AppSidebar() {
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400"
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500"
         >
           {mounted && theme === "dark" ? (
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
@@ -194,7 +194,7 @@ export default function AppSidebar() {
         </button>
         <button
           onClick={handleLogout}
-          className="w-full flex items-center px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 transition-colors"
+          className="w-full flex items-center px-3 py-2 rounded-lg text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500"
         >
           Log Out
         </button>
