@@ -296,6 +296,8 @@ export default function PostCard({
                   key={att.id}
                   src={att.signedUrl}
                   alt="Attachment"
+                  loading="lazy"
+                  decoding="async"
                   className={
                     mediaSize === "feed"
                       ? "max-w-[520px] w-full h-auto object-contain rounded-lg"
@@ -310,6 +312,8 @@ export default function PostCard({
                   key={att.id}
                   src={att.signedUrl}
                   controls
+                  preload="metadata"
+                  playsInline
                   className={
                     mediaSize === "feed"
                       ? "max-w-[640px] w-full h-auto rounded-lg"
