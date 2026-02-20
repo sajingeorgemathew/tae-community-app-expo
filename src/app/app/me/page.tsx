@@ -13,6 +13,7 @@ const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp"];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const MAX_TAGS = 12;
 const MAX_TAG_LEN = 24;
+const PAGE_SIZE = 20;
 
 interface Profile {
   id: string;
@@ -77,6 +78,8 @@ export default function MyProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -151,9 +154,10 @@ export default function MyProfilePage() {
         .select("id, author_id, content, audience, created_at")
         .eq("author_id", session.user.id)
         .order("created_at", { ascending: false })
-        .limit(30);
+        .limit(PAGE_SIZE);
 
       const rows = (postsData ?? []) as PostRow[];
+      setHasMore(rows.length === PAGE_SIZE);
       const postIds = rows.map((r) => r.id);
 
       // Fetch attachments for all posts and batch-sign media URLs
@@ -216,6 +220,76 @@ export default function MyProfilePage() {
 
     fetchMyProfile();
   }, [router]);
+
+  async function loadMorePosts() {
+    if (loadingMore || !hasMore || !currentUserId || posts.length === 0) return;
+    setLoadingMore(true);
+
+    const cursor = posts[posts.length - 1].created_at;
+
+    const { data: postsData } = await supabase
+      .from("posts")
+      .select("id, author_id, content, audience, created_at")
+      .eq("author_id", currentUserId)
+      .lt("created_at", cursor)
+      .order("created_at", { ascending: false })
+      .limit(PAGE_SIZE);
+
+    const rows = (postsData ?? []) as PostRow[];
+    setHasMore(rows.length === PAGE_SIZE);
+
+    if (rows.length > 0) {
+      const postIds = rows.map((r) => r.id);
+
+      // Fetch attachments
+      let attachmentsByPost: Record<string, Attachment[]> = {};
+      const { data: attachData } = await supabase
+        .from("post_attachments")
+        .select("id, post_id, type, storage_path, url")
+        .in("post_id", postIds);
+      attachmentsByPost = await signPostAttachments((attachData ?? []) as AttachmentRow[]);
+
+      // Fetch reactions
+      const reactionsByPost: Record<string, ReactionRow[]> = {};
+      const { data: reactionsData } = await supabase
+        .from("post_reactions")
+        .select("post_id, user_id, emoji")
+        .in("post_id", postIds);
+      const reactionRows = (reactionsData ?? []) as ReactionRow[];
+      for (const r of reactionRows) {
+        if (!reactionsByPost[r.post_id]) reactionsByPost[r.post_id] = [];
+        reactionsByPost[r.post_id].push(r);
+      }
+
+      const newPosts: Post[] = rows.map((row) => {
+        const postReactions = reactionsByPost[row.id] ?? [];
+        const reactionCounts: ReactionCounts = {};
+        for (const r of postReactions) {
+          reactionCounts[r.emoji] = (reactionCounts[r.emoji] ?? 0) + 1;
+        }
+        const userReactions = postReactions
+          .filter((r) => r.user_id === currentUserId)
+          .map((r) => r.emoji as Emoji);
+        return {
+          id: row.id,
+          content: row.content,
+          audience: row.audience,
+          created_at: row.created_at,
+          attachments: attachmentsByPost[row.id] ?? [],
+          reactionCounts,
+          userReactions,
+        };
+      });
+
+      setPosts((prev) => {
+        const existingIds = new Set(prev.map((p) => p.id));
+        const unique = newPosts.filter((p) => !existingIds.has(p.id));
+        return [...prev, ...unique];
+      });
+    }
+
+    setLoadingMore(false);
+  }
 
   function handleEdit() {
     setEditing(true);
@@ -935,26 +1009,42 @@ export default function MyProfilePage() {
                   </Link>
                 </div>
               ) : (
-                <ul className="space-y-4">
-                  {posts.map((post) => (
-                    <li key={post.id}>
-                      <PostCard
-                        postId={post.id}
-                        content={post.content}
-                        audience={post.audience}
-                        createdAt={post.created_at}
-                        attachments={post.attachments}
-                        canDelete={!!currentUserId}
-                        onDelete={() => handleDelete(post.id)}
-                        reactionCounts={post.reactionCounts}
-                        userReactions={post.userReactions}
-                        onReactionToggle={(emoji) => handleReactionToggle(post.id, emoji)}
-                        currentUserId={currentUserId}
-                        mediaSize="profile"
-                      />
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <ul className="space-y-4">
+                    {posts.map((post) => (
+                      <li key={post.id}>
+                        <PostCard
+                          postId={post.id}
+                          content={post.content}
+                          audience={post.audience}
+                          createdAt={post.created_at}
+                          attachments={post.attachments}
+                          canDelete={!!currentUserId}
+                          onDelete={() => handleDelete(post.id)}
+                          reactionCounts={post.reactionCounts}
+                          userReactions={post.userReactions}
+                          onReactionToggle={(emoji) => handleReactionToggle(post.id, emoji)}
+                          currentUserId={currentUserId}
+                          mediaSize="profile"
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                  {hasMore && (
+                    <div className="pt-4 text-center">
+                      <button
+                        onClick={loadMorePosts}
+                        disabled={loadingMore}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
+                      >
+                        {loadingMore && (
+                          <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                        )}
+                        {loadingMore ? "Loading..." : "Load more"}
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
