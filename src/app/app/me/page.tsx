@@ -570,30 +570,30 @@ export default function MyProfilePage() {
       <main className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-slate-800 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-gray-500">Loading profile...</p>
+          <p className="text-sm text-gray-500 dark:text-slate-400">Loading profile...</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gray-50/50">
+    <main className="min-h-screen bg-gray-50/50 dark:bg-slate-900">
       {/* Page Header */}
-      <div className="border-b border-gray-200 bg-white px-6 py-5 md:px-8">
+      <div className="border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-6 py-5 md:px-8">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div>
             <div className="flex items-center gap-3 mb-1">
               <Link
                 href="/app"
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </Link>
-              <h1 className="text-xl font-semibold text-gray-900">My Profile</h1>
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">My Profile</h1>
             </div>
-            <p className="text-sm text-gray-500 ml-8">Manage your personal information and skills</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400 ml-8">Manage your personal information and skills</p>
           </div>
           <div className="flex items-center gap-3">
             {editing ? (
@@ -601,7 +601,7 @@ export default function MyProfilePage() {
                 <button
                   onClick={handleCancel}
                   disabled={saving}
-                  className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
+                  className="inline-flex items-center rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-600 transition disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -638,8 +638,8 @@ export default function MyProfilePage() {
             <div
               className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium ${
                 message.type === "success"
-                  ? "bg-green-50 text-green-800 border border-green-200"
-                  : "bg-red-50 text-red-800 border border-red-200"
+                  ? "bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800"
+                  : "bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800"
               }`}
             >
               {message.type === "success" ? (
@@ -664,7 +664,7 @@ export default function MyProfilePage() {
           {/* ── Left Column: Profile Card ── */}
           <div className="space-y-6">
             {/* Profile Identity Card */}
-            <div className="rounded-xl border border-gray-200 bg-white p-6 text-center">
+            <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 text-center">
               {/* Avatar */}
               <div className="flex flex-col items-center">
                 <div className="relative">
@@ -695,41 +695,41 @@ export default function MyProfilePage() {
                   onChange={handleFileSelect}
                 />
                 {editing && (
-                  <p className="text-xs text-gray-400 mt-2">JPEG, PNG, or WebP &middot; 5 MB max</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">JPEG, PNG, or WebP &middot; 5 MB max</p>
                 )}
               </div>
 
               {/* Name & Headline */}
-              <h2 className="text-lg font-semibold text-gray-900 mt-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mt-4">
                 {profile?.full_name || "Your Name"}
               </h2>
               {profile?.headline && (
-                <p className="text-sm text-gray-500 mt-1">{profile.headline}</p>
+                <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{profile.headline}</p>
               )}
               {!profile?.headline && !editing && (
-                <p className="text-sm text-gray-400 mt-1 italic">No headline yet</p>
+                <p className="text-sm text-gray-400 dark:text-slate-500 mt-1 italic">No headline yet</p>
               )}
 
               {/* Role Badge */}
               {profile?.role && (
                 <div className="mt-3">
-                  <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 px-3 py-1 text-xs font-medium capitalize">
+                  <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-3 py-1 text-xs font-medium capitalize">
                     {profile.role}
                   </span>
                 </div>
               )}
 
               {/* Quick Info */}
-              <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
-                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700 space-y-2">
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-slate-300">
+                  <svg className="w-4 h-4 text-gray-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                   </svg>
                   <span>{profile?.program || "No program set"}</span>
                 </div>
                 {profile?.grad_year && (
-                  <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-slate-300">
+                    <svg className="w-4 h-4 text-gray-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     <span>Class of {profile.grad_year}</span>
@@ -743,13 +743,13 @@ export default function MyProfilePage() {
               <div
                 ref={completenessRef}
                 id="completeness"
-                className="rounded-xl border border-gray-200 bg-white p-5"
+                className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5"
               >
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-gray-900">Profile Completeness</h3>
-                  <span className="text-sm font-bold text-blue-600">{completeness.percent}%</span>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Profile Completeness</h3>
+                  <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{completeness.percent}%</span>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-2 mb-4">
+                <div className="w-full bg-gray-100 dark:bg-slate-700 rounded-full h-2 mb-4">
                   <div
                     className="bg-blue-600 h-2 rounded-full transition-all duration-500"
                     style={{ width: `${completeness.percent}%` }}
@@ -760,12 +760,12 @@ export default function MyProfilePage() {
                     <li key={item.key} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                        <span className="text-sm text-gray-600">{item.label}</span>
+                        <span className="text-sm text-gray-600 dark:text-slate-300">{item.label}</span>
                       </div>
                       <button
                         type="button"
                         onClick={() => handleAddField(item.key)}
-                        className="text-blue-600 hover:text-blue-700 text-xs font-medium hover:underline"
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-xs font-medium hover:underline"
                       >
                         Add
                       </button>
@@ -777,13 +777,13 @@ export default function MyProfilePage() {
 
             {/* Skills in View Mode (left column) */}
             {!editing && profile?.skills && profile.skills.length > 0 && (
-              <div className="rounded-xl border border-gray-200 bg-white p-5">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Skills</h3>
+              <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Skills</h3>
                 <div className="flex flex-wrap gap-2">
                   {profile.skills.map((skill, i) => (
                     <span
                       key={i}
-                      className="inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-3 py-1 text-xs font-medium"
+                      className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 text-xs font-medium"
                     >
                       {skill}
                     </span>
@@ -798,42 +798,42 @@ export default function MyProfilePage() {
             {editing ? (
               <>
                 {/* Basic Info Card */}
-                <div className="rounded-xl border border-gray-200 bg-white p-6">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <div className="w-1 h-5 bg-slate-800 rounded-full" />
+                <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <div className="w-1 h-5 bg-slate-800 dark:bg-slate-400 rounded-full" />
                     Basic Information
                   </h3>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5">Full Name</label>
                       <input
                         type="text"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition"
+                        className="w-full border border-gray-200 dark:border-slate-600 rounded-lg px-4 py-2.5 text-sm bg-white dark:bg-slate-700 dark:text-white dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition"
                         placeholder="Enter your full name"
                       />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Program</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5">Program</label>
                         <input
                           ref={programRef}
                           type="text"
                           value={program}
                           onChange={(e) => setProgram(e.target.value)}
-                          className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition"
+                          className="w-full border border-gray-200 dark:border-slate-600 rounded-lg px-4 py-2.5 text-sm bg-white dark:bg-slate-700 dark:text-white dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition"
                           placeholder="e.g. Computer Science"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Graduation Year</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5">Graduation Year</label>
                         <input
                           ref={gradYearRef}
                           type="number"
                           value={gradYear}
                           onChange={(e) => setGradYear(e.target.value)}
-                          className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition"
+                          className="w-full border border-gray-200 dark:border-slate-600 rounded-lg px-4 py-2.5 text-sm bg-white dark:bg-slate-700 dark:text-white dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition"
                           placeholder="e.g. 2026"
                         />
                       </div>
@@ -842,32 +842,32 @@ export default function MyProfilePage() {
                 </div>
 
                 {/* About Card */}
-                <div className="rounded-xl border border-gray-200 bg-white p-6">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                     <div className="w-1 h-5 bg-blue-600 rounded-full" />
                     About
                   </h3>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Headline</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5">Headline</label>
                     <input
                       ref={headlineRef}
                       type="text"
                       value={headline}
                       onChange={(e) => setHeadline(e.target.value)}
                       maxLength={160}
-                      className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition"
+                      className="w-full border border-gray-200 dark:border-slate-600 rounded-lg px-4 py-2.5 text-sm bg-white dark:bg-slate-700 dark:text-white dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition"
                       placeholder="A short summary about yourself"
                     />
-                    <p className="text-xs text-gray-400 mt-1.5 text-right">{headline.length}/160</p>
+                    <p className="text-xs text-gray-400 dark:text-slate-500 mt-1.5 text-right">{headline.length}/160</p>
                   </div>
                 </div>
 
                 {/* Skills Card */}
-                <div className="rounded-xl border border-gray-200 bg-white p-6">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                     <div className="w-1 h-5 bg-amber-500 rounded-full" />
                     Skills
-                    <span className="text-xs font-normal text-gray-400 ml-1">
+                    <span className="text-xs font-normal text-gray-400 dark:text-slate-500 ml-1">
                       {skills.length}/{MAX_TAGS}
                     </span>
                   </h3>
@@ -878,13 +878,13 @@ export default function MyProfilePage() {
                       {skills.map((skill, i) => (
                         <span
                           key={i}
-                          className="inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-700 pl-3 pr-1.5 py-1 text-xs font-medium group"
+                          className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 pl-3 pr-1.5 py-1 text-xs font-medium group"
                         >
                           {skill}
                           <button
                             type="button"
                             onClick={() => removeSkill(i)}
-                            className="w-5 h-5 rounded-full flex items-center justify-center hover:bg-blue-100 text-blue-400 hover:text-red-500 transition"
+                            className="w-5 h-5 rounded-full flex items-center justify-center hover:bg-blue-100 dark:hover:bg-blue-800/40 text-blue-400 dark:text-blue-400 hover:text-red-500 dark:hover:text-red-400 transition"
                           >
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -910,12 +910,12 @@ export default function MyProfilePage() {
                       }}
                       maxLength={MAX_TAG_LEN}
                       placeholder="Type a skill and press Enter"
-                      className="flex-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition"
+                      className="flex-1 border border-gray-200 dark:border-slate-600 rounded-lg px-4 py-2.5 text-sm bg-white dark:bg-slate-700 dark:text-white dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition"
                     />
                     <button
                       type="button"
                       onClick={addSkill}
-                      className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                      className="inline-flex items-center rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-600 transition"
                     >
                       Add
                     </button>
@@ -925,44 +925,44 @@ export default function MyProfilePage() {
             ) : (
               <>
                 {/* View Mode: Basic Info Card */}
-                <div className="rounded-xl border border-gray-200 bg-white p-6">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <div className="w-1 h-5 bg-slate-800 rounded-full" />
+                <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <div className="w-1 h-5 bg-slate-800 dark:bg-slate-400 rounded-full" />
                     Basic Information
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
                     <div>
-                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Full Name</p>
-                      <p className="text-sm text-gray-900">{profile?.full_name || "Not specified"}</p>
+                      <p className="text-xs font-medium text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-1">Full Name</p>
+                      <p className="text-sm text-gray-900 dark:text-white">{profile?.full_name || "Not specified"}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Role</p>
+                      <p className="text-xs font-medium text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-1">Role</p>
                       {profile?.role ? (
-                        <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 px-2.5 py-0.5 text-xs font-medium capitalize">
+                        <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-2.5 py-0.5 text-xs font-medium capitalize">
                           {profile.role}
                         </span>
                       ) : (
-                        <p className="text-sm text-gray-900">Not specified</p>
+                        <p className="text-sm text-gray-900 dark:text-white">Not specified</p>
                       )}
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Program</p>
-                      <p className="text-sm text-gray-900">{profile?.program || "Not specified"}</p>
+                      <p className="text-xs font-medium text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-1">Program</p>
+                      <p className="text-sm text-gray-900 dark:text-white">{profile?.program || "Not specified"}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Graduation Year</p>
-                      <p className="text-sm text-gray-900">{profile?.grad_year || "Not specified"}</p>
+                      <p className="text-xs font-medium text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-1">Graduation Year</p>
+                      <p className="text-sm text-gray-900 dark:text-white">{profile?.grad_year || "Not specified"}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* View Mode: About Card */}
-                <div className="rounded-xl border border-gray-200 bg-white p-6">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                     <div className="w-1 h-5 bg-blue-600 rounded-full" />
                     About
                   </h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">
+                  <p className="text-sm text-gray-600 dark:text-slate-300 leading-relaxed">
                     {profile?.headline || "No headline added yet."}
                   </p>
                 </div>
@@ -970,18 +970,18 @@ export default function MyProfilePage() {
             )}
 
             {/* My Posts Section */}
-            <div className="rounded-xl border border-gray-200 bg-white p-6">
+            <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                   <div className="w-1 h-5 bg-blue-600 rounded-full" />
                   My Posts
                   {posts.length > 0 && (
-                    <span className="text-xs font-normal text-gray-400 ml-1">{posts.length}</span>
+                    <span className="text-xs font-normal text-gray-400 dark:text-slate-500 ml-1">{posts.length}</span>
                   )}
                 </h3>
                 <Link
                   href="/app/feed/new"
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -991,11 +991,11 @@ export default function MyProfilePage() {
               </div>
               {posts.length === 0 ? (
                 <div className="text-center py-8">
-                  <svg className="w-12 h-12 text-gray-200 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-12 h-12 text-gray-200 dark:text-slate-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
                   </svg>
-                  <p className="text-sm font-medium text-gray-500 mb-1">No posts published</p>
-                  <p className="text-xs text-gray-400 mb-4 max-w-xs mx-auto">
+                  <p className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1">No posts published</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 mb-4 max-w-xs mx-auto">
                     Share your thoughts, projects, or insights with the community.
                   </p>
                   <Link
@@ -1035,7 +1035,7 @@ export default function MyProfilePage() {
                       <button
                         onClick={loadMorePosts}
                         disabled={loadingMore}
-                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-600 transition disabled:opacity-50"
                       >
                         {loadingMore && (
                           <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
