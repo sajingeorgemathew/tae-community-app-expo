@@ -67,8 +67,8 @@ function ConversationItem({
       onClick={onClick}
       className={`w-full text-left px-4 py-3 transition-colors duration-150 ${
         isActive
-          ? "bg-[#1e293b]/10 border-l-[3px] border-l-[#1e293b]"
-          : "hover:bg-slate-50 border-l-[3px] border-l-transparent"
+          ? "bg-[#1e293b]/10 border-l-[3px] border-l-[#1e293b] dark:bg-slate-700/40 dark:border-l-slate-400"
+          : "hover:bg-slate-50 border-l-[3px] border-l-transparent dark:hover:bg-slate-800/60"
       }`}
     >
       <div className="flex items-center gap-3">
@@ -79,21 +79,21 @@ function ConversationItem({
             size="sm"
           />
           {isOnline && (
-            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
+            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" />
           )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
             <p
               className={`truncate text-sm ${
-                convo.is_unread ? "font-semibold text-[#1e293b]" : "font-medium text-slate-700"
+                convo.is_unread ? "font-semibold text-[#1e293b] dark:text-slate-100" : "font-medium text-slate-700 dark:text-slate-300"
               }`}
             >
               {convo.other_user_name}
             </p>
             <div className="flex items-center gap-1.5 shrink-0">
               {convo.last_message_at && (
-                <span className={`text-[11px] ${convo.is_unread ? "text-[#1e293b] font-medium" : "text-slate-400"}`}>
+                <span className={`text-[11px] ${convo.is_unread ? "text-[#1e293b] font-medium dark:text-slate-200" : "text-slate-400 dark:text-slate-500"}`}>
                   {formatTimestamp(convo.last_message_at)}
                 </span>
               )}
@@ -102,14 +102,14 @@ function ConversationItem({
           <div className="flex items-center gap-2 mt-0.5">
             <p
               className={`text-xs truncate flex-1 ${
-                convo.is_unread ? "font-medium text-slate-600" : "text-slate-400"
+                convo.is_unread ? "font-medium text-slate-600 dark:text-slate-300" : "text-slate-400 dark:text-slate-500"
               }`}
             >
               {convo.last_message_content ||
                 (convo.last_message_at ? "Attachment" : "No messages yet")}
             </p>
             {convo.is_unread && convo.unread_count > 0 && (
-              <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-[#1e293b] rounded-full">
+              <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-[#1e293b] dark:bg-slate-200 dark:text-slate-900 rounded-full">
                 {convo.unread_count > 99 ? "99+" : convo.unread_count}
               </span>
             )}
@@ -168,7 +168,7 @@ function MessageBubble({
         <div className="hidden group-hover:flex items-center gap-1 mr-1">
           <button
             onClick={() => startEdit(msg)}
-            className="text-slate-400 hover:text-slate-600 p-1 rounded"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded"
             title="Edit"
           >
             &#9998;
@@ -186,8 +186,8 @@ function MessageBubble({
       <div
         className={`max-w-[70%] px-4 py-2.5 ${
           isOwn
-            ? "bg-[#1e293b] text-white rounded-2xl rounded-br-md"
-            : "bg-slate-100 text-slate-900 rounded-2xl rounded-bl-md"
+            ? "bg-[#1e293b] text-white rounded-2xl rounded-br-md dark:bg-slate-700"
+            : "bg-slate-100 text-slate-900 rounded-2xl rounded-bl-md dark:bg-slate-800 dark:text-slate-100"
         }`}
       >
         {/* Inline edit mode */}
@@ -196,21 +196,21 @@ function MessageBubble({
             <textarea
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
-              className="w-full rounded-lg p-2 text-slate-900 text-sm resize-none border border-slate-200 focus:outline-none focus:border-[#1e293b]"
+              className="w-full rounded-lg p-2 text-slate-900 dark:text-slate-100 text-sm resize-none border border-slate-200 dark:border-slate-600 dark:bg-slate-900 focus:outline-none focus:border-[#1e293b] dark:focus:border-slate-400"
               rows={3}
               autoFocus
             />
             <div className="flex gap-2 mt-1.5 justify-end">
               <button
                 onClick={cancelEdit}
-                className="text-xs px-3 py-1 rounded-lg bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors"
+                className="text-xs px-3 py-1 rounded-lg bg-slate-200 text-slate-600 hover:bg-slate-300 dark:bg-slate-600 dark:text-slate-200 dark:hover:bg-slate-500 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={() => saveEdit(msg.id)}
                 disabled={!editContent.trim()}
-                className="text-xs px-3 py-1 rounded-lg bg-white text-[#1e293b] font-medium hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                className="text-xs px-3 py-1 rounded-lg bg-white text-[#1e293b] font-medium hover:bg-slate-50 dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-slate-300 disabled:opacity-50 transition-colors"
               >
                 Save
               </button>
@@ -299,10 +299,10 @@ function Composer({
   formatFileSize: (b: number) => string;
 }) {
   return (
-    <div className="p-4 border-t border-slate-200 bg-white">
+    <div className="p-4 border-t border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-700">
       {selectedFile && (
-        <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-slate-50 rounded-lg text-sm border border-slate-200">
-          <span className="truncate flex-1 text-slate-600">
+        <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-sm border border-slate-200 dark:border-slate-700">
+          <span className="truncate flex-1 text-slate-600 dark:text-slate-300">
             {selectedFile.name} ({formatFileSize(selectedFile.size)})
           </span>
           <button
@@ -329,7 +329,7 @@ function Composer({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={sending}
-          className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-slate-400 hover:text-[#1e293b] hover:bg-slate-100 disabled:opacity-50 transition-colors"
+          className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-slate-400 hover:text-[#1e293b] hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-800 disabled:opacity-50 transition-colors"
           title="Attach file"
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -350,7 +350,7 @@ function Composer({
               }
             }}
             placeholder="Type a message..."
-            className="w-full border border-slate-200 rounded-2xl px-4 py-2.5 pr-12 resize-none text-sm focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b]/20 transition-colors placeholder:text-slate-400"
+            className="w-full border border-slate-200 rounded-2xl px-4 py-2.5 pr-12 resize-none text-sm focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b]/20 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-slate-400 dark:focus:ring-slate-400/20 transition-colors placeholder:text-slate-400"
             rows={1}
             disabled={sending}
           />
@@ -358,7 +358,7 @@ function Composer({
         <button
           type="submit"
           disabled={(!messageInput.trim() && !selectedFile) || sending}
-          className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-[#1e293b] text-white hover:bg-[#334155] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-[#1e293b] text-white hover:bg-[#334155] dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           {sending ? (
             <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
@@ -372,7 +372,7 @@ function Composer({
           )}
         </button>
       </form>
-      <p className="text-[11px] text-slate-400 mt-1.5 text-center">
+      <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5 text-center">
         Press Enter to send, Shift + Enter for new line
       </p>
     </div>
@@ -1107,9 +1107,9 @@ function MessagesContent() {
   return (
     <div className="app-card flex h-[calc(100vh-200px)] min-h-[400px] overflow-hidden">
       {/* Left pane: Conversation list */}
-      <div className="w-[340px] min-w-[280px] border-r border-slate-200 flex flex-col bg-white">
-        <div className="px-5 py-4 border-b border-slate-200">
-          <h2 className="text-base font-semibold text-[#1e293b]">Conversations</h2>
+      <div className="w-[340px] min-w-[280px] border-r border-slate-200 dark:border-slate-700 flex flex-col bg-white dark:bg-slate-900">
+        <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700">
+          <h2 className="text-base font-semibold text-[#1e293b] dark:text-slate-100">Conversations</h2>
         </div>
         <div className="flex-1 overflow-y-auto">
           {conversations.length === 0 ? (
@@ -1117,7 +1117,7 @@ function MessagesContent() {
               <p className="text-slate-400 text-sm">No conversations yet.</p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {conversations.map((convo) => (
                 <ConversationItem
                   key={convo.conversation_id}
@@ -1135,10 +1135,10 @@ function MessagesContent() {
       </div>
 
       {/* Right pane: Thread */}
-      <div className="flex-1 flex flex-col bg-white">
+      <div className="flex-1 flex flex-col bg-white dark:bg-slate-900">
         {!conversationId ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-3">
-            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-slate-300">
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 gap-3">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-slate-300 dark:text-slate-600">
               <path d="M8 36V12a4 4 0 0 1 4-4h24a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H16l-8 8Z" />
               <line x1="16" y1="18" x2="32" y2="18" />
               <line x1="16" y1="24" x2="26" y2="24" />
@@ -1152,7 +1152,7 @@ function MessagesContent() {
         ) : (
           <>
             {/* Thread header */}
-            <div className="px-5 py-3 border-b border-slate-200 bg-white flex items-center gap-3">
+            <div className="px-5 py-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center gap-3">
               {selectedConvo && (
                 <>
                   <div className="relative">
@@ -1163,12 +1163,12 @@ function MessagesContent() {
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-[#1e293b] text-sm truncate">
+                    <p className="font-semibold text-[#1e293b] dark:text-slate-100 text-sm truncate">
                       {selectedConvo.other_user_name}
                     </p>
                   </div>
                   {onlineSet.has(selectedConvo.other_user_id) && (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
                       <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
                       Online
                     </span>
@@ -1181,7 +1181,7 @@ function MessagesContent() {
             <div
               ref={messagesContainerRef}
               onScroll={handleContainerScroll}
-              className="flex-1 overflow-y-auto px-5 py-4 space-y-4 bg-slate-50/50"
+              className="flex-1 overflow-y-auto px-5 py-4 space-y-4 bg-slate-50/50 dark:bg-slate-950/50"
             >
               {loadingMessages ? (
                 <div className="flex items-center justify-center h-full">
@@ -1210,7 +1210,7 @@ function MessagesContent() {
                       <div key={msg.id}>
                         {showSeparator && (
                           <div className="flex items-center justify-center my-4">
-                            <span className="px-3 py-1 text-[11px] font-medium text-slate-500 bg-white rounded-full shadow-sm border border-slate-100">
+                            <span className="px-3 py-1 text-[11px] font-medium text-slate-500 bg-white rounded-full shadow-sm border border-slate-100 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700">
                               {formatDayLabel(msg.created_at)}
                             </span>
                           </div>
@@ -1263,12 +1263,12 @@ export default function MessagesPage() {
   return (
     <main className="min-h-screen p-8">
       <div className="mb-6">
-        <Link href="/app" className="text-[#1e293b] hover:text-[#334155] text-sm font-medium transition-colors">
+        <Link href="/app" className="text-[#1e293b] hover:text-[#334155] dark:text-slate-300 dark:hover:text-white text-sm font-medium transition-colors">
           &larr; Back to App
         </Link>
       </div>
 
-      <h1 className="text-2xl font-semibold text-[#1e293b] mb-6">Messages</h1>
+      <h1 className="text-2xl font-semibold text-[#1e293b] dark:text-slate-100 mb-6">Messages</h1>
 
       <Suspense fallback={
         <div className="flex items-center justify-center h-64">
