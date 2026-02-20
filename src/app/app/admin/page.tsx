@@ -75,6 +75,9 @@ interface Course {
 type AudienceFilter = "all" | "students" | "alumni";
 type TimeFilter = "1h" | "2h" | "3h" | "24h";
 
+const PAGE_SIZE = 20;
+const USER_PAGE_SIZE = 25;
+
 const TIME_FILTER_OPTIONS: { value: TimeFilter; label: string; hours: number }[] = [
   { value: "1h", label: "Last 1 hour", hours: 1 },
   { value: "2h", label: "Last 2 hours", hours: 2 },
@@ -93,6 +96,8 @@ export default function AdminPage() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("24h");
   const [selectedPosts, setSelectedPosts] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [hasMorePosts, setHasMorePosts] = useState(false);
+  const [loadingMorePosts, setLoadingMorePosts] = useState(false);
 
   // Users state
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -101,6 +106,8 @@ export default function AdminPage() {
   const [togglingUser, setTogglingUser] = useState<string | null>(null);
   const [bulkDisabling, setBulkDisabling] = useState(false);
   const [deletingUserPosts, setDeletingUserPosts] = useState(false);
+  const [hasMoreUsers, setHasMoreUsers] = useState(false);
+  const [loadingMoreUsers, setLoadingMoreUsers] = useState(false);
 
   // Tutor management state
   const [tutorSearch, setTutorSearch] = useState("");
@@ -162,7 +169,7 @@ export default function AdminPage() {
       .select("id, author_id, content, audience, created_at, profiles(full_name, avatar_path)")
       .gte("created_at", cutoff)
       .order("created_at", { ascending: false })
-      .limit(100);
+      .limit(PAGE_SIZE);
 
     if (error) {
       console.error("Error fetching posts:", error.message);
@@ -170,6 +177,7 @@ export default function AdminPage() {
     }
 
     const rows = (data ?? []) as PostRow[];
+    setHasMorePosts(rows.length === PAGE_SIZE);
     const postIds = rows.map((r) => r.id);
 
     // Fetch attachments and batch-sign media URLs
@@ -246,12 +254,14 @@ export default function AdminPage() {
       .from("profiles")
       .select("id, full_name, avatar_path, program, grad_year, role, is_listed_as_tutor, is_disabled, created_at")
       .order("created_at", { ascending: false })
-      .limit(50);
+      .limit(USER_PAGE_SIZE);
 
     if (error) {
       console.error("Error fetching users:", error.message);
       return;
     }
+
+    setHasMoreUsers((data ?? []).length === USER_PAGE_SIZE);
 
     const userRows = (data ?? []).map((p) => ({
       id: p.id,
@@ -276,6 +286,173 @@ export default function AdminPage() {
       const urls = await resolveAvatarUrls(withAvatars);
       setAvatarUrls((prev) => ({ ...prev, ...urls }));
     }
+  }
+
+  async function loadMorePosts() {
+    if (!currentUserId || loadingMorePosts || !hasMorePosts || posts.length === 0) return;
+
+    setLoadingMorePosts(true);
+
+    const cursor = posts[posts.length - 1].created_at;
+    const timeOption = TIME_FILTER_OPTIONS.find((t) => t.value === timeFilter);
+    const cutoff = new Date(Date.now() - (timeOption?.hours ?? 24) * 60 * 60 * 1000).toISOString();
+
+    const { data, error } = await supabase
+      .from("posts")
+      .select("id, author_id, content, audience, created_at, profiles(full_name, avatar_path)")
+      .gte("created_at", cutoff)
+      .lt("created_at", cursor)
+      .order("created_at", { ascending: false })
+      .limit(PAGE_SIZE);
+
+    if (error) {
+      console.error("Error loading more posts:", error.message);
+      setLoadingMorePosts(false);
+      return;
+    }
+
+    const rows = (data ?? []) as PostRow[];
+    setHasMorePosts(rows.length === PAGE_SIZE);
+
+    if (rows.length === 0) {
+      setLoadingMorePosts(false);
+      return;
+    }
+
+    const existingIds = new Set(posts.map((p) => p.id));
+    const newRows = rows.filter((r) => !existingIds.has(r.id));
+
+    if (newRows.length === 0) {
+      setLoadingMorePosts(false);
+      return;
+    }
+
+    const postIds = newRows.map((r) => r.id);
+
+    // Fetch attachments and batch-sign media URLs
+    let attachmentsByPost: Record<string, Attachment[]> = {};
+    if (postIds.length > 0) {
+      const { data: attachData } = await supabase
+        .from("post_attachments")
+        .select("id, post_id, type, storage_path, url")
+        .in("post_id", postIds);
+
+      attachmentsByPost = await signPostAttachments((attachData ?? []) as AttachmentRow[]);
+    }
+
+    // Fetch reactions
+    const reactionsByPost: Record<string, ReactionRow[]> = {};
+    if (postIds.length > 0) {
+      const { data: reactionsData } = await supabase
+        .from("post_reactions")
+        .select("post_id, user_id, emoji")
+        .in("post_id", postIds);
+
+      const reactionRows = (reactionsData ?? []) as ReactionRow[];
+      for (const r of reactionRows) {
+        if (!reactionsByPost[r.post_id]) {
+          reactionsByPost[r.post_id] = [];
+        }
+        reactionsByPost[r.post_id].push(r);
+      }
+    }
+
+    const newPosts: Post[] = newRows.map((row) => {
+      const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+      const postReactions = reactionsByPost[row.id] ?? [];
+
+      const reactionCounts: ReactionCounts = {};
+      for (const r of postReactions) {
+        reactionCounts[r.emoji] = (reactionCounts[r.emoji] ?? 0) + 1;
+      }
+
+      const userReactions = postReactions
+        .filter((r) => r.user_id === currentUserId)
+        .map((r) => r.emoji as Emoji);
+
+      return {
+        id: row.id,
+        author_id: row.author_id,
+        content: row.content,
+        audience: row.audience,
+        created_at: row.created_at,
+        author_name: profile?.full_name ?? "Unknown Author",
+        author_avatar_path: profile?.avatar_path ?? null,
+        attachments: attachmentsByPost[row.id] ?? [],
+        reactionCounts,
+        userReactions,
+      };
+    });
+
+    setPosts((prev) => [...prev, ...newPosts]);
+
+    // Resolve avatar URLs for new post authors
+    const authorProfiles = newPosts
+      .filter((p) => p.author_avatar_path)
+      .map((p) => ({ id: p.author_id, avatar_path: p.author_avatar_path }));
+    if (authorProfiles.length > 0) {
+      const urls = await resolveAvatarUrls(authorProfiles);
+      setAvatarUrls((prev) => ({ ...prev, ...urls }));
+    }
+
+    setLoadingMorePosts(false);
+  }
+
+  async function loadMoreUsers() {
+    if (loadingMoreUsers || !hasMoreUsers || users.length === 0) return;
+
+    setLoadingMoreUsers(true);
+
+    const cursor = users[users.length - 1].created_at;
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, full_name, avatar_path, program, grad_year, role, is_listed_as_tutor, is_disabled, created_at")
+      .lt("created_at", cursor)
+      .order("created_at", { ascending: false })
+      .limit(USER_PAGE_SIZE);
+
+    if (error) {
+      console.error("Error loading more users:", error.message);
+      setLoadingMoreUsers(false);
+      return;
+    }
+
+    const rows = data ?? [];
+    setHasMoreUsers(rows.length === USER_PAGE_SIZE);
+
+    const existingIds = new Set(users.map((u) => u.id));
+    const newRows = rows
+      .filter((p) => !existingIds.has(p.id))
+      .map((p) => ({
+        id: p.id,
+        full_name: p.full_name,
+        avatar_path: p.avatar_path ?? null,
+        program: p.program,
+        grad_year: p.grad_year,
+        role: p.role,
+        is_listed_as_tutor: p.is_listed_as_tutor ?? false,
+        is_disabled: p.is_disabled ?? false,
+        created_at: p.created_at,
+      }));
+
+    if (newRows.length === 0) {
+      setLoadingMoreUsers(false);
+      return;
+    }
+
+    setUsers((prev) => [...prev, ...newRows]);
+
+    // Resolve avatar URLs for new users only
+    const withAvatars = newRows
+      .filter((u) => u.avatar_path)
+      .map((u) => ({ id: u.id, avatar_path: u.avatar_path }));
+    if (withAvatars.length > 0) {
+      const urls = await resolveAvatarUrls(withAvatars);
+      setAvatarUrls((prev) => ({ ...prev, ...urls }));
+    }
+
+    setLoadingMoreUsers(false);
   }
 
   async function fetchCourses() {
@@ -971,6 +1148,7 @@ export default function AdminPage() {
                   <p className="text-sm text-gray-400">No posts found for selected filters.</p>
                 </div>
               ) : (
+                <>
                 <ul className="space-y-4">
                   {filteredPosts.map((post) => (
                     <li key={post.id} className="flex gap-3 items-start">
@@ -1003,6 +1181,18 @@ export default function AdminPage() {
                     </li>
                   ))}
                 </ul>
+                {hasMorePosts && (
+                  <div className="mt-4 text-center">
+                    <button
+                      onClick={loadMorePosts}
+                      disabled={loadingMorePosts}
+                      className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {loadingMorePosts ? "Loading..." : "Load more posts"}
+                    </button>
+                  </div>
+                )}
+                </>
               )}
             </div>
           </div>
@@ -1247,6 +1437,7 @@ export default function AdminPage() {
                 <p className="text-sm text-gray-400">No users found.</p>
               </div>
             ) : (
+              <>
               <div className="rounded-lg border border-gray-200 overflow-hidden overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50">
@@ -1331,6 +1522,18 @@ export default function AdminPage() {
                   </tbody>
                 </table>
               </div>
+              {hasMoreUsers && (
+                <div className="mt-4 text-center">
+                  <button
+                    onClick={loadMoreUsers}
+                    disabled={loadingMoreUsers}
+                    className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {loadingMoreUsers ? "Loading..." : "Load more users"}
+                  </button>
+                </div>
+              )}
+              </>
             )}
           </div>
         </div>
