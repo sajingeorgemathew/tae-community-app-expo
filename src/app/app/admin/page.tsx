@@ -6,6 +6,7 @@ import { supabase } from "@/src/lib/supabaseClient";
 import { useAvatarUrls } from "@/src/lib/avatarUrl";
 import Avatar from "@/src/components/Avatar";
 import PostCard, { Attachment, Emoji, ReactionCounts } from "@/src/components/PostCard";
+import { signPostAttachments } from "@/src/lib/signPostAttachments";
 
 interface ProfileJoin {
   full_name: string | null;
@@ -171,39 +172,15 @@ export default function AdminPage() {
     const rows = (data ?? []) as PostRow[];
     const postIds = rows.map((r) => r.id);
 
-    // Fetch attachments
-    const attachmentsByPost: Record<string, Attachment[]> = {};
+    // Fetch attachments and batch-sign media URLs
+    let attachmentsByPost: Record<string, Attachment[]> = {};
     if (postIds.length > 0) {
       const { data: attachData } = await supabase
         .from("post_attachments")
         .select("id, post_id, type, storage_path, url")
         .in("post_id", postIds);
 
-      const attachRows = (attachData ?? []) as AttachmentRow[];
-
-      for (const att of attachRows) {
-        let attachment: Attachment;
-
-        if (att.type === "link") {
-          attachment = { id: att.id, type: "link", linkUrl: att.url ?? undefined };
-        } else if (att.storage_path) {
-          const { data: signedData } = await supabase.storage
-            .from("post-media")
-            .createSignedUrl(att.storage_path, 3600);
-          attachment = {
-            id: att.id,
-            type: att.type,
-            signedUrl: signedData?.signedUrl,
-          };
-        } else {
-          continue;
-        }
-
-        if (!attachmentsByPost[att.post_id]) {
-          attachmentsByPost[att.post_id] = [];
-        }
-        attachmentsByPost[att.post_id].push(attachment);
-      }
+      attachmentsByPost = await signPostAttachments((attachData ?? []) as AttachmentRow[]);
     }
 
     // Fetch reactions
