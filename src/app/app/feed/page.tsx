@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { supabase } from "@/src/lib/supabaseClient";
 import { useAvatarUrls } from "@/src/lib/avatarUrl";
@@ -50,6 +50,8 @@ interface Post {
 
 type AudienceFilter = "all" | "students" | "alumni";
 
+const PAGE_SIZE = 20;
+
 // Helper: simple hash function for seed string
 function hashString(str: string): number {
   let hash = 0;
@@ -84,6 +86,9 @@ function seededShuffle<T>(array: T[], seed: string): T[] {
 export default function FeedPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [cursor, setCursor] = useState<{ createdAt: string; id: string } | null>(null);
   const [filter, setFilter] = useState<AudienceFilter>("all");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -120,7 +125,8 @@ export default function FeedPage() {
         .select("id, author_id, content, audience, created_at, profiles(full_name, avatar_path)")
         .gte("created_at", fiveDaysAgo)
         .order("created_at", { ascending: false })
-        .limit(100);
+        .order("id", { ascending: false })
+        .limit(PAGE_SIZE);
 
       if (error) {
         console.error("Error fetching posts:", error.message);
@@ -222,12 +228,127 @@ export default function FeedPage() {
       const seed = `${today}:${userId}`;
       const shuffledRecent = seededShuffle(recent, seed);
 
+      // Set cursor from last raw row (oldest in this batch by created_at desc, id desc)
+      if (rows.length > 0) {
+        const lastRow = rows[rows.length - 1];
+        setCursor({ createdAt: lastRow.created_at, id: lastRow.id });
+      }
+      setHasMore(rows.length >= PAGE_SIZE);
+
       setPosts([...fresh, ...shuffledRecent]);
       setLoading(false);
     }
 
     fetchData();
   }, []);
+
+  const loadMore = useCallback(async () => {
+    if (!cursor || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+
+    const { data, error } = await supabase
+      .from("posts")
+      .select("id, author_id, content, audience, created_at, profiles(full_name, avatar_path)")
+      .gte("created_at", fiveDaysAgo)
+      .or(`created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(PAGE_SIZE);
+
+    if (error) {
+      console.error("Error fetching more posts:", error.message);
+      setLoadingMore(false);
+      return;
+    }
+
+    const rows = (data ?? []) as PostRow[];
+    const postIds = rows.map((r) => r.id);
+
+    // Fetch attachments
+    let attachmentsByPost: Record<string, Attachment[]> = {};
+    if (postIds.length > 0) {
+      const { data: attachData } = await supabase
+        .from("post_attachments")
+        .select("id, post_id, type, storage_path, url")
+        .in("post_id", postIds);
+
+      attachmentsByPost = await signPostAttachments((attachData ?? []) as AttachmentRow[]);
+    }
+
+    // Fetch reactions
+    const reactionsByPost: Record<string, ReactionRow[]> = {};
+    if (postIds.length > 0) {
+      const { data: reactionsData } = await supabase
+        .from("post_reactions")
+        .select("post_id, user_id, emoji")
+        .in("post_id", postIds);
+
+      const reactionRows = (reactionsData ?? []) as ReactionRow[];
+      for (const r of reactionRows) {
+        if (!reactionsByPost[r.post_id]) {
+          reactionsByPost[r.post_id] = [];
+        }
+        reactionsByPost[r.post_id].push(r);
+      }
+    }
+
+    // Resolve avatars
+    const authorAvatars: { id: string; avatar_path: string | null }[] = [];
+    const seenAuthors = new Set<string>();
+    for (const row of rows) {
+      if (!seenAuthors.has(row.author_id)) {
+        seenAuthors.add(row.author_id);
+        const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+        authorAvatars.push({ id: row.author_id, avatar_path: profile?.avatar_path ?? null });
+      }
+    }
+    const avatarUrlMap = await resolveAvatarUrls(authorAvatars);
+
+    const userId = session?.user.id ?? null;
+    const newPosts: Post[] = rows.map((row) => {
+      const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+      const postReactions = reactionsByPost[row.id] ?? [];
+
+      const reactionCounts: ReactionCounts = {};
+      for (const r of postReactions) {
+        reactionCounts[r.emoji] = (reactionCounts[r.emoji] ?? 0) + 1;
+      }
+
+      const userReactions = postReactions
+        .filter((r) => r.user_id === userId)
+        .map((r) => r.emoji as Emoji);
+
+      return {
+        id: row.id,
+        author_id: row.author_id,
+        content: row.content,
+        audience: row.audience,
+        created_at: row.created_at,
+        author_name: profile?.full_name ?? "Unknown Author",
+        author_avatar_url: avatarUrlMap[row.author_id] ?? null,
+        attachments: attachmentsByPost[row.id] ?? [],
+        reactionCounts,
+        userReactions,
+      };
+    });
+
+    // Update cursor from last row
+    if (rows.length > 0) {
+      const lastRow = rows[rows.length - 1];
+      setCursor({ createdAt: lastRow.created_at, id: lastRow.id });
+    }
+    setHasMore(rows.length >= PAGE_SIZE);
+
+    // Append new posts without reshuffling existing ones
+    setPosts((prev) => [...prev, ...newPosts]);
+    setLoadingMore(false);
+  }, [cursor, loadingMore, hasMore, resolveAvatarUrls]);
 
   const filteredPosts =
     filter === "all"
@@ -453,6 +574,26 @@ export default function FeedPage() {
                 mediaSize="feed"
               />
             ))}
+
+            {/* Load More button */}
+            {hasMore && (
+              <div className="flex justify-center pt-2 pb-4">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loadingMore ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    "Load more"
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
