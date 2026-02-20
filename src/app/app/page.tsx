@@ -329,7 +329,7 @@ export default function AppPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-400">Loading...</p>
+        <p className="text-gray-400 dark:text-slate-500">Loading...</p>
       </div>
     );
   }
@@ -354,7 +354,7 @@ export default function AppPage() {
         <div className="flex gap-3">
           <Link
             href="/app/feed/new"
-            className="inline-flex items-center gap-2 rounded-lg bg-white text-slate-900 px-5 py-2.5 text-sm font-medium hover:bg-gray-100 transition"
+            className="inline-flex items-center gap-2 rounded-lg bg-white text-slate-900 px-5 py-2.5 text-sm font-medium hover:bg-gray-100 transition dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
           >
             <span className="text-lg leading-none">+</span> Create Post
           </Link>
@@ -369,29 +369,29 @@ export default function AppPage() {
 
       {/* ---- Profile Completion Banner ---- */}
       {profileIncomplete && (
-        <section className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <section className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden dark:bg-slate-950 dark:border-slate-700">
           <div className="flex">
             {/* Navy accent stripe */}
-            <div className="w-1.5 bg-slate-800 shrink-0" />
+            <div className="w-1.5 bg-slate-800 shrink-0 dark:bg-slate-400" />
 
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 px-6 py-5 flex-1">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-slate-800 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                   </svg>
-                  <h3 className="text-sm font-semibold text-gray-900">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100">
                     Finish setting up your profile
                   </h3>
                 </div>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-slate-400">
                   A complete profile helps others find and connect with you.
                 </p>
 
                 {missingFields.length > 0 && (
                   <ul className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
                     {missingFields.map((field) => (
-                      <li key={field} className="flex items-center gap-1.5 text-xs text-gray-500">
+                      <li key={field} className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-slate-400">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
                         {field}
                       </li>
@@ -424,14 +424,14 @@ export default function AppPage() {
           onFocus={() => {
             if (searchQuery.trim() && searchResults.length > 0) setShowDropdown(true);
           }}
-          className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+          className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:ring-blue-400/30"
         />
         {showDropdown && searchQuery.trim() && (
-          <div className="absolute z-10 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-80 overflow-y-auto">
+          <div className="absolute z-10 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-80 overflow-y-auto dark:bg-slate-950 dark:border-slate-700">
             {searchLoading ? (
-              <p className="px-4 py-3 text-sm text-gray-400">Searching...</p>
+              <p className="px-4 py-3 text-sm text-gray-400 dark:text-slate-500">Searching...</p>
             ) : searchResults.length === 0 ? (
-              <p className="px-4 py-3 text-sm text-gray-500">No matching members.</p>
+              <p className="px-4 py-3 text-sm text-gray-500 dark:text-slate-400">No matching members.</p>
             ) : (
               <ul>
                 {searchResults.map((result) => (
@@ -442,34 +442,34 @@ export default function AppPage() {
                         setShowDropdown(false);
                         router.push(`/app/profile/${result.id}`);
                       }}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-2"
+                      className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-2 dark:hover:bg-slate-800"
                     >
                       <Avatar
                         fullName={result.full_name || "?"}
                         avatarUrl={searchAvatarUrls[result.id]}
                         size="sm"
                       />
-                      <span className="font-medium text-sm">
+                      <span className="font-medium text-sm dark:text-slate-100">
                         {result.full_name || "Unnamed Member"}
                       </span>
                       {result.role && (
-                        <span className="text-xs bg-gray-200 px-2 py-0.5 rounded">
+                        <span className="text-xs bg-gray-200 px-2 py-0.5 rounded dark:bg-slate-700 dark:text-slate-300">
                           {result.role}
                         </span>
                       )}
                       {result.program && (
-                        <span className="text-xs text-gray-500">{result.program}</span>
+                        <span className="text-xs text-gray-500 dark:text-slate-400">{result.program}</span>
                       )}
                       {result.skills && result.skills.length > 0 && (
                         <>
                           <span
                             title={result.skills[0]}
-                            className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-gray-700 max-w-[140px] truncate whitespace-nowrap overflow-hidden"
+                            className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-gray-700 max-w-[140px] truncate whitespace-nowrap overflow-hidden dark:border-slate-600 dark:text-slate-300"
                           >
                             {result.skills[0]}
                           </span>
                           {result.skills.length > 1 && (
-                            <span className="text-xs text-gray-400 whitespace-nowrap">
+                            <span className="text-xs text-gray-400 whitespace-nowrap dark:text-slate-500">
                               +{result.skills.length - 1}
                             </span>
                           )}
@@ -482,7 +482,7 @@ export default function AppPage() {
             )}
             <Link
               href={`/app/directory?query=${encodeURIComponent(searchQuery.trim())}`}
-              className="block px-4 py-2 text-sm text-blue-600 hover:bg-gray-50 border-t text-center"
+              className="block px-4 py-2 text-sm text-blue-600 hover:bg-gray-50 border-t text-center dark:text-blue-400 dark:hover:bg-slate-800 dark:border-slate-700"
             >
               See all results
             </Link>
@@ -523,19 +523,19 @@ export default function AppPage() {
         {/* Recent Posts */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 dark:text-slate-100">
               <span className="w-1 h-5 bg-blue-600 rounded-full inline-block" />
               Recent Posts
             </h2>
-            <Link href="/app/feed" className="text-sm text-blue-600 hover:underline">
+            <Link href="/app/feed" className="text-sm text-blue-600 hover:underline dark:text-blue-400">
               View all
             </Link>
           </div>
 
           {postsLoading ? (
-            <p className="text-sm text-gray-400">Loading posts...</p>
+            <p className="text-sm text-gray-400 dark:text-slate-500">Loading posts...</p>
           ) : posts.length === 0 ? (
-            <div className="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-400">
               No posts yet. Be the first to share something!
             </div>
           ) : (
@@ -544,7 +544,7 @@ export default function AppPage() {
                 <Link
                   key={post.id}
                   href={`/app/feed#post-${post.id}`}
-                  className="block rounded-xl border border-gray-200 bg-white p-4 hover:shadow-md transition-shadow"
+                  className="block rounded-xl border border-gray-200 bg-white p-4 hover:shadow-md transition-shadow dark:bg-slate-950 dark:border-slate-700"
                 >
                   <div className="flex items-start gap-3">
                     <Avatar
@@ -554,14 +554,14 @@ export default function AppPage() {
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm text-gray-900">
+                        <span className="font-medium text-sm text-gray-900 dark:text-slate-100">
                           {post.author_name}
                         </span>
-                        <span className="text-xs text-gray-400 whitespace-nowrap ml-2">
+                        <span className="text-xs text-gray-400 whitespace-nowrap ml-2 dark:text-slate-500">
                           {timeAgo(post.created_at)}
                         </span>
                       </div>
-                      <p className="mt-1 text-sm text-gray-600 line-clamp-2">
+                      <p className="mt-1 text-sm text-gray-600 line-clamp-2 dark:text-slate-400">
                         {truncate(post.content, 120)}
                       </p>
                     </div>
@@ -575,19 +575,19 @@ export default function AppPage() {
         {/* Recent Questions */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 dark:text-slate-100">
               <span className="w-1 h-5 bg-amber-500 rounded-full inline-block" />
               Recent Questions
             </h2>
-            <Link href="/app/questions" className="text-sm text-blue-600 hover:underline">
+            <Link href="/app/questions" className="text-sm text-blue-600 hover:underline dark:text-blue-400">
               View all
             </Link>
           </div>
 
           {questionsLoading ? (
-            <p className="text-sm text-gray-400">Loading questions...</p>
+            <p className="text-sm text-gray-400 dark:text-slate-500">Loading questions...</p>
           ) : questions.length === 0 ? (
-            <div className="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-400">
               No questions yet. Ask the community something!
             </div>
           ) : (
@@ -596,12 +596,12 @@ export default function AppPage() {
                 <Link
                   key={q.id}
                   href={`/app/questions/${q.id}`}
-                  className="block rounded-xl border border-gray-200 bg-white p-4 hover:shadow-md transition-shadow"
+                  className="block rounded-xl border border-gray-200 bg-white p-4 hover:shadow-md transition-shadow dark:bg-slate-950 dark:border-slate-700"
                 >
-                  <h3 className="font-medium text-sm text-gray-900">
+                  <h3 className="font-medium text-sm text-gray-900 dark:text-slate-100">
                     {truncate(q.title, 80)}
                   </h3>
-                  <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+                  <div className="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-slate-400">
                     <div className="flex items-center gap-2">
                       <Avatar
                         fullName={q.author_name}
@@ -612,7 +612,7 @@ export default function AppPage() {
                       <span>&middot;</span>
                       <span>{timeAgo(q.created_at)}</span>
                     </div>
-                    <span className="text-gray-400">
+                    <span className="text-gray-400 dark:text-slate-500">
                       {q.answer_count} {q.answer_count === 1 ? "answer" : "answers"}
                     </span>
                   </div>

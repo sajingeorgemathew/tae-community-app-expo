@@ -124,6 +124,10 @@ body {
   background: #334155;
 }
 
+:where(.dark) .app-shell .app-btn-primary:hover {
+  background: #475569;
+}
+
 .app-shell .app-input {
   display: block;
   width: 100%;
@@ -141,4 +145,8 @@ body {
   outline: none;
   border-color: var(--brand-navy);
   box-shadow: 0 0 0 2px rgba(30, 41, 59, 0.15);
+}
+
+:where(.dark) .app-shell .app-input:focus {
+  box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.25);
 }

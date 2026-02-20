@@ -211,7 +211,7 @@ export default function PostCard({
   const totalReactions = Object.values(reactionCounts).reduce((sum, c) => sum + c, 0);
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden dark:bg-slate-950 dark:border-slate-700">
       {/* Author Header */}
       <div className="px-5 pt-5 pb-0">
         <div className="flex items-start justify-between">
@@ -229,20 +229,20 @@ export default function PostCard({
                   {authorId ? (
                     <Link
                       href={`/app/profile/${authorId}`}
-                      className="font-semibold text-gray-900 hover:text-slate-700 transition-colors truncate"
+                      className="font-semibold text-gray-900 hover:text-slate-700 transition-colors truncate dark:text-slate-100 dark:hover:text-slate-300"
                     >
                       {authorName}
                     </Link>
                   ) : (
-                    <span className="font-semibold text-gray-900 truncate">{authorName}</span>
+                    <span className="font-semibold text-gray-900 truncate dark:text-slate-100">{authorName}</span>
                   )}
                   {audience !== "all" && (
-                    <span className="inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-2 py-0.5 text-xs font-medium capitalize">
+                    <span className="inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-2 py-0.5 text-xs font-medium capitalize dark:bg-blue-950 dark:text-blue-300">
                       {audience}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-gray-400 mt-0.5">{formatDate(createdAt)}</p>
+                <p className="text-xs text-gray-400 mt-0.5 dark:text-slate-500">{formatDate(createdAt)}</p>
               </div>
             </div>
           )}
@@ -252,7 +252,7 @@ export default function PostCard({
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setShowMenu((v) => !v)}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-800"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                   <circle cx="12" cy="5" r="1.5" />
@@ -261,13 +261,13 @@ export default function PostCard({
                 </svg>
               </button>
               {showMenu && (
-                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[140px]">
+                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[140px] dark:bg-slate-900 dark:border-slate-700">
                   <button
                     onClick={() => {
                       setShowMenu(false);
                       onDelete();
                     }}
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2 dark:text-red-400 dark:hover:bg-red-950"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -283,7 +283,7 @@ export default function PostCard({
 
       {/* Content */}
       <div className="px-5 pt-3 pb-1">
-        <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{content}</p>
+        <p className="text-gray-800 whitespace-pre-wrap leading-relaxed dark:text-slate-200">{content}</p>
       </div>
 
       {/* Attachments */}
@@ -330,7 +330,7 @@ export default function PostCard({
                   href={att.linkUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 hover:underline text-sm break-all"
+                  className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 hover:underline text-sm break-all dark:text-blue-400 dark:hover:text-blue-300"
                 >
                   <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -358,8 +358,8 @@ export default function PostCard({
                     onClick={() => onReactionToggle(emoji)}
                     className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm transition-colors ${
                       isActive
-                        ? "bg-blue-50 border border-blue-200 text-blue-700"
-                        : "bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100"
+                        ? "bg-blue-50 border border-blue-200 text-blue-700 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-300"
+                        : "bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
                     }`}
                   >
                     <span>{emoji}</span>
@@ -373,7 +373,7 @@ export default function PostCard({
             {postId && currentUserId && (
               <button
                 onClick={() => setShowComments((v) => !v)}
-                className="text-sm text-gray-500 hover:text-gray-700 transition-colors font-medium"
+                className="text-sm text-gray-500 hover:text-gray-700 transition-colors font-medium dark:text-slate-400 dark:hover:text-slate-200"
               >
                 {showComments
                   ? "Hide comments"
@@ -390,8 +390,8 @@ export default function PostCard({
 
       {/* Comments Section */}
       {postId && currentUserId && showComments && (
-        <div className="border-t border-gray-100 px-5 py-4">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Comments</p>
+        <div className="border-t border-gray-100 px-5 py-4 dark:border-slate-800">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 dark:text-slate-400">Comments</p>
 
           {/* Comment Input */}
           <div className="flex gap-3 mb-4">
@@ -399,7 +399,7 @@ export default function PostCard({
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               placeholder="Write a comment..."
-              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm resize-y min-h-[40px] max-h-[120px] focus:outline-none focus:ring-2 focus:ring-slate-800/20 focus:border-slate-300 placeholder:text-gray-400 transition"
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm resize-y min-h-[40px] max-h-[120px] focus:outline-none focus:ring-2 focus:ring-slate-800/20 focus:border-slate-300 placeholder:text-gray-400 transition dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:ring-slate-400/30 dark:focus:border-slate-500"
               rows={1}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -411,7 +411,7 @@ export default function PostCard({
             <button
               onClick={handleAddComment}
               disabled={submitting || !newComment.trim()}
-              className="self-end rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              className="self-end rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition dark:bg-slate-800 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
             >
               {submitting ? "..." : "Post Comment"}
             </button>
@@ -420,25 +420,25 @@ export default function PostCard({
           {/* Comments List */}
           {loadingComments ? (
             <div className="flex items-center gap-2 py-3">
-              <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm text-gray-400">Loading comments...</p>
+              <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin dark:border-slate-600 dark:border-t-transparent" />
+              <p className="text-sm text-gray-400 dark:text-slate-500">Loading comments...</p>
             </div>
           ) : (
             <>
               {comments.length === 0 && (
-                <p className="text-sm text-gray-400 italic text-center py-3">
+                <p className="text-sm text-gray-400 italic text-center py-3 dark:text-slate-500">
                   No comments yet. Be the first to share your thoughts!
                 </p>
               )}
               <div className="space-y-3">
                 {comments.map((comment) => (
-                  <div key={comment.id} className="rounded-lg bg-gray-50 p-3">
+                  <div key={comment.id} className="rounded-lg bg-gray-50 p-3 dark:bg-slate-900">
                     {editingId === comment.id ? (
                       <div className="space-y-2">
                         <textarea
                           value={editContent}
                           onChange={(e) => setEditContent(e.target.value)}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-800/20 focus:border-slate-300 transition"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-800/20 focus:border-slate-300 transition dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 dark:focus:ring-slate-400/30 dark:focus:border-slate-500"
                           rows={2}
                         />
                         <div className="flex gap-2">
@@ -450,7 +450,7 @@ export default function PostCard({
                           </button>
                           <button
                             onClick={() => { setEditingId(null); setEditContent(""); }}
-                            className="text-xs bg-gray-200 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-300 transition font-medium"
+                            className="text-xs bg-gray-200 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-300 transition font-medium dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
                           >
                             Cancel
                           </button>
@@ -459,19 +459,19 @@ export default function PostCard({
                     ) : (
                       <>
                         <div className="flex items-center justify-between mb-1">
-                          <span className="font-medium text-gray-800 text-sm">{comment.author_name}</span>
-                          <span className="text-xs text-gray-400">
+                          <span className="font-medium text-gray-800 text-sm dark:text-slate-200">{comment.author_name}</span>
+                          <span className="text-xs text-gray-400 dark:text-slate-500">
                             {formatDate(comment.created_at)}
                             {comment.updated_at !== comment.created_at && " (edited)"}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{comment.content}</p>
+                        <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed dark:text-slate-300">{comment.content}</p>
                         {(canEditComment(comment) || canDeleteComment(comment)) && (
                           <div className="mt-2 flex gap-3">
                             {canEditComment(comment) && (
                               <button
                                 onClick={() => { setEditingId(comment.id); setEditContent(comment.content); }}
-                                className="text-xs text-gray-500 hover:text-slate-700 font-medium transition-colors"
+                                className="text-xs text-gray-500 hover:text-slate-700 font-medium transition-colors dark:text-slate-400 dark:hover:text-slate-200"
                               >
                                 Edit
                               </button>
@@ -479,7 +479,7 @@ export default function PostCard({
                             {canDeleteComment(comment) && (
                               <button
                                 onClick={() => handleDeleteComment(comment.id)}
-                                className="text-xs text-gray-500 hover:text-red-600 font-medium transition-colors"
+                                className="text-xs text-gray-500 hover:text-red-600 font-medium transition-colors dark:text-slate-400 dark:hover:text-red-400"
                               >
                                 Delete
                               </button>

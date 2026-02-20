@@ -29,7 +29,7 @@ export default function Avatar({
 
   return (
     <div
-      className={`${sizeClass} rounded-full overflow-hidden bg-gray-200 flex items-center justify-center shrink-0 ${className}`}
+      className={`${sizeClass} rounded-full overflow-hidden bg-gray-200 flex items-center justify-center shrink-0 dark:bg-slate-700 ${className}`}
     >
       {avatarUrl ? (
         <img
@@ -38,7 +38,7 @@ export default function Avatar({
           className="w-full h-full object-cover"
         />
       ) : (
-        <span className="text-gray-500 font-medium">{getInitials(fullName)}</span>
+        <span className="text-gray-500 font-medium dark:text-slate-300">{getInitials(fullName)}</span>
       )}
     </div>
   );

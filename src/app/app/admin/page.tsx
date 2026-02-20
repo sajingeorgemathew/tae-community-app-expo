@@ -1022,10 +1022,10 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-gray-50/50">
+      <main className="min-h-screen flex items-center justify-center bg-gray-50/50 dark:bg-slate-950">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-slate-800 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-slate-500">Loading admin dashboard...</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Loading admin dashboard...</p>
         </div>
       </main>
     );
@@ -1033,19 +1033,19 @@ export default function AdminPage() {
 
   if (!isAdmin) {
     return (
-      <main className="min-h-screen p-6 md:p-8 bg-gray-50/50">
+      <main className="min-h-screen p-6 md:p-8 bg-gray-50/50 dark:bg-slate-950">
         <div className="max-w-md mx-auto mt-20">
-          <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-8 text-center">
-            <div className="w-14 h-14 mx-auto rounded-full bg-red-50 flex items-center justify-center mb-4">
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-8 text-center dark:bg-slate-950 dark:border-slate-700">
+            <div className="w-14 h-14 mx-auto rounded-full bg-red-50 flex items-center justify-center mb-4 dark:bg-red-950">
               <svg className="w-7 h-7 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
               </svg>
             </div>
-            <h1 className="text-xl font-bold text-[#1e293b] mb-2">Not Authorized</h1>
-            <p className="text-sm text-gray-500 mb-6">
+            <h1 className="text-xl font-bold text-[#1e293b] mb-2 dark:text-slate-100">Not Authorized</h1>
+            <p className="text-sm text-gray-500 mb-6 dark:text-slate-400">
               You do not have permission to access this page.
             </p>
-            <Link href="/app" className="text-sm text-blue-600 hover:underline font-medium">
+            <Link href="/app" className="text-sm text-blue-600 hover:underline font-medium dark:text-blue-400">
               &larr; Back to App
             </Link>
           </div>
@@ -1058,7 +1058,7 @@ export default function AdminPage() {
   const allUsersSelected = filteredUsers.length > 0 && filteredUsers.every((u) => selectedUsers.has(u.id));
 
   return (
-    <main className="min-h-screen bg-gray-50/50 p-6 md:p-8">
+    <main className="min-h-screen bg-gray-50/50 p-6 md:p-8 dark:bg-slate-950">
       <div className="max-w-6xl mx-auto">
         <div className="mb-6">
           <Link href="/app" className="text-sm text-blue-600 hover:underline font-medium">
@@ -1066,20 +1066,20 @@ export default function AdminPage() {
           </Link>
         </div>
 
-        <h1 className="text-2xl font-bold text-[#1e293b] mb-8">Admin Dashboard</h1>
+        <h1 className="text-2xl font-bold text-[#1e293b] mb-8 dark:text-slate-100">Admin Dashboard</h1>
 
         {/* Posts Section */}
         <section className="mb-8">
-          <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-            <div className="px-6 py-5 border-b border-gray-100">
-              <h2 className="text-lg font-semibold text-gray-900">Posts Moderation</h2>
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm dark:bg-slate-950 dark:border-slate-700">
+            <div className="px-6 py-5 border-b border-gray-100 dark:border-slate-800">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Posts Moderation</h2>
             </div>
 
             <div className="px-6 py-4">
               <div className="flex flex-wrap gap-4 mb-4">
                 {/* Audience filter */}
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Audience:</span>
+                  <span className="text-xs font-medium text-gray-400 uppercase tracking-wider dark:text-slate-500">Audience:</span>
                   <div className="flex gap-1.5">
                     {(["all", "students", "alumni"] as AudienceFilter[]).map((option) => (
                       <button
@@ -1088,7 +1088,7 @@ export default function AdminPage() {
                         className={`px-3 py-1 rounded-full text-xs font-medium capitalize transition-colors ${
                           audienceFilter === option
                             ? "bg-slate-800 text-white"
-                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                         }`}
                       >
                         {option}
@@ -1099,7 +1099,7 @@ export default function AdminPage() {
 
                 {/* Time filter */}
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Time:</span>
+                  <span className="text-xs font-medium text-gray-400 uppercase tracking-wider dark:text-slate-500">Time:</span>
                   <div className="flex gap-1.5">
                     {TIME_FILTER_OPTIONS.map((option) => (
                       <button
@@ -1108,7 +1108,7 @@ export default function AdminPage() {
                         className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                           timeFilter === option.value
                             ? "bg-slate-800 text-white"
-                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                         }`}
                       >
                         {option.label}
@@ -1119,8 +1119,8 @@ export default function AdminPage() {
               </div>
 
               {/* Bulk actions for posts */}
-              <div className="flex flex-wrap gap-3 items-center py-3 px-4 rounded-lg bg-gray-50 border border-gray-100">
-                <label className="flex items-center gap-2 text-sm text-gray-700">
+              <div className="flex flex-wrap gap-3 items-center py-3 px-4 rounded-lg bg-gray-50 border border-gray-100 dark:bg-slate-900 dark:border-slate-800">
+                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
                   <input
                     type="checkbox"
                     checked={allPostsSelected}
@@ -1129,7 +1129,7 @@ export default function AdminPage() {
                   />
                   Select all visible
                 </label>
-                <span className="text-xs text-gray-400 font-medium">
+                <span className="text-xs text-gray-400 font-medium dark:text-slate-500">
                   ({selectedPosts.size} selected)
                 </span>
                 <button
@@ -1145,7 +1145,7 @@ export default function AdminPage() {
             <div className="px-6 pb-6">
               {filteredPosts.length === 0 ? (
                 <div className="py-8 text-center">
-                  <p className="text-sm text-gray-400">No posts found for selected filters.</p>
+                  <p className="text-sm text-gray-400 dark:text-slate-500">No posts found for selected filters.</p>
                 </div>
               ) : (
                 <>
@@ -1211,30 +1211,30 @@ export default function AdminPage() {
               placeholder="Search by name..."
               value={tutorSearch}
               onChange={(e) => setTutorSearch(e.target.value)}
-              className="w-full max-w-md rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b]/20 transition-colors"
+              className="w-full max-w-md rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b]/20 transition-colors dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-slate-400 dark:focus:ring-slate-400/30"
             />
           </div>
 
           <div className="px-6 pb-6">
             {filteredTutorUsers.length === 0 ? (
               <div className="py-8 text-center">
-                <p className="text-sm text-gray-400">No users found.</p>
+                <p className="text-sm text-gray-400 dark:text-slate-500">No users found.</p>
               </div>
             ) : (
-              <div className="rounded-lg border border-gray-200 overflow-hidden overflow-x-auto">
+              <div className="rounded-lg border border-gray-200 overflow-hidden overflow-x-auto dark:border-slate-700">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gray-50 dark:bg-slate-900">
                     <tr>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Program</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Grad Year</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Listed</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Courses</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-slate-400">Name</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-slate-400">Program</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-slate-400">Grad Year</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-slate-400">Role</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-slate-400">Listed</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-slate-400">Courses</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-slate-400">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
                     {filteredTutorUsers.map((user) => {
                       const edit = getTutorEdit(user);
                       const changed = hasTutorChanges(user);
@@ -1248,7 +1248,7 @@ export default function AdminPage() {
                       const cStatus = courseSaveStatus[user.id];
 
                       return (
-                        <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                        <tr key={user.id} className="hover:bg-gray-50/50 transition-colors dark:hover:bg-slate-900/50">
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
                               <Avatar
@@ -1256,19 +1256,19 @@ export default function AdminPage() {
                                 avatarUrl={avatarUrls[user.id]}
                                 size="sm"
                               />
-                              <span className="font-medium text-gray-900">{user.full_name ?? "No name"}</span>
+                              <span className="font-medium text-gray-900 dark:text-slate-100">{user.full_name ?? "No name"}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-gray-600">{user.program ?? "-"}</td>
-                          <td className="px-4 py-3 text-gray-600">{user.grad_year ?? "-"}</td>
+                          <td className="px-4 py-3 text-gray-600 dark:text-slate-400">{user.program ?? "-"}</td>
+                          <td className="px-4 py-3 text-gray-600 dark:text-slate-400">{user.grad_year ?? "-"}</td>
                           <td className="px-4 py-3">
                             {isSelf || isAdminRole ? (
-                              <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-600 px-2.5 py-0.5 text-xs font-medium capitalize">{user.role ?? "member"}</span>
+                              <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-600 px-2.5 py-0.5 text-xs font-medium capitalize dark:bg-slate-800 dark:text-slate-300">{user.role ?? "member"}</span>
                             ) : (
                               <select
                                 value={edit.role}
                                 onChange={(e) => handleTutorRoleChange(user.id, e.target.value, user)}
-                                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b]/20 transition-colors"
+                                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b]/20 transition-colors dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:focus:border-slate-400 dark:focus:ring-slate-400/30"
                               >
                                 <option value="member">member</option>
                                 <option value="tutor">tutor</option>
@@ -1277,7 +1277,7 @@ export default function AdminPage() {
                           </td>
                           <td className="px-4 py-3">
                             {isSelf || isAdminRole ? (
-                              <span className="text-gray-400">-</span>
+                              <span className="text-gray-400 dark:text-slate-600">-</span>
                             ) : (
                               <input
                                 type="checkbox"
@@ -1290,15 +1290,15 @@ export default function AdminPage() {
                           </td>
                           <td className="px-4 py-3">
                             {isSelf || isAdminRole ? (
-                              <span className="text-gray-400">-</span>
+                              <span className="text-gray-400 dark:text-slate-600">-</span>
                             ) : !isTutor ? (
-                              <span className="text-xs text-gray-400 italic">Promote to tutor to assign courses</span>
+                              <span className="text-xs text-gray-400 italic dark:text-slate-500">Promote to tutor to assign courses</span>
                             ) : (
                               <div className="flex flex-col gap-1.5">
                                 <div className="relative">
                                   <button
                                     onClick={() => setCourseDropdownOpen(courseDropdownOpen === user.id ? null : user.id)}
-                                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-left min-w-[160px] bg-white hover:bg-gray-50 transition-colors"
+                                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-left min-w-[160px] bg-white hover:bg-gray-50 transition-colors dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                                   >
                                     {selectedCourses.length === 0
                                       ? "Select courses..."
@@ -1318,7 +1318,7 @@ export default function AdminPage() {
                                     {selectedCourses.map((cid) => {
                                       const c = courses.find((co) => co.id === cid);
                                       return c ? (
-                                        <span key={cid} className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-200 text-xs px-2 py-0.5 rounded-full">
+                                        <span key={cid} className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-200 text-xs px-2 py-0.5 rounded-full dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
                                           {c.code}
                                           <button
                                             onClick={() => handleCourseToggle(user.id, cid)}
@@ -1401,8 +1401,8 @@ export default function AdminPage() {
             />
 
             {/* Bulk actions for users */}
-            <div className="flex flex-wrap gap-3 items-center py-3 px-4 rounded-lg bg-gray-50 border border-gray-100">
-              <label className="flex items-center gap-2 text-sm text-gray-700">
+            <div className="flex flex-wrap gap-3 items-center py-3 px-4 rounded-lg bg-gray-50 border border-gray-100 dark:bg-slate-900 dark:border-slate-800">
+              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
                 <input
                   type="checkbox"
                   checked={allUsersSelected}
@@ -1434,13 +1434,13 @@ export default function AdminPage() {
           <div className="px-6 pb-6">
             {filteredUsers.length === 0 ? (
               <div className="py-8 text-center">
-                <p className="text-sm text-gray-400">No users found.</p>
+                <p className="text-sm text-gray-400 dark:text-slate-500">No users found.</p>
               </div>
             ) : (
               <>
-              <div className="rounded-lg border border-gray-200 overflow-hidden overflow-x-auto">
+              <div className="rounded-lg border border-gray-200 overflow-hidden overflow-x-auto dark:border-slate-700">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gray-50 dark:bg-slate-900">
                     <tr>
                       <th className="text-left px-4 py-3 w-8">
                         <input
@@ -1450,17 +1450,17 @@ export default function AdminPage() {
                           className="w-4 h-4 rounded border-gray-300"
                         />
                       </th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Program</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Grad Year</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-slate-400">Name</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-slate-400">Program</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-slate-400">Grad Year</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-slate-400">Role</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-slate-400">Status</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-slate-400">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
                     {filteredUsers.map((user) => (
-                      <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                      <tr key={user.id} className="hover:bg-gray-50/50 transition-colors dark:hover:bg-slate-900/50">
                         <td className="px-4 py-3">
                           <input
                             type="checkbox"
@@ -1484,18 +1484,18 @@ export default function AdminPage() {
                             </Link>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-gray-600">{user.program ?? "-"}</td>
-                        <td className="px-4 py-3 text-gray-600">{user.grad_year ?? "-"}</td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-slate-400">{user.program ?? "-"}</td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-slate-400">{user.grad_year ?? "-"}</td>
                         <td className="px-4 py-3">
-                          <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-600 px-2.5 py-0.5 text-xs font-medium capitalize">
+                          <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-600 px-2.5 py-0.5 text-xs font-medium capitalize dark:bg-slate-800 dark:text-slate-300">
                             {user.role ?? "member"}
                           </span>
                         </td>
                         <td className="px-4 py-3">
                           {user.is_disabled ? (
-                            <span className="inline-flex items-center rounded-full bg-red-50 text-red-700 border border-red-200 px-2.5 py-0.5 text-xs font-medium">Disabled</span>
+                            <span className="inline-flex items-center rounded-full bg-red-50 text-red-700 border border-red-200 px-2.5 py-0.5 text-xs font-medium dark:bg-red-950 dark:text-red-300 dark:border-red-800">Disabled</span>
                           ) : (
-                            <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 text-xs font-medium">Active</span>
+                            <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 text-xs font-medium dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800">Active</span>
                           )}
                         </td>
                         <td className="px-4 py-3">
@@ -1569,15 +1569,15 @@ function CourseDropdown({
   return (
     <div
       ref={ref}
-      className="absolute z-10 mt-1 bg-white rounded-lg border border-gray-200 shadow-lg max-h-48 overflow-y-auto min-w-[220px]"
+      className="absolute z-10 mt-1 bg-white rounded-lg border border-gray-200 shadow-lg max-h-48 overflow-y-auto min-w-[220px] dark:bg-slate-900 dark:border-slate-700"
     >
       {courses.length === 0 ? (
-        <div className="px-3 py-2 text-sm text-gray-400">No courses available</div>
+        <div className="px-3 py-2 text-sm text-gray-400 dark:text-slate-500">No courses available</div>
       ) : (
         courses.map((course) => (
           <label
             key={course.id}
-            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm transition-colors"
+            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm transition-colors dark:hover:bg-slate-800"
           >
             <input
               type="checkbox"
@@ -1585,8 +1585,8 @@ function CourseDropdown({
               onChange={() => onToggle(course.id)}
               className="w-4 h-4 rounded border-gray-300"
             />
-            <span className="font-medium text-gray-900">{course.code}</span>
-            <span className="text-gray-500">{course.title}</span>
+            <span className="font-medium text-gray-900 dark:text-slate-100">{course.code}</span>
+            <span className="text-gray-500 dark:text-slate-400">{course.title}</span>
           </label>
         ))
       )}
