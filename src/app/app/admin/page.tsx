@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { supabase } from "@/src/lib/supabaseClient";
 import { useAvatarUrls } from "@/src/lib/avatarUrl";
@@ -1295,24 +1296,15 @@ export default function AdminPage() {
                               <span className="text-xs text-gray-400 italic dark:text-slate-500">Promote to tutor to assign courses</span>
                             ) : (
                               <div className="flex flex-col gap-1.5">
-                                <div className="relative">
-                                  <button
-                                    onClick={() => setCourseDropdownOpen(courseDropdownOpen === user.id ? null : user.id)}
-                                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-left min-w-[160px] bg-white hover:bg-gray-50 transition-colors dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                                  >
-                                    {selectedCourses.length === 0
-                                      ? "Select courses..."
-                                      : `${selectedCourses.length} course${selectedCourses.length > 1 ? "s" : ""} selected`}
-                                  </button>
-                                  {courseDropdownOpen === user.id && (
-                                    <CourseDropdown
-                                      courses={courses}
-                                      selected={selectedCourses}
-                                      onToggle={(courseId) => handleCourseToggle(user.id, courseId)}
-                                      onClose={() => setCourseDropdownOpen(null)}
-                                    />
-                                  )}
-                                </div>
+                                <CourseDropdownTrigger
+                                  userId={user.id}
+                                  courses={courses}
+                                  selectedCourses={selectedCourses}
+                                  isOpen={courseDropdownOpen === user.id}
+                                  onToggleOpen={() => setCourseDropdownOpen(courseDropdownOpen === user.id ? null : user.id)}
+                                  onCourseToggle={(courseId) => handleCourseToggle(user.id, courseId)}
+                                  onClose={() => setCourseDropdownOpen(null)}
+                                />
                                 {selectedCourses.length > 0 && (
                                   <div className="flex flex-wrap gap-1">
                                     {selectedCourses.map((cid) => {
@@ -1543,33 +1535,121 @@ export default function AdminPage() {
   );
 }
 
+function CourseDropdownTrigger({
+  userId,
+  courses,
+  selectedCourses,
+  isOpen,
+  onToggleOpen,
+  onCourseToggle,
+  onClose,
+}: {
+  userId: string;
+  courses: Course[];
+  selectedCourses: string[];
+  isOpen: boolean;
+  onToggleOpen: () => void;
+  onCourseToggle: (courseId: string) => void;
+  onClose: () => void;
+}) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        onClick={onToggleOpen}
+        className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-left min-w-[160px] bg-white hover:bg-gray-50 transition-colors dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+      >
+        {selectedCourses.length === 0
+          ? "Select courses..."
+          : `${selectedCourses.length} course${selectedCourses.length > 1 ? "s" : ""} selected`}
+      </button>
+      {isOpen && (
+        <CourseDropdown
+          courses={courses}
+          selected={selectedCourses}
+          onToggle={onCourseToggle}
+          onClose={onClose}
+          anchorRef={buttonRef}
+        />
+      )}
+    </>
+  );
+}
+
 function CourseDropdown({
   courses,
   selected,
   onToggle,
   onClose,
+  anchorRef,
 }: {
   courses: Course[];
   selected: string[];
   onToggle: (courseId: string) => void;
   onClose: () => void;
+  anchorRef: React.RefObject<HTMLButtonElement | null>;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ top: number; left: number; flipUp: boolean }>({
+    top: 0,
+    left: 0,
+    flipUp: false,
+  });
+
+  const updatePosition = useCallback(() => {
+    if (!anchorRef.current) return;
+    const rect = anchorRef.current.getBoundingClientRect();
+    const dropdownHeight = 288; // max-h-72 = 18rem = 288px
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const flipUp = spaceBelow < dropdownHeight && rect.top > spaceBelow;
+
+    setPosition({
+      top: flipUp ? rect.top : rect.bottom + 4,
+      left: rect.left,
+      flipUp,
+    });
+  }, [anchorRef]);
+
+  useEffect(() => {
+    updatePosition();
+
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [updatePosition]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        ref.current &&
+        !ref.current.contains(target) &&
+        anchorRef.current &&
+        !anchorRef.current.contains(target)
+      ) {
         onClose();
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [onClose]);
+  }, [onClose, anchorRef]);
 
-  return (
+  return createPortal(
     <div
       ref={ref}
-      className="absolute z-10 mt-1 bg-white rounded-lg border border-gray-200 shadow-lg max-h-48 overflow-y-auto min-w-[220px] dark:bg-slate-900 dark:border-slate-700"
+      style={{
+        position: "fixed",
+        top: position.flipUp ? undefined : position.top,
+        bottom: position.flipUp ? window.innerHeight - position.top + 4 : undefined,
+        left: position.left,
+        zIndex: 9999,
+      }}
+      className="bg-white rounded-lg border border-gray-200 shadow-lg max-h-72 overflow-y-auto min-w-[220px] dark:bg-slate-900 dark:border-slate-700"
     >
       {courses.length === 0 ? (
         <div className="px-3 py-2 text-sm text-gray-400 dark:text-slate-500">No courses available</div>
@@ -1590,6 +1670,7 @@ function CourseDropdown({
           </label>
         ))
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
