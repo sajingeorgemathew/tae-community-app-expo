@@ -294,8 +294,8 @@ export default function NewPostPage() {
 
   if (!userId) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex items-center gap-3 text-slate-500">
+      <main className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950">
+        <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400">
           <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -307,11 +307,11 @@ export default function NewPostPage() {
   }
 
   return (
-    <main className="min-h-screen p-6 md:p-8">
+    <main className="min-h-screen p-6 md:p-8 dark:bg-slate-950">
       {/* Back link */}
       <Link
         href="/app/feed"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-[#1e293b] hover:text-[#334155] transition-colors mb-6"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-[#1e293b] hover:text-[#334155] dark:text-slate-300 dark:hover:text-slate-100 transition-colors mb-6"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
@@ -321,27 +321,27 @@ export default function NewPostPage() {
 
       {/* Page header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#1e293b]">Create New Post</h1>
-        <p className="text-sm text-slate-500 mt-1">Share an update with the community</p>
+        <h1 className="text-2xl font-bold text-[#1e293b] dark:text-slate-100">Create New Post</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Share an update with the community</p>
       </div>
 
       {/* Error banner */}
       {error && (
-        <div className="mb-5 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-          <svg className="w-5 h-5 text-red-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+        <div className="mb-5 flex items-start gap-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/50 px-4 py-3">
+          <svg className="w-5 h-5 text-red-500 dark:text-red-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
           </svg>
-          <p className="text-sm text-red-700 font-medium">{error}</p>
+          <p className="text-sm text-red-700 dark:text-red-300 font-medium">{error}</p>
         </div>
       )}
 
       {/* Composer card */}
       <div className="max-w-2xl">
         <form onSubmit={handleSubmit}>
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
             {/* Content section */}
             <div className="p-5 md:p-6">
-              <label htmlFor="content" className="block text-sm font-semibold text-[#1e293b] mb-2">
+              <label htmlFor="content" className="block text-sm font-semibold text-[#1e293b] dark:text-slate-100 mb-2">
                 Content
               </label>
               <textarea
@@ -350,17 +350,17 @@ export default function NewPostPage() {
                 onChange={(e) => setContent(e.target.value)}
                 rows={6}
                 placeholder="What's on your mind?"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b] focus:bg-white outline-none transition-colors resize-y"
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-[#1e293b] dark:focus:border-slate-500 focus:ring-1 focus:ring-[#1e293b] dark:focus:ring-slate-500 focus:bg-white dark:focus:bg-slate-800 outline-none transition-colors resize-y"
                 required
               />
-              <p className="text-xs text-slate-400 mt-1.5 text-right">Markdown supported</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 text-right">Markdown supported</p>
             </div>
 
-            <div className="border-t border-slate-100 mx-5 md:mx-6" />
+            <div className="border-t border-slate-100 dark:border-slate-700/50 mx-5 md:mx-6" />
 
             {/* Audience section */}
             <div className="p-5 md:p-6">
-              <label className="block text-sm font-semibold text-[#1e293b] mb-3">
+              <label className="block text-sm font-semibold text-[#1e293b] dark:text-slate-100 mb-3">
                 Audience
               </label>
               <div className="flex flex-wrap gap-2">
@@ -371,8 +371,8 @@ export default function NewPostPage() {
                     onClick={() => setAudience(opt.value)}
                     className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                       audience === opt.value
-                        ? "bg-[#1e293b] text-white shadow-sm"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        ? "bg-[#1e293b] text-white shadow-sm dark:bg-slate-100 dark:text-slate-900"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                     }`}
                   >
                     {opt.label}
@@ -381,15 +381,15 @@ export default function NewPostPage() {
               </div>
             </div>
 
-            <div className="border-t border-slate-100 mx-5 md:mx-6" />
+            <div className="border-t border-slate-100 dark:border-slate-700/50 mx-5 md:mx-6" />
 
             {/* Link section */}
             <div className="p-5 md:p-6">
-              <label htmlFor="linkUrl" className="block text-sm font-semibold text-[#1e293b] mb-2">
-                Link <span className="text-slate-400 font-normal">(optional)</span>
+              <label htmlFor="linkUrl" className="block text-sm font-semibold text-[#1e293b] dark:text-slate-100 mb-2">
+                Link <span className="text-slate-400 dark:text-slate-500 font-normal">(optional)</span>
               </label>
               <div className="relative">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
                 </svg>
                 <input
@@ -398,31 +398,31 @@ export default function NewPostPage() {
                   value={linkUrl}
                   onChange={(e) => setLinkUrl(e.target.value)}
                   placeholder="https://example.com"
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50/50 pl-10 pr-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b] focus:bg-white outline-none transition-colors"
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800 pl-10 pr-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-[#1e293b] dark:focus:border-slate-500 focus:ring-1 focus:ring-[#1e293b] dark:focus:ring-slate-500 focus:bg-white dark:focus:bg-slate-800 outline-none transition-colors"
                 />
               </div>
             </div>
 
-            <div className="border-t border-slate-100 mx-5 md:mx-6" />
+            <div className="border-t border-slate-100 dark:border-slate-700/50 mx-5 md:mx-6" />
 
             {/* Attachments section */}
             <div className="p-5 md:p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Image upload dropzone */}
                 <div>
-                  <label className="block text-sm font-semibold text-[#1e293b] mb-2">
-                    Images <span className="text-slate-400 font-normal">(max 5, 5MB each)</span>
+                  <label className="block text-sm font-semibold text-[#1e293b] dark:text-slate-100 mb-2">
+                    Images <span className="text-slate-400 dark:text-slate-500 font-normal">(max 5, 5MB each)</span>
                   </label>
                   <button
                     type="button"
                     onClick={() => imageInputRef.current?.click()}
-                    className="w-full rounded-lg border-2 border-dashed border-slate-200 hover:border-[#1e293b]/40 bg-slate-50/50 hover:bg-slate-50 px-4 py-8 flex flex-col items-center gap-2 transition-colors group"
+                    className="w-full rounded-lg border-2 border-dashed border-slate-200 dark:border-slate-600 hover:border-[#1e293b]/40 dark:hover:border-slate-400 bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 px-4 py-8 flex flex-col items-center gap-2 transition-colors group"
                   >
-                    <svg className="w-8 h-8 text-slate-300 group-hover:text-[#1e293b]/50 transition-colors" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <svg className="w-8 h-8 text-slate-300 dark:text-slate-500 group-hover:text-[#1e293b]/50 dark:group-hover:text-slate-300 transition-colors" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
                     </svg>
-                    <span className="text-sm font-medium text-slate-500 group-hover:text-slate-700">Upload images</span>
-                    <span className="text-xs text-slate-400">PNG, JPG, WebP</span>
+                    <span className="text-sm font-medium text-slate-500 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-slate-200">Upload images</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">PNG, JPG, WebP</span>
                   </button>
                   <input
                     ref={imageInputRef}
@@ -437,19 +437,19 @@ export default function NewPostPage() {
 
                 {/* Video upload dropzone */}
                 <div>
-                  <label className="block text-sm font-semibold text-[#1e293b] mb-2">
-                    Video <span className="text-slate-400 font-normal">(max 1, 50MB)</span>
+                  <label className="block text-sm font-semibold text-[#1e293b] dark:text-slate-100 mb-2">
+                    Video <span className="text-slate-400 dark:text-slate-500 font-normal">(max 1, 50MB)</span>
                   </label>
                   <button
                     type="button"
                     onClick={() => videoInputRef.current?.click()}
-                    className="w-full rounded-lg border-2 border-dashed border-slate-200 hover:border-[#1e293b]/40 bg-slate-50/50 hover:bg-slate-50 px-4 py-8 flex flex-col items-center gap-2 transition-colors group"
+                    className="w-full rounded-lg border-2 border-dashed border-slate-200 dark:border-slate-600 hover:border-[#1e293b]/40 dark:hover:border-slate-400 bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 px-4 py-8 flex flex-col items-center gap-2 transition-colors group"
                   >
-                    <svg className="w-8 h-8 text-slate-300 group-hover:text-[#1e293b]/50 transition-colors" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <svg className="w-8 h-8 text-slate-300 dark:text-slate-500 group-hover:text-[#1e293b]/50 dark:group-hover:text-slate-300 transition-colors" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                       <path strokeLinecap="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
                     </svg>
-                    <span className="text-sm font-medium text-slate-500 group-hover:text-slate-700">Upload video</span>
-                    <span className="text-xs text-slate-400">MP4, WebM</span>
+                    <span className="text-sm font-medium text-slate-500 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-slate-200">Upload video</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">MP4, WebM</span>
                   </button>
                   <input
                     ref={videoInputRef}
@@ -465,23 +465,23 @@ export default function NewPostPage() {
               {/* Image previews */}
               {imageFiles.length > 0 && (
                 <div className="mt-4">
-                  <p className="text-xs font-medium text-slate-500 mb-2">
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">
                     {imageFiles.length} image{imageFiles.length !== 1 ? "s" : ""} selected
                   </p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {imageFiles.map((file, i) => (
                       <div
                         key={i}
-                        className="relative group rounded-lg border border-slate-200 bg-slate-50 p-3 flex items-center gap-3"
+                        className="relative group rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3 flex items-center gap-3"
                       >
-                        <div className="w-10 h-10 rounded bg-slate-200 flex items-center justify-center shrink-0">
-                          <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                        <div className="w-10 h-10 rounded bg-slate-200 dark:bg-slate-700 flex items-center justify-center shrink-0">
+                          <svg className="w-5 h-5 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
                           </svg>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium text-slate-700 truncate">{file.name}</p>
-                          <p className="text-[11px] text-slate-400">{formatFileSize(file.size)}</p>
+                          <p className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">{file.name}</p>
+                          <p className="text-[11px] text-slate-400 dark:text-slate-500">{formatFileSize(file.size)}</p>
                         </div>
                         <button
                           type="button"
@@ -502,16 +502,16 @@ export default function NewPostPage() {
               {/* Video preview */}
               {videoFile && (
                 <div className="mt-4">
-                  <p className="text-xs font-medium text-slate-500 mb-2">1 video selected</p>
-                  <div className="relative group rounded-lg border border-slate-200 bg-slate-50 p-3 flex items-center gap-3 max-w-xs">
-                    <div className="w-10 h-10 rounded bg-slate-200 flex items-center justify-center shrink-0">
-                      <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">1 video selected</p>
+                  <div className="relative group rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3 flex items-center gap-3 max-w-xs">
+                    <div className="w-10 h-10 rounded bg-slate-200 dark:bg-slate-700 flex items-center justify-center shrink-0">
+                      <svg className="w-5 h-5 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                         <path strokeLinecap="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
                       </svg>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-slate-700 truncate">{videoFile.name}</p>
-                      <p className="text-[11px] text-slate-400">{formatFileSize(videoFile.size)}</p>
+                      <p className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">{videoFile.name}</p>
+                      <p className="text-[11px] text-slate-400 dark:text-slate-500">{formatFileSize(videoFile.size)}</p>
                     </div>
                     <button
                       type="button"
@@ -529,20 +529,20 @@ export default function NewPostPage() {
             </div>
 
             {/* Divider before actions */}
-            <div className="border-t border-slate-200" />
+            <div className="border-t border-slate-200 dark:border-slate-700" />
 
             {/* Action row */}
             <div className="p-5 md:p-6 flex items-center justify-end gap-3">
               <Link
                 href="/app/feed"
-                className="px-5 py-2.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                className="px-5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
                 Cancel
               </Link>
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-6 py-2.5 rounded-lg bg-[#1e293b] text-white text-sm font-medium hover:bg-[#334155] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm inline-flex items-center gap-2"
+                className="px-6 py-2.5 rounded-lg bg-[#1e293b] dark:bg-slate-100 text-white dark:text-slate-900 text-sm font-medium hover:bg-[#334155] dark:hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm inline-flex items-center gap-2"
               >
                 {submitting && (
                   <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -557,7 +557,7 @@ export default function NewPostPage() {
         </form>
 
         {/* Footer note */}
-        <p className="text-center text-xs text-slate-400 mt-4">
+        <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-4">
           By posting, you agree to the Community Guidelines.
         </p>
       </div>
