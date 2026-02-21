@@ -465,47 +465,47 @@ export default function FeedPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-gray-50/50">
+      <main className="min-h-screen flex items-center justify-center bg-gray-50/50 dark:bg-slate-900">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-slate-800 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-gray-500">Loading feed...</p>
+          <div className="w-8 h-8 border-2 border-slate-800 border-t-transparent rounded-full animate-spin dark:border-slate-200 dark:border-t-transparent" />
+          <p className="text-sm text-gray-500 dark:text-slate-400">Loading feed...</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gray-50/50">
+    <main className="min-h-screen bg-gray-50/50 dark:bg-slate-900">
       {/* Page Header */}
-      <div className="border-b border-gray-200 bg-white px-6 py-5 md:px-8">
+      <div className="border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-5 md:px-8">
         <div className="max-w-3xl mx-auto">
           <div className="flex items-center gap-3 mb-1">
             <Link
               href="/app"
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </Link>
-            <h1 className="text-xl font-semibold text-gray-900">Feed</h1>
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-slate-100">Feed</h1>
           </div>
-          <p className="text-sm text-gray-500 ml-8">Stay connected with the community</p>
+          <p className="text-sm text-gray-500 dark:text-slate-400 ml-8">Stay connected with the community</p>
         </div>
       </div>
 
       {/* Controls: Filters + New Post */}
-      <div className="border-b border-gray-200 bg-white px-6 py-3 md:px-8">
+      <div className="border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-3 md:px-8">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             {(["all", "students", "alumni"] as AudienceFilter[]).map((option) => (
               <button
                 key={option}
                 onClick={() => setFilter(option)}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium capitalize transition-colors ${
+                className={`px-4 py-1.5 rounded-full text-sm font-medium capitalize transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 ${
                   filter === option
-                    ? "bg-slate-800 text-white"
-                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                    ? "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900"
+                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-slate-300 dark:hover:text-slate-100 dark:hover:bg-slate-800/60"
                 }`}
               >
                 {option}
@@ -514,7 +514,7 @@ export default function FeedPage() {
           </div>
           <Link
             href="/app/feed/new"
-            className="inline-flex items-center gap-2 rounded-lg bg-slate-800 text-white px-5 py-2 text-sm font-medium hover:bg-slate-700 transition shadow-sm"
+            className="inline-flex items-center gap-2 rounded-lg bg-slate-800 text-white px-5 py-2 text-sm font-medium hover:bg-slate-700 dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-slate-300 transition shadow-sm"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -527,14 +527,14 @@ export default function FeedPage() {
       {/* Posts List */}
       <div className="max-w-3xl mx-auto px-6 py-6 md:px-8">
         {filteredPosts.length === 0 ? (
-          <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
-            <svg className="w-12 h-12 text-gray-200 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-12 text-center">
+            <svg className="w-12 h-12 text-gray-200 dark:text-slate-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
             </svg>
-            <p className="text-sm font-medium text-gray-500 mb-1">
+            <p className="text-sm font-medium text-gray-500 dark:text-slate-300 mb-1">
               {posts.length === 0 ? "No posts yet" : "No posts for this filter"}
             </p>
-            <p className="text-xs text-gray-400 mb-4">
+            <p className="text-xs text-gray-400 dark:text-slate-500 mb-4">
               {posts.length === 0
                 ? "Be the first to share something with the community."
                 : "Try a different filter to see more posts."}
@@ -542,7 +542,7 @@ export default function FeedPage() {
             {posts.length === 0 && (
               <Link
                 href="/app/feed/new"
-                className="inline-flex items-center gap-2 rounded-lg bg-slate-800 text-white px-5 py-2 text-sm font-medium hover:bg-slate-700 transition"
+                className="inline-flex items-center gap-2 rounded-lg bg-slate-800 text-white px-5 py-2 text-sm font-medium hover:bg-slate-700 dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-slate-300 transition"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -581,7 +581,7 @@ export default function FeedPage() {
                 <button
                   onClick={loadMore}
                   disabled={loadingMore}
-                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-6 py-2.5 text-sm font-medium text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loadingMore ? (
                     <>
