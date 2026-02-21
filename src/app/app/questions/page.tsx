@@ -193,7 +193,7 @@ export default function QuestionsPage() {
   function renderReplyPreview(q: Question) {
     if (q.answer_count === 0) {
       return (
-        <span className="text-slate-400 italic">No replies yet</span>
+        <span className="text-slate-400 dark:text-slate-500 italic">No replies yet</span>
       );
     }
 
@@ -204,12 +204,12 @@ export default function QuestionsPage() {
     if (q.answer_count === 1) {
       return (
         <span>
-          <span className="text-emerald-600 font-medium">1 reply</span>
-          <span className="text-slate-300 mx-1.5">·</span>
+          <span className="text-emerald-600 dark:text-emerald-400 font-medium">1 reply</span>
+          <span className="text-slate-300 dark:text-slate-600 mx-1.5">·</span>
           Replied by{" "}
-          <span className="font-medium text-slate-700">{replierName}</span>
+          <span className="font-medium text-slate-700 dark:text-slate-300">{replierName}</span>
           {showBadge && (
-            <span className="ml-1.5 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-blue-50 text-blue-700">
+            <span className="ml-1.5 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
               {q.latest_replier_role}
             </span>
           )}
@@ -219,17 +219,17 @@ export default function QuestionsPage() {
 
     return (
       <span>
-        <span className="text-emerald-600 font-medium">{q.answer_count} replies</span>
-        <span className="text-slate-300 mx-1.5">·</span>
+        <span className="text-emerald-600 dark:text-emerald-400 font-medium">{q.answer_count} replies</span>
+        <span className="text-slate-300 dark:text-slate-600 mx-1.5">·</span>
         Latest:{" "}
-        <span className="font-medium text-slate-700">{replierName}</span>
+        <span className="font-medium text-slate-700 dark:text-slate-300">{replierName}</span>
         {showBadge && (
           <span className="ml-1.5 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-blue-50 text-blue-700">
             {q.latest_replier_role}
           </span>
         )}
         {q.answer_count > 2 && (
-          <span className="text-slate-400"> + {q.answer_count - 1} more</span>
+          <span className="text-slate-400 dark:text-slate-500"> + {q.answer_count - 1} more</span>
         )}
       </span>
     );
@@ -242,13 +242,13 @@ export default function QuestionsPage() {
         <div className="max-w-6xl mx-auto">
           {/* Header skeleton */}
           <div className="mb-8">
-            <div className="h-4 w-24 bg-slate-200 rounded animate-pulse mb-4" />
+            <div className="h-4 w-24 bg-slate-200 dark:bg-slate-700 rounded animate-pulse mb-4" />
             <div className="flex items-center justify-between">
               <div>
-                <div className="h-7 w-40 bg-slate-200 rounded animate-pulse mb-2" />
-                <div className="h-4 w-64 bg-slate-100 rounded animate-pulse" />
+                <div className="h-7 w-40 bg-slate-200 dark:bg-slate-700 rounded animate-pulse mb-2" />
+                <div className="h-4 w-64 bg-slate-100 dark:bg-slate-600 rounded animate-pulse" />
               </div>
-              <div className="h-10 w-36 bg-slate-200 rounded-lg animate-pulse" />
+              <div className="h-10 w-36 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse" />
             </div>
           </div>
           {/* Card skeletons */}
@@ -256,14 +256,14 @@ export default function QuestionsPage() {
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
-                className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+                className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm"
               >
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-full bg-slate-200 animate-pulse shrink-0" />
+                  <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse shrink-0" />
                   <div className="flex-1 space-y-2.5">
-                    <div className="h-5 w-2/3 bg-slate-200 rounded animate-pulse" />
-                    <div className="h-4 w-full bg-slate-100 rounded animate-pulse" />
-                    <div className="h-3 w-1/2 bg-slate-100 rounded animate-pulse" />
+                    <div className="h-5 w-2/3 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                    <div className="h-4 w-full bg-slate-100 dark:bg-slate-600 rounded animate-pulse" />
+                    <div className="h-3 w-1/2 bg-slate-100 dark:bg-slate-600 rounded animate-pulse" />
                   </div>
                 </div>
               </div>
@@ -281,7 +281,7 @@ export default function QuestionsPage() {
         <div className="mb-6">
           <Link
             href="/app"
-            className="text-[#1e293b] font-medium hover:underline text-sm inline-flex items-center gap-1"
+            className="text-[#1e293b] dark:text-slate-200 font-medium hover:underline text-sm inline-flex items-center gap-1"
           >
             &larr; Back to App
           </Link>
@@ -289,7 +289,7 @@ export default function QuestionsPage() {
 
         {/* Error banner */}
         {error && (
-          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+          <div className="mb-6 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 px-5 py-4 text-sm text-red-700 dark:text-red-300">
             {error}
           </div>
         )}
@@ -297,14 +297,14 @@ export default function QuestionsPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-[#1e293b]">Questions</h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <h1 className="text-2xl font-bold text-[#1e293b] dark:text-slate-100">Questions</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
               Ask questions and get answers from the community
             </p>
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="text-white bg-[#1e293b] rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-[#334155] transition-colors"
+            className="text-white bg-[#1e293b] dark:bg-emerald-600 rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-[#334155] dark:hover:bg-emerald-700 transition-colors"
           >
             {showForm ? "Cancel" : "Ask a Question"}
           </button>
@@ -314,10 +314,10 @@ export default function QuestionsPage() {
         {showForm && (
           <form
             onSubmit={handleSubmit}
-            className="mb-8 rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-4"
+            className="mb-8 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm space-y-4"
           >
             <div>
-              <label className="block text-sm font-medium text-[#1e293b] mb-1.5">
+              <label className="block text-sm font-medium text-[#1e293b] dark:text-slate-200 mb-1.5">
                 Title
               </label>
               <input
@@ -326,12 +326,12 @@ export default function QuestionsPage() {
                 onChange={(e) => setTitle(e.target.value)}
                 required
                 maxLength={200}
-                className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b]/20 transition-colors"
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#1e293b] dark:focus:border-slate-400 focus:ring-1 focus:ring-[#1e293b]/20 dark:focus:ring-slate-400/30 transition-colors"
                 placeholder="What's your question?"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1e293b] mb-1.5">
+              <label className="block text-sm font-medium text-[#1e293b] dark:text-slate-200 mb-1.5">
                 Details
               </label>
               <textarea
@@ -339,14 +339,14 @@ export default function QuestionsPage() {
                 onChange={(e) => setBody(e.target.value)}
                 required
                 rows={4}
-                className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b]/20 transition-colors resize-none"
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#1e293b] dark:focus:border-slate-400 focus:ring-1 focus:ring-[#1e293b]/20 dark:focus:ring-slate-400/30 transition-colors resize-none"
                 placeholder="Provide more context..."
               />
             </div>
             <button
               type="submit"
               disabled={submitting || !title.trim() || !body.trim()}
-              className="text-white bg-[#1e293b] rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-[#334155] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-white bg-[#1e293b] dark:bg-emerald-600 rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-[#334155] dark:hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? "Posting..." : "Post Question"}
             </button>
@@ -355,10 +355,10 @@ export default function QuestionsPage() {
 
         {/* Empty state */}
         {questions.length === 0 ? (
-          <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center">
-            <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 flex items-center justify-center mb-4">
+          <div className="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-12 text-center">
+            <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center mb-4">
               <svg
-                className="w-7 h-7 text-emerald-600"
+                className="w-7 h-7 text-emerald-600 dark:text-emerald-400"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -371,10 +371,10 @@ export default function QuestionsPage() {
                 />
               </svg>
             </div>
-            <p className="text-sm font-medium text-slate-700 mb-1">
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               No questions yet
             </p>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-slate-400 dark:text-slate-500">
               Be the first to ask a question!
             </p>
           </div>
@@ -385,7 +385,7 @@ export default function QuestionsPage() {
               <Link
                 key={q.id}
                 href={`/app/questions/${q.id}`}
-                className="group block rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all duration-200"
+                className="group block rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm hover:shadow-md hover:border-emerald-200 dark:hover:border-emerald-700 transition-all duration-200"
               >
                 <div className="flex items-start gap-4">
                   {/* Avatar with online dot */}
@@ -397,7 +397,7 @@ export default function QuestionsPage() {
                     />
                     {onlineSet.has(q.author_id) && (
                       <span
-                        className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-[2px] border-white rounded-full"
+                        className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-[2px] border-white dark:border-slate-800 rounded-full"
                         title="Online"
                       />
                     )}
@@ -405,21 +405,21 @@ export default function QuestionsPage() {
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-[#1e293b] group-hover:text-emerald-700 transition-colors">
+                    <p className="font-semibold text-[#1e293b] dark:text-slate-100 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
                       {q.title}
                     </p>
-                    <p className="text-sm text-slate-500 mt-1 leading-relaxed">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                       {truncate(q.body, 150)}
                     </p>
 
                     {/* Meta row */}
-                    <div className="flex flex-wrap items-center gap-x-1.5 text-xs text-slate-400 mt-2.5">
-                      <span className="font-medium text-slate-600">
+                    <div className="flex flex-wrap items-center gap-x-1.5 text-xs text-slate-400 dark:text-slate-500 mt-2.5">
+                      <span className="font-medium text-slate-600 dark:text-slate-300">
                         {q.author_name}
                       </span>
-                      <span className="text-slate-300">·</span>
+                      <span className="text-slate-300 dark:text-slate-600">·</span>
                       <span>{formatDate(q.created_at)}</span>
-                      <span className="text-slate-300">·</span>
+                      <span className="text-slate-300 dark:text-slate-600">·</span>
                       {renderReplyPreview(q)}
                     </div>
                   </div>
