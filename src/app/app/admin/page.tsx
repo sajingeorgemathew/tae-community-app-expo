@@ -1062,7 +1062,7 @@ export default function AdminPage() {
     <main className="min-h-screen bg-gray-50/50 p-6 md:p-8 dark:bg-slate-950">
       <div className="max-w-6xl mx-auto">
         <div className="mb-6">
-          <Link href="/app" className="text-sm text-blue-600 hover:underline font-medium">
+          <Link href="/app" className="text-sm text-blue-600 hover:underline font-medium dark:text-blue-400">
             &larr; Back to App
           </Link>
         </div>
@@ -1088,7 +1088,7 @@ export default function AdminPage() {
                         onClick={() => setAudienceFilter(option)}
                         className={`px-3 py-1 rounded-full text-xs font-medium capitalize transition-colors ${
                           audienceFilter === option
-                            ? "bg-slate-800 text-white"
+                            ? "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900"
                             : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                         }`}
                       >
@@ -1108,7 +1108,7 @@ export default function AdminPage() {
                         onClick={() => setTimeFilter(option.value)}
                         className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                           timeFilter === option.value
-                            ? "bg-slate-800 text-white"
+                            ? "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900"
                             : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                         }`}
                       >
@@ -1201,9 +1201,9 @@ export default function AdminPage() {
 
       {/* Tutors Section */}
       <section className="mb-8">
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="px-6 py-5 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900">Tutors</h2>
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm dark:bg-slate-950 dark:border-slate-700">
+          <div className="px-6 py-5 border-b border-gray-100 dark:border-slate-800">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Tutors</h2>
           </div>
 
           <div className="px-6 py-4">
@@ -1377,9 +1377,9 @@ export default function AdminPage() {
 
       {/* Users Section */}
       <section className="mb-8">
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="px-6 py-5 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900">Users Management</h2>
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm dark:bg-slate-950 dark:border-slate-700">
+          <div className="px-6 py-5 border-b border-gray-100 dark:border-slate-800">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Users Management</h2>
           </div>
 
           <div className="px-6 py-4">
@@ -1389,7 +1389,7 @@ export default function AdminPage() {
               placeholder="Search by name, program, grad year, or role..."
               value={userSearch}
               onChange={(e) => setUserSearch(e.target.value)}
-              className="w-full max-w-md rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b]/20 transition-colors mb-4"
+              className="w-full max-w-md rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b]/20 transition-colors mb-4 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-slate-400 dark:focus:ring-slate-400/30"
             />
 
             {/* Bulk actions for users */}
@@ -1403,7 +1403,7 @@ export default function AdminPage() {
                 />
                 Select all visible
               </label>
-              <span className="text-xs text-gray-400 font-medium">
+              <span className="text-xs text-gray-400 font-medium dark:text-slate-500">
                 ({selectedUsers.size} selected)
               </span>
               <button
@@ -1470,7 +1470,7 @@ export default function AdminPage() {
                             />
                             <Link
                               href={`/app/profile/${user.id}`}
-                              className="text-sm text-blue-600 hover:underline font-medium"
+                              className="text-sm text-blue-600 hover:underline font-medium dark:text-blue-400"
                             >
                               {user.full_name ?? "No name"}
                             </Link>
