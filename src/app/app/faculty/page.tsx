@@ -209,37 +209,37 @@ function FacultyContent() {
   /* ── loading skeleton ── */
   if (loading) {
     return (
-      <main className="min-h-screen p-6 md:p-10">
+      <main className="min-h-screen p-6 md:p-10 dark:bg-slate-900">
         <div className="max-w-6xl mx-auto">
           {/* skeleton header */}
           <div className="mb-8">
-            <div className="h-8 w-40 bg-slate-200 rounded-lg animate-pulse mb-2" />
-            <div className="h-4 w-64 bg-slate-100 rounded animate-pulse" />
+            <div className="h-8 w-40 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse mb-2" />
+            <div className="h-4 w-64 bg-slate-100 dark:bg-slate-700/60 rounded animate-pulse" />
           </div>
           {/* skeleton filters */}
           <div className="flex flex-col sm:flex-row gap-3 mb-8">
-            <div className="h-11 flex-1 max-w-md bg-slate-100 rounded-xl animate-pulse" />
-            <div className="h-11 w-48 bg-slate-100 rounded-xl animate-pulse" />
+            <div className="h-11 flex-1 max-w-md bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />
+            <div className="h-11 w-48 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />
           </div>
           {/* skeleton cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
-                className="rounded-2xl border border-gray-200 bg-white p-6 animate-pulse flex flex-col items-center"
+                className="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 animate-pulse flex flex-col items-center"
               >
-                <div className="w-28 h-28 rounded-full bg-slate-200 mb-4" />
-                <div className="h-5 w-32 bg-slate-200 rounded mb-2" />
-                <div className="h-3 w-16 bg-emerald-100 rounded-full mb-3" />
-                <div className="h-3 w-48 bg-slate-100 rounded mb-2" />
+                <div className="w-28 h-28 rounded-full bg-slate-200 dark:bg-slate-700 mb-4" />
+                <div className="h-5 w-32 bg-slate-200 dark:bg-slate-700 rounded mb-2" />
+                <div className="h-3 w-16 bg-emerald-100 dark:bg-emerald-900/40 rounded-full mb-3" />
+                <div className="h-3 w-48 bg-slate-100 dark:bg-slate-700/60 rounded mb-2" />
                 <div className="flex gap-2 mb-4 mt-2">
-                  <div className="h-5 w-14 bg-slate-100 rounded-full" />
-                  <div className="h-5 w-14 bg-slate-100 rounded-full" />
-                  <div className="h-5 w-14 bg-slate-100 rounded-full" />
+                  <div className="h-5 w-14 bg-slate-100 dark:bg-slate-700/60 rounded-full" />
+                  <div className="h-5 w-14 bg-slate-100 dark:bg-slate-700/60 rounded-full" />
+                  <div className="h-5 w-14 bg-slate-100 dark:bg-slate-700/60 rounded-full" />
                 </div>
-                <div className="w-full border-t border-slate-100 pt-4 mt-auto flex gap-2">
-                  <div className="h-9 flex-1 bg-slate-100 rounded-lg" />
-                  <div className="h-9 flex-1 bg-slate-200 rounded-lg" />
+                <div className="w-full border-t border-slate-100 dark:border-slate-700 pt-4 mt-auto flex gap-2">
+                  <div className="h-9 flex-1 bg-slate-100 dark:bg-slate-700/60 rounded-lg" />
+                  <div className="h-9 flex-1 bg-slate-200 dark:bg-slate-700 rounded-lg" />
                 </div>
               </div>
             ))}
@@ -254,12 +254,12 @@ function FacultyContent() {
 
   /* ── main render ── */
   return (
-    <main className="min-h-screen p-6 md:p-10">
+    <main className="min-h-screen p-6 md:p-10 dark:bg-slate-900">
       <div className="max-w-6xl mx-auto">
         {/* ── header ── */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-[#1e293b]">Faculty</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <h1 className="text-2xl font-bold text-[#1e293b] dark:text-white">Faculty</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Meet our tutors — here to guide you through your learning journey.
           </p>
         </div>
@@ -274,12 +274,12 @@ function FacultyContent() {
                 placeholder="Search by name, headline, skills..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-9 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b]/20 transition-colors"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 pl-10 pr-9 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#1e293b] dark:focus:border-slate-400 focus:ring-1 focus:ring-[#1e293b]/20 dark:focus:ring-slate-400/20 transition-colors"
               />
               {search && (
                 <button
                   onClick={() => setSearch("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                 >
                   <XIcon className="w-4 h-4" />
                 </button>
@@ -289,7 +289,7 @@ function FacultyContent() {
               <select
                 value={selectedCourseId}
                 onChange={(e) => setSelectedCourseId(e.target.value)}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b]/20 transition-colors"
+                className="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#1e293b] dark:focus:border-slate-400 focus:ring-1 focus:ring-[#1e293b]/20 dark:focus:ring-slate-400/20 transition-colors"
               >
                 <option value="">All courses</option>
                 {courses.map((c) => (
@@ -304,28 +304,28 @@ function FacultyContent() {
 
         {/* ── empty / no-results states ── */}
         {noTutorsAtAll ? (
-          <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center">
-            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-emerald-50 flex items-center justify-center">
+          <div className="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-12 text-center">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
               <GraduationCapIcon className="w-7 h-7 text-emerald-400" />
             </div>
-            <p className="text-sm font-medium text-slate-700 mb-1">No tutors listed yet</p>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">No tutors listed yet</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500">
               Faculty listings will appear here once tutors are available.
             </p>
           </div>
         ) : noFilterResults ? (
-          <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center">
-            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
+          <div className="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-12 text-center">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
               <SearchIcon className="w-7 h-7 text-slate-400" />
             </div>
-            <p className="text-sm font-medium text-slate-700 mb-1">No tutors match your filters</p>
-            <p className="text-sm text-slate-400">Try adjusting your search or course filter.</p>
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">No tutors match your filters</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500">Try adjusting your search or course filter.</p>
             <button
               onClick={() => {
                 setSearch("");
                 setSelectedCourseId("");
               }}
-              className="mt-4 text-sm text-[#1e293b] font-medium hover:underline"
+              className="mt-4 text-sm text-[#1e293b] dark:text-slate-300 font-medium hover:underline"
             >
               Clear filters
             </button>
@@ -336,10 +336,10 @@ function FacultyContent() {
             {filteredTutors.map((tutor) => (
               <div
                 key={tutor.id}
-                className="group relative rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-lg hover:border-emerald-200 transition-all duration-200 flex flex-col"
+                className="group relative rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm hover:shadow-lg dark:shadow-slate-900/50 hover:border-emerald-200 dark:hover:border-emerald-700 transition-all duration-200 flex flex-col"
               >
                 {/* tutor badge */}
-                <span className="absolute top-4 right-4 text-[11px] font-semibold uppercase tracking-wide px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                <span className="absolute top-4 right-4 text-[11px] font-semibold uppercase tracking-wide px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-700">
                   Tutor
                 </span>
 
@@ -357,24 +357,24 @@ function FacultyContent() {
                     />
                     {onlineSet.has(tutor.id) && (
                       <span
-                        className="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 border-[2.5px] border-white rounded-full"
+                        className="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 border-[2.5px] border-white dark:border-slate-800 rounded-full ring-1 ring-emerald-400/50"
                         title="Online"
                       />
                     )}
                   </div>
 
                   {/* name */}
-                  <h3 className="text-lg font-semibold text-[#1e293b] leading-tight group-hover:text-emerald-700 transition-colors">
+                  <h3 className="text-lg font-semibold text-[#1e293b] dark:text-white leading-tight group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
                     {tutor.full_name || "Unnamed Tutor"}
                   </h3>
 
                   {/* headline */}
                   {tutor.headline ? (
-                    <p className="text-sm text-slate-500 mt-1 line-clamp-2">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
                       {tutor.headline}
                     </p>
                   ) : (
-                    <p className="text-sm text-slate-400 italic mt-1">
+                    <p className="text-sm text-slate-400 dark:text-slate-500 italic mt-1">
                       Tutor
                     </p>
                   )}
@@ -385,7 +385,7 @@ function FacultyContent() {
                       {tutor.skills.slice(0, 5).map((skill) => (
                         <span
                           key={skill}
-                          className="inline-block text-[11px] font-medium text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full"
+                          className="inline-block text-[11px] font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2.5 py-0.5 rounded-full"
                         >
                           {skill}
                         </span>
@@ -404,7 +404,7 @@ function FacultyContent() {
                       {tutorCourses[tutor.id].map((course) => (
                         <span
                           key={course.id}
-                          className="inline-block text-[11px] font-medium text-blue-600 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full"
+                          className="inline-block text-[11px] font-medium text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 px-2.5 py-0.5 rounded-full"
                         >
                           {course.code}
                         </span>
@@ -414,10 +414,10 @@ function FacultyContent() {
                 </Link>
 
                 {/* CTA row */}
-                <div className="border-t border-slate-100 px-5 py-3.5 flex items-center gap-2 mt-auto">
+                <div className="border-t border-slate-100 dark:border-slate-700 px-5 py-3.5 flex items-center gap-2 mt-auto">
                   <Link
                     href={`/app/profile/${tutor.id}`}
-                    className="flex-1 text-center text-sm font-medium text-[#1e293b] rounded-lg border border-slate-200 px-3 py-2 hover:bg-slate-50 transition-colors"
+                    className="flex-1 text-center text-sm font-medium text-[#1e293b] dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                   >
                     View Profile
                   </Link>
@@ -425,7 +425,7 @@ function FacultyContent() {
                     <button
                       onClick={(e) => handleMessage(tutor.id, e)}
                       disabled={messagingProfileId === tutor.id}
-                      className="flex-1 text-center text-sm font-medium text-white bg-[#1e293b] rounded-lg px-3 py-2 hover:bg-[#334155] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="flex-1 text-center text-sm font-medium text-white bg-[#1e293b] dark:bg-slate-200 dark:text-slate-900 rounded-lg px-3 py-2 hover:bg-[#334155] dark:hover:bg-slate-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       {messagingProfileId === tutor.id ? (
                         <span className="inline-flex items-center justify-center gap-1.5">
@@ -447,12 +447,12 @@ function FacultyContent() {
 
         {/* ── results count ── */}
         {filteredTutors.length > 0 && (
-          <p className="text-xs text-slate-400 text-center mt-6">
-            Showing <span className="font-medium text-slate-600">{filteredTutors.length}</span>{" "}
+          <p className="text-xs text-slate-400 dark:text-slate-500 text-center mt-6">
+            Showing <span className="font-medium text-slate-600 dark:text-slate-300">{filteredTutors.length}</span>{" "}
             {filteredTutors.length === 1 ? "tutor" : "tutors"}
             {search && (
               <>
-                {" "}matching &ldquo;<span className="text-slate-600">{search}</span>&rdquo;
+                {" "}matching &ldquo;<span className="text-slate-600 dark:text-slate-300">{search}</span>&rdquo;
               </>
             )}
           </p>
@@ -466,7 +466,7 @@ export default function FacultyPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen flex items-center justify-center">
+        <main className="min-h-screen flex items-center justify-center dark:bg-slate-900">
           <div className="flex items-center gap-3 text-slate-400">
             <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="40" strokeLinecap="round" />

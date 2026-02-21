@@ -22,14 +22,14 @@ interface Profile {
 
 /* ──────────────────────────── role badge colour map ─ */
 const ROLE_STYLES: Record<string, string> = {
-  admin: "bg-blue-100 text-blue-700 border border-blue-200",
-  tutor: "bg-emerald-100 text-emerald-700 border border-emerald-200",
-  member: "bg-slate-100 text-slate-600 border border-slate-200",
+  admin: "bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700",
+  tutor: "bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-700",
+  member: "bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600",
 };
 
 function roleBadgeClass(role: string | null) {
   if (!role) return "";
-  return ROLE_STYLES[role.toLowerCase()] ?? "bg-slate-100 text-slate-600 border border-slate-200";
+  return ROLE_STYLES[role.toLowerCase()] ?? "bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600";
 }
 
 /* ──────────────────────────── search icon ─────────── */
@@ -167,34 +167,34 @@ function DirectoryContent() {
   /* ── loading state ── */
   if (loading) {
     return (
-      <main className="min-h-screen p-6 md:p-10">
+      <main className="min-h-screen p-6 md:p-10 dark:bg-slate-900">
         <div className="max-w-6xl mx-auto">
           {/* skeleton header */}
           <div className="mb-8">
-            <div className="h-8 w-56 bg-slate-200 rounded-lg animate-pulse mb-2" />
-            <div className="h-4 w-72 bg-slate-100 rounded animate-pulse" />
+            <div className="h-8 w-56 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse mb-2" />
+            <div className="h-4 w-72 bg-slate-100 dark:bg-slate-700/60 rounded animate-pulse" />
           </div>
           {/* skeleton search */}
-          <div className="h-11 w-full max-w-md bg-slate-100 rounded-xl animate-pulse mb-8" />
+          <div className="h-11 w-full max-w-md bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse mb-8" />
           {/* skeleton cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
-                className="rounded-xl border border-gray-200 bg-white p-5 animate-pulse"
+                className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 animate-pulse"
               >
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-slate-200" />
+                  <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700" />
                   <div className="flex-1">
-                    <div className="h-4 w-28 bg-slate-200 rounded mb-1.5" />
-                    <div className="h-3 w-20 bg-slate-100 rounded" />
+                    <div className="h-4 w-28 bg-slate-200 dark:bg-slate-700 rounded mb-1.5" />
+                    <div className="h-3 w-20 bg-slate-100 dark:bg-slate-700/60 rounded" />
                   </div>
                 </div>
-                <div className="h-3 w-full bg-slate-100 rounded mb-2" />
-                <div className="h-3 w-3/4 bg-slate-50 rounded mb-4" />
+                <div className="h-3 w-full bg-slate-100 dark:bg-slate-700/60 rounded mb-2" />
+                <div className="h-3 w-3/4 bg-slate-50 dark:bg-slate-700/40 rounded mb-4" />
                 <div className="flex gap-2">
-                  <div className="h-8 w-24 bg-slate-100 rounded-lg" />
-                  <div className="h-8 w-24 bg-slate-200 rounded-lg" />
+                  <div className="h-8 w-24 bg-slate-100 dark:bg-slate-700/60 rounded-lg" />
+                  <div className="h-8 w-24 bg-slate-200 dark:bg-slate-700 rounded-lg" />
                 </div>
               </div>
             ))}
@@ -206,13 +206,13 @@ function DirectoryContent() {
 
   /* ── main render ── */
   return (
-    <main className="min-h-screen p-6 md:p-10">
+    <main className="min-h-screen p-6 md:p-10 dark:bg-slate-900">
       <div className="max-w-6xl mx-auto">
         {/* ── header ── */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-[#1e293b]">Member Directory</h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <h1 className="text-2xl font-bold text-[#1e293b] dark:text-white">Member Directory</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
               Connect with {filteredProfiles.length === profiles.length
                 ? `${profiles.length} active members`
                 : `${filteredProfiles.length} of ${profiles.length} members`}{" "}
@@ -228,12 +228,12 @@ function DirectoryContent() {
               placeholder="Search by name, program, or year..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-9 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b]/20 transition-colors"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 pl-10 pr-9 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#1e293b] dark:focus:border-slate-400 focus:ring-1 focus:ring-[#1e293b]/20 dark:focus:ring-slate-400/20 transition-colors"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
               >
                 <XIcon className="w-4 h-4" />
               </button>
@@ -243,12 +243,12 @@ function DirectoryContent() {
 
         {/* ── empty state ── */}
         {filteredProfiles.length === 0 ? (
-          <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
+          <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-12 text-center">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
               <SearchIcon className="w-6 h-6 text-slate-400" />
             </div>
-            <p className="text-sm font-medium text-slate-700 mb-1">No members found</p>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">No members found</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500">
               {searchQuery
                 ? "Try adjusting your search terms."
                 : "No members are available at this time."}
@@ -256,7 +256,7 @@ function DirectoryContent() {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="mt-4 text-sm text-[#1e293b] font-medium hover:underline"
+                className="mt-4 text-sm text-[#1e293b] dark:text-slate-300 font-medium hover:underline"
               >
                 Clear search
               </button>
@@ -268,7 +268,7 @@ function DirectoryContent() {
             {filteredProfiles.map((profile) => (
               <div
                 key={profile.id}
-                className="group rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                className="group rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm hover:shadow-md dark:shadow-slate-900/50 transition-shadow flex flex-col"
               >
                 {/* card body – clickable area → profile */}
                 <Link
@@ -285,13 +285,13 @@ function DirectoryContent() {
                       />
                       {onlineSet.has(profile.id) && (
                         <span
-                          className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"
+                          className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-slate-800 rounded-full ring-1 ring-emerald-400/50"
                           title="Online"
                         />
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-[#1e293b] truncate leading-tight">
+                      <p className="font-semibold text-[#1e293b] dark:text-white truncate leading-tight">
                         {profile.full_name || "Unnamed Member"}
                       </p>
                       {profile.role && (
@@ -306,11 +306,11 @@ function DirectoryContent() {
 
                   {/* headline */}
                   {profile.headline ? (
-                    <p className="text-sm text-slate-600 line-clamp-2 mb-2">
+                    <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-2 mb-2">
                       {profile.headline}
                     </p>
                   ) : (
-                    <p className="text-sm text-slate-400 italic mb-2">
+                    <p className="text-sm text-slate-400 dark:text-slate-500 italic mb-2">
                       No additional details provided.
                     </p>
                   )}
@@ -331,7 +331,7 @@ function DirectoryContent() {
                       {profile.skills.slice(0, 4).map((skill) => (
                         <span
                           key={skill}
-                          className="inline-block text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full"
+                          className="inline-block text-[11px] font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full"
                         >
                           {skill}
                         </span>
@@ -346,10 +346,10 @@ function DirectoryContent() {
                 </Link>
 
                 {/* CTA row */}
-                <div className="border-t border-slate-100 px-5 py-3 flex items-center gap-2">
+                <div className="border-t border-slate-100 dark:border-slate-700 px-5 py-3 flex items-center gap-2">
                   <Link
                     href={`/app/profile/${profile.id}`}
-                    className="flex-1 text-center text-sm font-medium text-slate-600 rounded-lg border border-slate-200 px-3 py-2 hover:bg-slate-50 transition-colors"
+                    className="flex-1 text-center text-sm font-medium text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                   >
                     View Profile
                   </Link>
@@ -357,7 +357,7 @@ function DirectoryContent() {
                     <button
                       onClick={(e) => handleMessage(profile.id, e)}
                       disabled={messagingProfileId === profile.id}
-                      className="flex-1 text-center text-sm font-medium text-white bg-[#1e293b] rounded-lg px-3 py-2 hover:bg-[#334155] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="flex-1 text-center text-sm font-medium text-white bg-[#1e293b] dark:bg-slate-200 dark:text-slate-900 rounded-lg px-3 py-2 hover:bg-[#334155] dark:hover:bg-slate-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       {messagingProfileId === profile.id ? (
                         <span className="inline-flex items-center justify-center gap-1.5">
@@ -379,12 +379,12 @@ function DirectoryContent() {
 
         {/* ── results count ── */}
         {filteredProfiles.length > 0 && (
-          <p className="text-xs text-slate-400 text-center mt-6">
-            Showing <span className="font-medium text-slate-600">{filteredProfiles.length}</span>{" "}
+          <p className="text-xs text-slate-400 dark:text-slate-500 text-center mt-6">
+            Showing <span className="font-medium text-slate-600 dark:text-slate-300">{filteredProfiles.length}</span>{" "}
             {filteredProfiles.length === 1 ? "member" : "members"}
             {searchQuery && (
               <>
-                {" "}matching &ldquo;<span className="text-slate-600">{searchQuery}</span>&rdquo;
+                {" "}matching &ldquo;<span className="text-slate-600 dark:text-slate-300">{searchQuery}</span>&rdquo;
               </>
             )}
           </p>
@@ -398,7 +398,7 @@ export default function DirectoryPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen flex items-center justify-center">
+        <main className="min-h-screen flex items-center justify-center dark:bg-slate-900">
           <div className="flex items-center gap-3 text-slate-400">
             <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="40" strokeLinecap="round" />
