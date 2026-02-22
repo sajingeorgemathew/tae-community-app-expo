@@ -50,8 +50,8 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 p-4">
-      <div className="w-full max-w-sm bg-white rounded-xl shadow-md border-t-4 border-[#1e293b] p-8">
+    <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 p-4">
+      <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-xl shadow-md dark:shadow-lg dark:shadow-black/30 border-t-4 border-[#1e293b] dark:border-slate-500 p-8">
         <div className="flex justify-center mb-6">
           <Image
             src="/tae-logo.jpg"
@@ -62,10 +62,10 @@ export default function LoginPage() {
             priority
           />
         </div>
-        <h1 className="text-2xl font-semibold mb-6 text-center text-[#1e293b]">Log In</h1>
+        <h1 className="text-2xl font-semibold mb-6 text-center text-[#1e293b] dark:text-slate-100">Log In</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-1">
+            <label htmlFor="email" className="block text-sm font-medium mb-1 dark:text-slate-200">
               Email
             </label>
             <input
@@ -74,11 +74,11 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b]"
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b] dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-slate-400 dark:focus:border-slate-400 dark:focus:ring-slate-400"
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-medium mb-1">
+            <label htmlFor="password" className="block text-sm font-medium mb-1 dark:text-slate-200">
               Password
             </label>
             <input
@@ -87,21 +87,21 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b]"
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b] dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-slate-400 dark:focus:border-slate-400 dark:focus:ring-slate-400"
             />
           </div>
-          {error && <p className="text-red-600 text-sm">{error}</p>}
+          {error && <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#1e293b] text-white py-2 rounded-lg hover:bg-[#334155] disabled:opacity-50 transition-colors"
+            className="w-full bg-[#1e293b] text-white py-2 rounded-lg hover:bg-[#334155] disabled:opacity-50 transition-colors dark:bg-slate-600 dark:hover:bg-slate-500"
           >
             {loading ? "Logging in..." : "Log In"}
           </button>
         </form>
-        <p className="mt-4 text-sm text-center">
+        <p className="mt-4 text-sm text-center dark:text-slate-300">
           Don&apos;t have an account?{" "}
-          <Link href="/signup" className="text-[#1e293b] font-medium hover:underline">
+          <Link href="/signup" className="text-[#1e293b] dark:text-slate-100 font-medium hover:underline">
             Sign up
           </Link>
         </p>
