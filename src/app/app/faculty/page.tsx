@@ -222,7 +222,7 @@ function FacultyContent() {
             <div className="h-11 w-48 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />
           </div>
           {/* skeleton cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
@@ -332,7 +332,7 @@ function FacultyContent() {
           </div>
         ) : (
           /* ── tutor cards grid ── */
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
             {filteredTutors.map((tutor) => (
               <div
                 key={tutor.id}
@@ -414,7 +414,7 @@ function FacultyContent() {
                 </Link>
 
                 {/* CTA row */}
-                <div className="border-t border-slate-100 dark:border-slate-700 px-5 py-3.5 flex items-center gap-2 mt-auto">
+                <div className="border-t border-slate-100 dark:border-slate-700 px-5 py-3.5 flex flex-col sm:flex-row items-center gap-2 mt-auto">
                   <Link
                     href={`/app/profile/${tutor.id}`}
                     className="flex-1 text-center text-sm font-medium text-[#1e293b] dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"

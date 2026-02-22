@@ -1059,7 +1059,7 @@ export default function AdminPage() {
   const allUsersSelected = filteredUsers.length > 0 && filteredUsers.every((u) => selectedUsers.has(u.id));
 
   return (
-    <main className="min-h-screen bg-gray-50/50 p-6 md:p-8 dark:bg-slate-950">
+    <main className="min-h-screen bg-gray-50/50 p-4 md:p-8 dark:bg-slate-950">
       <div className="max-w-6xl mx-auto">
         <div className="mb-6">
           <Link href="/app" className="text-sm text-blue-600 hover:underline font-medium dark:text-blue-400">
@@ -1223,7 +1223,7 @@ export default function AdminPage() {
               </div>
             ) : (
               <div className="rounded-lg border border-gray-200 overflow-hidden overflow-x-auto dark:border-slate-700">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm min-w-[700px]">
                   <thead className="bg-gray-50 dark:bg-slate-900">
                     <tr>
                       <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-slate-400">Name</th>
@@ -1431,7 +1431,7 @@ export default function AdminPage() {
             ) : (
               <>
               <div className="rounded-lg border border-gray-200 overflow-hidden overflow-x-auto dark:border-slate-700">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm min-w-[700px]">
                   <thead className="bg-gray-50 dark:bg-slate-900">
                     <tr>
                       <th className="text-left px-4 py-3 w-8">

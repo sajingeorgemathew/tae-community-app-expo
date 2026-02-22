@@ -338,9 +338,9 @@ export default function AppPage() {
   const firstName = displayName.split(" ")[0];
 
   return (
-    <div className="p-6 md:p-8 space-y-8">
+    <div className="p-4 md:p-8 space-y-8">
       {/* ---- Hero Banner ---- */}
-      <section className="rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-blue-900 px-8 py-10 text-white flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <section className="rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-blue-900 px-5 py-8 md:px-8 md:py-10 text-white flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">
             Welcome back, {firstName}!
@@ -351,7 +351,7 @@ export default function AppPage() {
 
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Link
             href="/app/feed/new"
             className="inline-flex items-center gap-2 rounded-lg bg-white text-slate-900 px-5 py-2.5 text-sm font-medium hover:bg-gray-100 transition dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
@@ -442,14 +442,14 @@ export default function AppPage() {
                         setShowDropdown(false);
                         router.push(`/app/profile/${result.id}`);
                       }}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-2 dark:hover:bg-slate-800"
+                      className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-2 min-w-0 dark:hover:bg-slate-800"
                     >
                       <Avatar
                         fullName={result.full_name || "?"}
                         avatarUrl={searchAvatarUrls[result.id]}
                         size="sm"
                       />
-                      <span className="font-medium text-sm dark:text-slate-100">
+                      <span className="font-medium text-sm truncate dark:text-slate-100">
                         {result.full_name || "Unnamed Member"}
                       </span>
                       {result.role && (

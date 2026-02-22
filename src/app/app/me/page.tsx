@@ -579,8 +579,8 @@ export default function MyProfilePage() {
   return (
     <main className="min-h-screen bg-gray-50/50 dark:bg-slate-900">
       {/* Page Header */}
-      <div className="border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-6 py-5 md:px-8">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
+      <div className="border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-4 md:px-8 md:py-5">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <div className="flex items-center gap-3 mb-1">
               <Link
@@ -595,7 +595,7 @@ export default function MyProfilePage() {
             </div>
             <p className="text-sm text-gray-500 dark:text-slate-400 ml-8">Manage your personal information and skills</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {editing ? (
               <>
                 <button
@@ -930,7 +930,7 @@ export default function MyProfilePage() {
                     <div className="w-1 h-5 bg-slate-800 dark:bg-slate-400 rounded-full" />
                     Basic Information
                   </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-4 sm:gap-x-8">
                     <div>
                       <p className="text-xs font-medium text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-1">Full Name</p>
                       <p className="text-sm text-gray-900 dark:text-white">{profile?.full_name || "Not specified"}</p>

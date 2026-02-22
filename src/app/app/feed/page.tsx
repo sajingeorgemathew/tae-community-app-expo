@@ -495,8 +495,8 @@ export default function FeedPage() {
       </div>
 
       {/* Controls: Filters + New Post */}
-      <div className="border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-3 md:px-8">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
+      <div className="border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-4 py-3 md:px-8">
+        <div className="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-y-2">
           <div className="flex items-center gap-1.5">
             {(["all", "students", "alumni"] as AudienceFilter[]).map((option) => (
               <button
@@ -525,7 +525,7 @@ export default function FeedPage() {
       </div>
 
       {/* Posts List */}
-      <div className="max-w-3xl mx-auto px-6 py-6 md:px-8">
+      <div className="max-w-3xl mx-auto px-4 py-4 md:px-8 md:py-6">
         {filteredPosts.length === 0 ? (
           <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-12 text-center">
             <svg className="w-12 h-12 text-gray-200 dark:text-slate-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -238,7 +238,7 @@ export default function QuestionsPage() {
   /* ───── Loading skeleton ───── */
   if (loading) {
     return (
-      <main className="min-h-screen p-6 md:p-10">
+      <main className="min-h-screen p-4 md:p-10">
         <div className="max-w-6xl mx-auto">
           {/* Header skeleton */}
           <div className="mb-8">
@@ -275,7 +275,7 @@ export default function QuestionsPage() {
   }
 
   return (
-    <main className="min-h-screen p-6 md:p-10">
+    <main className="min-h-screen p-4 md:p-10">
       <div className="max-w-6xl mx-auto">
         {/* Back link */}
         <div className="mb-6">
@@ -295,7 +295,7 @@ export default function QuestionsPage() {
         )}
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-[#1e293b] dark:text-slate-100">Questions</h1>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">

@@ -167,7 +167,7 @@ function DirectoryContent() {
   /* ── loading state ── */
   if (loading) {
     return (
-      <main className="min-h-screen p-6 md:p-10 dark:bg-slate-900">
+      <main className="min-h-screen p-4 md:p-10 dark:bg-slate-900">
         <div className="max-w-6xl mx-auto">
           {/* skeleton header */}
           <div className="mb-8">
@@ -206,7 +206,7 @@ function DirectoryContent() {
 
   /* ── main render ── */
   return (
-    <main className="min-h-screen p-6 md:p-10 dark:bg-slate-900">
+    <main className="min-h-screen p-4 md:p-10 dark:bg-slate-900">
       <div className="max-w-6xl mx-auto">
         {/* ── header ── */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
@@ -346,7 +346,7 @@ function DirectoryContent() {
                 </Link>
 
                 {/* CTA row */}
-                <div className="border-t border-slate-100 dark:border-slate-700 px-5 py-3 flex items-center gap-2">
+                <div className="border-t border-slate-100 dark:border-slate-700 px-5 py-3 flex flex-col sm:flex-row items-center gap-2">
                   <Link
                     href={`/app/profile/${profile.id}`}
                     className="flex-1 text-center text-sm font-medium text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
