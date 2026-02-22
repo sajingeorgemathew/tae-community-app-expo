@@ -346,7 +346,7 @@ function DirectoryContent() {
                 </Link>
 
                 {/* CTA row */}
-                <div className="border-t border-slate-100 dark:border-slate-700 px-5 py-3 flex flex-col sm:flex-row items-center gap-2">
+                <div className="border-t border-slate-100 dark:border-slate-700 px-5 py-3 grid grid-cols-2 sm:flex sm:flex-row items-center gap-2">
                   <Link
                     href={`/app/profile/${profile.id}`}
                     className="flex-1 text-center text-sm font-medium text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
