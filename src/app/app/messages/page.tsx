@@ -1107,7 +1107,7 @@ function MessagesContent() {
   return (
     <div className="app-card flex h-[calc(100vh-200px)] min-h-[400px] overflow-hidden">
       {/* Left pane: Conversation list */}
-      <div className="w-[340px] min-w-[280px] border-r border-slate-200 dark:border-slate-700 flex flex-col bg-white dark:bg-slate-900">
+      <div className={`md:w-[340px] md:min-w-[280px] border-r border-slate-200 dark:border-slate-700 flex-col bg-white dark:bg-slate-900 ${conversationId ? "hidden md:flex" : "flex w-full"}`}>
         <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700">
           <h2 className="text-base font-semibold text-[#1e293b] dark:text-slate-100">Conversations</h2>
         </div>
@@ -1135,7 +1135,7 @@ function MessagesContent() {
       </div>
 
       {/* Right pane: Thread */}
-      <div className="flex-1 flex flex-col bg-white dark:bg-slate-900">
+      <div className={`flex-1 flex-col bg-white dark:bg-slate-900 ${!conversationId ? "hidden md:flex" : "flex"}`}>
         {!conversationId ? (
           <div className="flex-1 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 gap-3">
             <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-slate-300 dark:text-slate-600">
@@ -1153,6 +1153,16 @@ function MessagesContent() {
           <>
             {/* Thread header */}
             <div className="px-5 py-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center gap-3">
+              {/* Mobile back button */}
+              <button
+                onClick={() => router.push("/app/messages")}
+                className="md:hidden shrink-0 -ml-1 mr-1 p-1 rounded-lg text-slate-500 hover:text-[#1e293b] hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800 transition-colors"
+                aria-label="Back to conversations"
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="12 15 7 10 12 5" />
+                </svg>
+              </button>
               {selectedConvo && (
                 <>
                   <div className="relative">
@@ -1261,7 +1271,7 @@ function MessagesContent() {
 
 export default function MessagesPage() {
   return (
-    <main className="min-h-screen p-8">
+    <main className="min-h-screen p-4 md:p-8">
       <div className="mb-6">
         <Link href="/app" className="text-[#1e293b] hover:text-[#334155] dark:text-slate-300 dark:hover:text-white text-sm font-medium transition-colors">
           &larr; Back to App
