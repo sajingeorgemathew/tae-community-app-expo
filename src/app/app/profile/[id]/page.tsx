@@ -18,6 +18,9 @@ interface Profile {
   avatar_path: string | null;
   headline: string | null;
   skills: string[];
+  current_work: string | null;
+  qualifications: string | null;
+  experience: string | null;
 }
 
 interface PostRow {
@@ -100,7 +103,7 @@ export default function ProfilePage() {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, program, grad_year, role, avatar_path, headline, skills")
+        .select("id, full_name, program, grad_year, role, avatar_path, headline, skills, current_work, qualifications, experience")
         .eq("id", id)
         .single();
 
@@ -612,6 +615,28 @@ export default function ProfilePage() {
                 </p>
               </div>
             )}
+
+            {/* Profile Detail Sections */}
+            {[
+              { title: "Current Work", body: profile?.current_work },
+              { title: "Qualifications", body: profile?.qualifications },
+              { title: "Experience", body: profile?.experience },
+            ]
+              .filter((s) => s.body?.trim())
+              .map((section) => (
+                <div
+                  key={section.title}
+                  className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6"
+                >
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <div className="w-1 h-5 bg-blue-600 rounded-full" />
+                    {section.title}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-slate-300 leading-relaxed whitespace-pre-line break-words">
+                    {section.body}
+                  </p>
+                </div>
+              ))}
 
             {/* Posts Section */}
             <div>
