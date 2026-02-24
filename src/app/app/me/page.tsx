@@ -24,6 +24,9 @@ interface Profile {
   avatar_path: string | null;
   headline: string | null;
   skills: string[];
+  current_work: string | null;
+  qualifications: string | null;
+  experience: string | null;
 }
 
 interface MissingItem {
@@ -92,6 +95,9 @@ export default function MyProfilePage() {
   const [headline, setHeadline] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState("");
+  const [currentWork, setCurrentWork] = useState("");
+  const [qualifications, setQualifications] = useState("");
+  const [experience, setExperience] = useState("");
 
   // Avatar state
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -120,7 +126,7 @@ export default function MyProfilePage() {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, program, grad_year, role, avatar_path, headline, skills")
+        .select("id, full_name, program, grad_year, role, avatar_path, headline, skills, current_work, qualifications, experience")
         .eq("id", session.user.id)
         .single();
 
@@ -133,6 +139,9 @@ export default function MyProfilePage() {
       const profileData: Profile = {
         ...data,
         skills: data.skills ?? [],
+        current_work: data.current_work ?? null,
+        qualifications: data.qualifications ?? null,
+        experience: data.experience ?? null,
       };
 
       setProfile(profileData);
@@ -141,6 +150,9 @@ export default function MyProfilePage() {
       setGradYear(profileData.grad_year?.toString() || "");
       setHeadline(profileData.headline || "");
       setSkills(profileData.skills);
+      setCurrentWork(profileData.current_work || "");
+      setQualifications(profileData.qualifications || "");
+      setExperience(profileData.experience || "");
 
       // Get signed URL for existing avatar via cached helper
       if (profileData.avatar_path) {
@@ -304,6 +316,9 @@ export default function MyProfilePage() {
     setHeadline(profile?.headline || "");
     setSkills(profile?.skills ?? []);
     setSkillInput("");
+    setCurrentWork(profile?.current_work || "");
+    setQualifications(profile?.qualifications || "");
+    setExperience(profile?.experience || "");
     // Clear avatar selection
     setAvatarFile(null);
     setAvatarPreview(null);
@@ -392,6 +407,9 @@ export default function MyProfilePage() {
       headline: headline.trim() || null,
       skills,
       avatar_path: newAvatarPath,
+      current_work: currentWork.trim() || null,
+      qualifications: qualifications.trim() || null,
+      experience: experience.trim() || null,
     };
 
     const { error } = await supabase
@@ -410,6 +428,9 @@ export default function MyProfilePage() {
         headline: updates.headline,
         skills: updates.skills,
         avatar_path: updates.avatar_path,
+        current_work: updates.current_work,
+        qualifications: updates.qualifications,
+        experience: updates.experience,
       };
       setProfile(updatedProfile);
 
@@ -921,6 +942,46 @@ export default function MyProfilePage() {
                     </button>
                   </div>
                 </div>
+
+                {/* Work & Experience Card */}
+                <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <div className="w-1 h-5 bg-green-600 rounded-full" />
+                    Work &amp; Experience
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5">Current Work</label>
+                      <textarea
+                        value={currentWork}
+                        onChange={(e) => setCurrentWork(e.target.value)}
+                        rows={3}
+                        className="w-full border border-gray-200 dark:border-slate-600 rounded-lg px-4 py-2.5 text-sm bg-white dark:bg-slate-700 dark:text-white dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition resize-y"
+                        placeholder="What are you currently working on?"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5">Qualifications</label>
+                      <textarea
+                        value={qualifications}
+                        onChange={(e) => setQualifications(e.target.value)}
+                        rows={3}
+                        className="w-full border border-gray-200 dark:border-slate-600 rounded-lg px-4 py-2.5 text-sm bg-white dark:bg-slate-700 dark:text-white dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition resize-y"
+                        placeholder="Degrees, certifications, or other qualifications"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5">Experience</label>
+                      <textarea
+                        value={experience}
+                        onChange={(e) => setExperience(e.target.value)}
+                        rows={3}
+                        className="w-full border border-gray-200 dark:border-slate-600 rounded-lg px-4 py-2.5 text-sm bg-white dark:bg-slate-700 dark:text-white dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition resize-y"
+                        placeholder="Relevant work or volunteer experience"
+                      />
+                    </div>
+                  </div>
+                </div>
               </>
             ) : (
               <>
@@ -966,6 +1027,36 @@ export default function MyProfilePage() {
                     {profile?.headline || "No headline added yet."}
                   </p>
                 </div>
+
+                {/* View Mode: Work & Experience Card */}
+                {(profile?.current_work || profile?.qualifications || profile?.experience) && (
+                  <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                      <div className="w-1 h-5 bg-green-600 rounded-full" />
+                      Work &amp; Experience
+                    </h3>
+                    <div className="space-y-4">
+                      {profile.current_work && (
+                        <div>
+                          <p className="text-xs font-medium text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-1">Current Work</p>
+                          <p className="text-sm text-gray-600 dark:text-slate-300 leading-relaxed whitespace-pre-line">{profile.current_work}</p>
+                        </div>
+                      )}
+                      {profile.qualifications && (
+                        <div>
+                          <p className="text-xs font-medium text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-1">Qualifications</p>
+                          <p className="text-sm text-gray-600 dark:text-slate-300 leading-relaxed whitespace-pre-line">{profile.qualifications}</p>
+                        </div>
+                      )}
+                      {profile.experience && (
+                        <div>
+                          <p className="text-xs font-medium text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-1">Experience</p>
+                          <p className="text-sm text-gray-600 dark:text-slate-300 leading-relaxed whitespace-pre-line">{profile.experience}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </>
             )}
 
