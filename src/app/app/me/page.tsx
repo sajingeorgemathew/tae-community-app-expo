@@ -32,34 +32,22 @@ interface Profile {
 interface MissingItem {
   key: "avatar" | "headline" | "skills" | "program_year" | "current_work" | "qualifications" | "experience";
   label: string;
-  recommended?: boolean;
 }
 
 function computeCompleteness(p: Profile): { percent: number; missing: MissingItem[] } {
   const missing: MissingItem[] = [];
-  // Base fields (4 items, 25% each = 100% max)
+  const totalFields = 7;
+
   if (!p.avatar_path) missing.push({ key: "avatar", label: "Add a profile photo" });
   if (!p.headline?.trim()) missing.push({ key: "headline", label: "Write a headline" });
   if (!p.skills || p.skills.length === 0) missing.push({ key: "skills", label: "Add at least one skill" });
   if (!p.program?.trim() || !p.grad_year) missing.push({ key: "program_year", label: "Set program & graduation year" });
-  const baseFilled = 4 - missing.length;
+  if (!p.current_work?.trim()) missing.push({ key: "current_work", label: "Describe what you're working on" });
+  if (!p.qualifications?.trim()) missing.push({ key: "qualifications", label: "Add your qualifications" });
+  if (!p.experience?.trim()) missing.push({ key: "experience", label: "Add your experience" });
 
-  // Bonus fields (recommended, each worth ~5% bonus on top of base)
-  const bonusFields: { key: MissingItem["key"]; value: string | null; label: string }[] = [
-    { key: "current_work", value: p.current_work, label: "Describe what you're working on" },
-    { key: "qualifications", value: p.qualifications, label: "Add your qualifications" },
-    { key: "experience", value: p.experience, label: "Add your experience" },
-  ];
-  let bonusPoints = 0;
-  for (const f of bonusFields) {
-    if (!f.value?.trim()) {
-      missing.push({ key: f.key, label: f.label, recommended: true });
-    } else {
-      bonusPoints += 5;
-    }
-  }
-
-  const percent = Math.min(100, baseFilled * 25 + bonusPoints);
+  const filled = totalFields - missing.length;
+  const percent = Math.round((filled / totalFields) * 100);
   return { percent, missing };
 }
 
@@ -808,10 +796,9 @@ export default function MyProfilePage() {
                   {completeness.missing.map((item) => (
                     <li key={item.key} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className={`w-1.5 h-1.5 rounded-full ${item.recommended ? "bg-green-400" : "bg-amber-400"}`} />
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                         <span className="text-sm text-gray-600 dark:text-slate-300">
                           {item.label}
-                          {item.recommended && <span className="ml-1.5 text-xs text-green-600 dark:text-green-400">(Recommended)</span>}
                         </span>
                       </div>
                       <button
