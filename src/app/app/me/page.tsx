@@ -30,18 +30,37 @@ interface Profile {
 }
 
 interface MissingItem {
-  key: "avatar" | "headline" | "skills" | "program_year";
+  key: "avatar" | "headline" | "skills" | "program_year" | "current_work" | "qualifications" | "experience";
   label: string;
+  recommended?: boolean;
 }
 
 function computeCompleteness(p: Profile): { percent: number; missing: MissingItem[] } {
   const missing: MissingItem[] = [];
+  // Base fields (4 items, 25% each = 100% max)
   if (!p.avatar_path) missing.push({ key: "avatar", label: "Add a profile photo" });
   if (!p.headline?.trim()) missing.push({ key: "headline", label: "Write a headline" });
   if (!p.skills || p.skills.length === 0) missing.push({ key: "skills", label: "Add at least one skill" });
   if (!p.program?.trim() || !p.grad_year) missing.push({ key: "program_year", label: "Set program & graduation year" });
-  const filled = 4 - missing.length;
-  return { percent: filled * 25, missing };
+  const baseFilled = 4 - missing.length;
+
+  // Bonus fields (recommended, each worth ~5% bonus on top of base)
+  const bonusFields: { key: MissingItem["key"]; value: string | null; label: string }[] = [
+    { key: "current_work", value: p.current_work, label: "Describe what you're working on" },
+    { key: "qualifications", value: p.qualifications, label: "Add your qualifications" },
+    { key: "experience", value: p.experience, label: "Add your experience" },
+  ];
+  let bonusPoints = 0;
+  for (const f of bonusFields) {
+    if (!f.value?.trim()) {
+      missing.push({ key: f.key, label: f.label, recommended: true });
+    } else {
+      bonusPoints += 5;
+    }
+  }
+
+  const percent = Math.min(100, baseFilled * 25 + bonusPoints);
+  return { percent, missing };
 }
 
 interface PostRow {
@@ -578,6 +597,15 @@ export default function MyProfilePage() {
           target = programRef.current;
           programRef.current?.focus();
           break;
+        case "current_work":
+        case "qualifications":
+        case "experience":
+          // These fields are in the edit form; just scroll to the about section
+          target = document.querySelector<HTMLElement>(`textarea[placeholder*="${
+            key === "current_work" ? "currently working" : key === "qualifications" ? "certifications" : "volunteer"
+          }"]`);
+          target?.focus();
+          break;
       }
       target?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 100);
@@ -780,8 +808,11 @@ export default function MyProfilePage() {
                   {completeness.missing.map((item) => (
                     <li key={item.key} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                        <span className="text-sm text-gray-600 dark:text-slate-300">{item.label}</span>
+                        <div className={`w-1.5 h-1.5 rounded-full ${item.recommended ? "bg-green-400" : "bg-amber-400"}`} />
+                        <span className="text-sm text-gray-600 dark:text-slate-300">
+                          {item.label}
+                          {item.recommended && <span className="ml-1.5 text-xs text-green-600 dark:text-green-400">(Recommended)</span>}
+                        </span>
                       </div>
                       <button
                         type="button"
