@@ -7,31 +7,10 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
-    "check:env": "node scripts/check-env.mjs",
-    "web:dev": "echo 'Placeholder: will run apps/web dev after MONO-02 migration'",
-    "web:build": "echo 'Placeholder: will run apps/web build after MONO-02 migration'",
-    "web:typecheck": "echo 'Placeholder: will run apps/web typecheck after MONO-02 migration'"
-  },
-  "dependencies": {
-    "@supabase/ssr": "^0.8.0",
-    "@supabase/supabase-js": "^2.90.1",
-    "next": "16.1.1",
-    "next-themes": "^0.4.6",
-    "react": "19.2.3",
-    "react-dom": "19.2.3"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.1.1",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "web:dev": "npm -w @tae/web run dev",
+    "web:build": "npm -w @tae/web run build",
+    "web:start": "npm -w @tae/web run start",
+    "web:lint": "npm -w @tae/web run lint",
+    "web:typecheck": "npm -w @tae/web run typecheck"
   }
 }
