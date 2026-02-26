@@ -2,11 +2,19 @@
   "name": "tae-community-app",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check:env": "node scripts/check-env.mjs",
+    "web:dev": "echo 'Placeholder: will run apps/web dev after MONO-02 migration'",
+    "web:build": "echo 'Placeholder: will run apps/web build after MONO-02 migration'",
+    "web:typecheck": "echo 'Placeholder: will run apps/web typecheck after MONO-02 migration'"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
