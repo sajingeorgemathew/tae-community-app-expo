@@ -3,32 +3,26 @@
 Monorepo for the TAE community platform (web + mobile).
 
 ## Structure
-
-```
 ├── apps/
-│   ├── web/          # Next.js web app (will be moved here in MONO-02)
-│   └── mobile/       # Expo React Native app (future)
+│ ├── web/ # Next.js web app
+│ └── mobile/ # Expo React Native app (future)
 ├── packages/
-│   └── shared/       # Shared types, contracts, and utilities (@tae/shared)
-├── src/              # Current Next.js app source (root-level, pre-migration)
-└── package.json      # npm workspaces root
-```
+│ └── shared/ # Shared types, contracts, and utilities (@tae/shared)
+└── package.json # npm workspaces root
 
-## Current State
-
-The Next.js app still lives at the repo root (`src/`, `app/`, etc.).
-MONO-02 will relocate it into `apps/web/`.
-
-## Scripts
+## Scripts (run from repo root)
 
 | Script | Description |
 |---|---|
-| `npm run dev` | Start Next.js dev server (current root app) |
-| `npm run build` | Build Next.js app (current root app) |
-| `npm run lint` | Run ESLint |
-| `npm run web:dev` | Placeholder — will target `apps/web` after MONO-02 |
-| `npm run web:build` | Placeholder — will target `apps/web` after MONO-02 |
-| `npm run web:typecheck` | Placeholder — will target `apps/web` after MONO-02 |
+| `npm run web:dev` | Start Next.js dev server |
+| `npm run web:build` | Build Next.js app |
+| `npm run web:start` | Start Next.js production server |
+| `npm run web:lint` | Run ESLint on web app |
+| `npm run web:typecheck` | Run TypeScript check on web app |
+
+## Environment
+
+Copy `apps/web/.env.example` to `apps/web/.env.local` and fill in the values.
 
 ## Workspace Tooling
 
