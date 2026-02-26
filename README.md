@@ -3,15 +3,12 @@
 Monorepo for the TAE community platform (web + mobile).
 
 ## Structure
-
-```
 ├── apps/
-│   ├── web/          # Next.js web app
-│   └── mobile/       # Expo React Native app (future)
+│ ├── web/ # Next.js web app
+│ └── mobile/ # Expo React Native app (future)
 ├── packages/
-│   └── shared/       # Shared types, contracts, and utilities (@tae/shared)
-└── package.json      # npm workspaces root
-```
+│ └── shared/ # Shared types, contracts, and utilities (@tae/shared)
+└── package.json # npm workspaces root
 
 ## Scripts (run from repo root)
 
