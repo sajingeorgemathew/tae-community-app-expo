@@ -11,6 +11,13 @@
     "web:build": "npm -w @tae/web run build",
     "web:start": "npm -w @tae/web run start",
     "web:lint": "npm -w @tae/web run lint",
-    "web:typecheck": "npm -w @tae/web run typecheck"
+    "web:typecheck": "npm -w @tae/web run typecheck",
+    "mobile:start": "npm -w @tae/mobile run start",
+    "mobile:android": "npm -w @tae/mobile run android",
+    "mobile:ios": "npm -w @tae/mobile run ios",
+    "mobile:web": "npm -w @tae/mobile run web"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14"
   }
 }
