@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "TAE Community",
+    "slug": "tae-community",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "tae",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tae.community"
+    },
+    "android": {
+      "package": "com.tae.community",
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "plugins": [
+      "expo-font"
+    ]
+  }
+}
