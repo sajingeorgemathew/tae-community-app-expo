@@ -2,7 +2,7 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import FeedScreen from "../screens/FeedScreen";
 import MessagesScreen from "../screens/MessagesScreen";
-import DirectoryScreen from "../screens/DirectoryScreen";
+import DirectoryStack from "./DirectoryStack";
 import MeScreen from "../screens/MeScreen";
 
 export type AppTabsParamList = {
@@ -19,7 +19,11 @@ export default function AppTabs() {
     <Tab.Navigator screenOptions={{ headerShown: true }}>
       <Tab.Screen name="Feed" component={FeedScreen} />
       <Tab.Screen name="Messages" component={MessagesScreen} />
-      <Tab.Screen name="Directory" component={DirectoryScreen} />
+      <Tab.Screen
+        name="Directory"
+        component={DirectoryStack}
+        options={{ headerShown: false }}
+      />
       <Tab.Screen name="Me" component={MeScreen} />
     </Tab.Navigator>
   );
