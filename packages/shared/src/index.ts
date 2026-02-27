@@ -15,6 +15,23 @@ export {
   validatePostInsert,
 } from "./validators";
 
+// Auth helpers (EXPO-04)
+export {
+  type StorageAdapter,
+  AUTH_STORAGE_KEYS,
+  createInMemoryStorageAdapter,
+  type AuthClientOptions,
+  createSupabaseClientWithAuthStorage,
+  getInitialSession,
+  subscribeToAuthChanges,
+  signOutSafe,
+  PROTECTED_ROUTE_PREFIXES,
+  AUTH_ONLY_ROUTES,
+  isProtectedRoute,
+  getInitialRoute,
+  shouldRedirect,
+} from "./auth";
+
 // Storage helpers (EXPO-03)
 export {
   normalizeExtension,
