@@ -1,5 +1,16 @@
-// @tae/shared — placeholder entry point
-// Shared types, contracts, and utilities will live here.
-// This package is scaffolded as part of MONO-01 and will be populated in later tickets.
+// @tae/shared — shared types, Supabase helpers, and validators
 
-export {};
+// Entity types
+export * from "./types";
+
+// Supabase client helper
+export { createSupabaseClient } from "./supabase/client";
+export type { SupabaseClientOptions } from "./supabase/client";
+
+// Validators
+export {
+  requireString,
+  requireUUID,
+  validateMessageInsert,
+  validatePostInsert,
+} from "./validators";
