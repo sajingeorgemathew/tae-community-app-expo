@@ -40,7 +40,7 @@ export type {
 export type { PresenceRow, PresenceUpsert } from "./presence";
 export { PRESENCE_ONLINE_THRESHOLD_MS, PRESENCE_HEARTBEAT_INTERVAL_MS } from "./presence";
 
-export type { StorageBucket } from "./storage";
+export type { StorageBucket, SignedUrlResult } from "./storage";
 export {
   STORAGE_BUCKETS,
   SIGNED_URL_EXPIRY_SECONDS,
