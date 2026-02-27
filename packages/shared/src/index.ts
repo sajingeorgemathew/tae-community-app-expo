@@ -14,3 +14,22 @@ export {
   validateMessageInsert,
   validatePostInsert,
 } from "./validators";
+
+// Storage helpers (EXPO-03)
+export {
+  normalizeExtension,
+  extractExtension,
+  isAllowedExtension,
+  isImageExtension,
+  isVideoExtension,
+  buildAvatarPath,
+  buildPostMediaPath,
+  buildMessageMediaPath,
+  bucketForPath,
+  getPublicUrl,
+  createSignedUrl,
+  createSignedUrlsBatch,
+  uploadFile,
+  removeFile,
+} from "./storage";
+export type { UploadSource, UploadResult } from "./storage";
