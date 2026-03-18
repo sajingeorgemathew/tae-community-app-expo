@@ -1,5 +1,6 @@
 import type {
   ConversationListItem,
+  MessageInsert,
   MessageWithAttachments,
 } from "@tae/shared";
 import { createSignedUrlsBatch, STORAGE_BUCKETS } from "@tae/shared";
@@ -36,6 +37,15 @@ export async function fetchConversationMessages(
 
   if (error) throw new Error(error.message);
   return (data ?? []) as unknown as MessageWithAttachments[];
+}
+
+// ---------------------------------------------------------------------------
+// Send a message
+// ---------------------------------------------------------------------------
+
+export async function sendMessage(insert: MessageInsert): Promise<void> {
+  const { error } = await supabase.from("messages").insert(insert);
+  if (error) throw new Error(error.message);
 }
 
 // ---------------------------------------------------------------------------
