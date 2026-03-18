@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Button,
   FlatList,
   Image,
@@ -12,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MessageWithAttachments } from "@tae/shared";
 import type { MessagesStackParamList } from "../navigation/MessagesStack";
@@ -19,6 +21,7 @@ import {
   fetchConversationMessages,
   resolveMessageSignedUrls,
   sendMessage,
+  uploadAndLinkAttachment,
 } from "../lib/messages";
 import { useAuth } from "../state/auth";
 
@@ -110,6 +113,7 @@ export default function ConversationScreen({ route, navigation }: Props) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [attachment, setAttachment] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const listRef = useRef<FlatList<MessageWithAttachments>>(null);
 
   useEffect(() => {
@@ -147,21 +151,51 @@ export default function ConversationScreen({ route, navigation }: Props) {
     load();
   }, [load]);
 
+  const pickAttachment = useCallback(async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images", "videos"],
+      quality: 0.8,
+      allowsEditing: false,
+    });
+    if (!result.canceled && result.assets.length > 0) {
+      setAttachment(result.assets[0]);
+    }
+  }, []);
+
+  const removeAttachment = useCallback(() => {
+    setAttachment(null);
+  }, []);
+
   const handleSend = useCallback(async () => {
     const trimmed = text.trim();
-    if (!trimmed || sending || !myUserId) return;
+    if ((!trimmed && !attachment) || sending || !myUserId) return;
 
     setSending(true);
     setSendError(null);
     try {
-      await sendMessage({
+      // 1) Create message row (content can be empty string for attachment-only)
+      const { id: messageId } = await sendMessage({
         conversation_id: conversationId,
         sender_id: myUserId,
-        content: trimmed,
+        content: trimmed || "",
       });
+
+      // 2) Upload attachment & insert linkage if present
+      if (attachment) {
+        const fileName = attachment.fileName ?? `attachment.${attachment.type === "video" ? "mp4" : "jpg"}`;
+        await uploadAndLinkAttachment({
+          conversationId,
+          messageId,
+          fileUri: attachment.uri,
+          mimeType: attachment.mimeType ?? (attachment.type === "video" ? "video/mp4" : "image/jpeg"),
+          fileName,
+          fileSize: attachment.fileSize ?? undefined,
+        });
+      }
+
       setText("");
+      setAttachment(null);
       await load();
-      // Scroll to bottom after refresh
       setTimeout(() => {
         listRef.current?.scrollToEnd({ animated: true });
       }, 100);
@@ -170,9 +204,9 @@ export default function ConversationScreen({ route, navigation }: Props) {
     } finally {
       setSending(false);
     }
-  }, [text, sending, myUserId, conversationId, load]);
+  }, [text, attachment, sending, myUserId, conversationId, load]);
 
-  const canSend = text.trim().length > 0 && !sending;
+  const canSend = (text.trim().length > 0 || attachment !== null) && !sending;
 
   if (loading) {
     return (
@@ -238,7 +272,31 @@ export default function ConversationScreen({ route, navigation }: Props) {
         <Text style={styles.sendErrorText}>{sendError}</Text>
       ) : null}
 
+      {attachment ? (
+        <View style={styles.attachmentPreview}>
+          <Image
+            source={{ uri: attachment.uri }}
+            style={styles.previewThumb}
+            resizeMode="cover"
+          />
+          <Text style={styles.previewName} numberOfLines={1}>
+            {attachment.fileName ?? "Attachment"}
+          </Text>
+          <TouchableOpacity onPress={removeAttachment} style={styles.previewRemove}>
+            <Text style={styles.previewRemoveText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
       <View style={styles.composer}>
+        <TouchableOpacity
+          onPress={pickAttachment}
+          disabled={sending}
+          style={styles.attachButton}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.attachButtonText}>+</Text>
+        </TouchableOpacity>
         <TextInput
           style={styles.composerInput}
           placeholder="Type a message…"
@@ -322,6 +380,48 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingHorizontal: 16,
     paddingTop: 4,
+  },
+  attachmentPreview: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: "#f0f0f0",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#ddd",
+  },
+  previewThumb: {
+    width: 40,
+    height: 40,
+    borderRadius: 6,
+  },
+  previewName: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 13,
+    color: "#333",
+  },
+  previewRemove: {
+    padding: 6,
+  },
+  previewRemoveText: {
+    fontSize: 16,
+    color: "#888",
+  },
+  attachButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#e9e9eb",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
+  },
+  attachButtonText: {
+    fontSize: 22,
+    color: "#007AFF",
+    lineHeight: 24,
+    fontWeight: "600",
   },
   composer: {
     flexDirection: "row",

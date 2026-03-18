@@ -1,9 +1,18 @@
 import type {
   ConversationListItem,
+  MessageAttachmentInsert,
   MessageInsert,
   MessageWithAttachments,
 } from "@tae/shared";
-import { createSignedUrlsBatch, STORAGE_BUCKETS } from "@tae/shared";
+import {
+  buildMessageMediaPath,
+  createSignedUrlsBatch,
+  extractExtension,
+  isImageExtension,
+  isVideoExtension,
+  STORAGE_BUCKETS,
+  uploadFile,
+} from "@tae/shared";
 import { supabase } from "./supabase";
 import { getCachedSignedUrl } from "./posts";
 
@@ -43,8 +52,77 @@ export async function fetchConversationMessages(
 // Send a message
 // ---------------------------------------------------------------------------
 
-export async function sendMessage(insert: MessageInsert): Promise<void> {
-  const { error } = await supabase.from("messages").insert(insert);
+export async function sendMessage(
+  insert: MessageInsert,
+): Promise<{ id: string }> {
+  const { data, error } = await supabase
+    .from("messages")
+    .insert(insert)
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+  return data as { id: string };
+}
+
+// ---------------------------------------------------------------------------
+// Upload attachment & create linkage row
+// ---------------------------------------------------------------------------
+
+export async function uploadAndLinkAttachment({
+  conversationId,
+  messageId,
+  fileUri,
+  mimeType,
+  fileName,
+  fileSize,
+}: {
+  conversationId: string;
+  messageId: string;
+  fileUri: string;
+  mimeType: string;
+  fileName: string;
+  fileSize?: number;
+}): Promise<void> {
+  const ext = extractExtension(fileName);
+  const type = isImageExtension(ext)
+    ? "image"
+    : isVideoExtension(ext)
+      ? "video"
+      : "image"; // fallback for allowed types
+
+  const storagePath = buildMessageMediaPath({ conversationId, messageId, ext });
+
+  // Read file as ArrayBuffer (required by shared uploadFile on Expo)
+  const FileSystem = await import("expo-file-system");
+  const base64 = await FileSystem.readAsStringAsync(fileUri, {
+    encoding: "base64" as const,
+  });
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  const body = bytes.buffer as ArrayBuffer;
+
+  const result = await uploadFile(supabase, {
+    path: storagePath,
+    bucket: STORAGE_BUCKETS.MESSAGE_MEDIA,
+    contentType: mimeType,
+    body,
+  });
+  if (result.error) throw new Error(result.error);
+
+  // Insert attachment linkage row
+  const attachmentInsert: MessageAttachmentInsert = {
+    message_id: messageId,
+    type,
+    storage_path: storagePath,
+    mime_type: mimeType,
+    size_bytes: fileSize,
+  };
+  const { error } = await supabase
+    .from("message_attachments")
+    .insert(attachmentInsert);
   if (error) throw new Error(error.message);
 }
 
