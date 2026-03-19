@@ -4,13 +4,13 @@ import type { NavigatorScreenParams } from "@react-navigation/native";
 import FeedStack, { type FeedStackParamList } from "./FeedStack";
 import MessagesStack, { type MessagesStackParamList } from "./MessagesStack";
 import DirectoryStack from "./DirectoryStack";
-import MeScreen from "../screens/MeScreen";
+import MeStack, { type MeStackParamList } from "./MeStack";
 
 export type AppTabsParamList = {
   Feed: NavigatorScreenParams<FeedStackParamList>;
   Messages: NavigatorScreenParams<MessagesStackParamList>;
   Directory: undefined;
-  Me: undefined;
+  Me: NavigatorScreenParams<MeStackParamList>;
 };
 
 const Tab = createBottomTabNavigator<AppTabsParamList>();
@@ -33,7 +33,11 @@ export default function AppTabs() {
         component={DirectoryStack}
         options={{ headerShown: false }}
       />
-      <Tab.Screen name="Me" component={MeScreen} />
+      <Tab.Screen
+        name="Me"
+        component={MeStack}
+        options={{ headerShown: false }}
+      />
     </Tab.Navigator>
   );
 }
