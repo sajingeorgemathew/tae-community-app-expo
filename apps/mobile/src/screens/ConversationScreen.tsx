@@ -18,6 +18,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MessageWithAttachments } from "@tae/shared";
 import type { MessagesStackParamList } from "../navigation/MessagesStack";
 import {
+  deleteMessage,
   fetchConversationMessages,
   resolveMessageSignedUrls,
   sendMessage,
@@ -168,12 +169,13 @@ export default function ConversationScreen({ route, navigation }: Props) {
 
   const handleSend = useCallback(async () => {
     const trimmed = text.trim();
+    // Block empty sends: must have text or attachment
     if ((!trimmed && !attachment) || sending || !myUserId) return;
 
     setSending(true);
     setSendError(null);
     try {
-      // 1) Create message row (content can be empty string for attachment-only)
+      // 1) Create message row
       const { id: messageId } = await sendMessage({
         conversation_id: conversationId,
         sender_id: myUserId,
@@ -183,14 +185,27 @@ export default function ConversationScreen({ route, navigation }: Props) {
       // 2) Upload attachment & insert linkage if present
       if (attachment) {
         const fileName = attachment.fileName ?? `attachment.${attachment.type === "video" ? "mp4" : "jpg"}`;
-        await uploadAndLinkAttachment({
-          conversationId,
-          messageId,
-          fileUri: attachment.uri,
-          mimeType: attachment.mimeType ?? (attachment.type === "video" ? "video/mp4" : "image/jpeg"),
-          fileName,
-          fileSize: attachment.fileSize ?? undefined,
-        });
+        try {
+          await uploadAndLinkAttachment({
+            conversationId,
+            messageId,
+            fileUri: attachment.uri,
+            mimeType: attachment.mimeType ?? (attachment.type === "video" ? "video/mp4" : "image/jpeg"),
+            fileName,
+            fileSize: attachment.fileSize ?? undefined,
+          });
+        } catch (attachErr: unknown) {
+          // Attachment failed — rollback the message row if it has no text content
+          // (i.e. it would be a ghost/blank row without the attachment)
+          if (!trimmed) {
+            try {
+              await deleteMessage(messageId);
+            } catch {
+              // Best-effort rollback; the original error is more important
+            }
+          }
+          throw attachErr;
+        }
       }
 
       setText("");
@@ -200,7 +215,14 @@ export default function ConversationScreen({ route, navigation }: Props) {
         listRef.current?.scrollToEnd({ animated: true });
       }, 100);
     } catch (e: unknown) {
-      setSendError(e instanceof Error ? e.message : "Failed to send message");
+      const msg = e instanceof Error ? e.message : "Failed to send message";
+      setSendError(attachment ? `Attachment failed: ${msg}` : msg);
+      Alert.alert(
+        "Send failed",
+        attachment
+          ? `Could not upload attachment. ${msg}`
+          : msg,
+      );
     } finally {
       setSending(false);
     }

@@ -65,6 +65,18 @@ export async function sendMessage(
 }
 
 // ---------------------------------------------------------------------------
+// Delete a message (used for rollback on failed attachment sends)
+// ---------------------------------------------------------------------------
+
+export async function deleteMessage(messageId: string): Promise<void> {
+  const { error } = await supabase
+    .from("messages")
+    .delete()
+    .eq("id", messageId);
+  if (error) throw new Error(error.message);
+}
+
+// ---------------------------------------------------------------------------
 // Upload attachment & create linkage row
 // ---------------------------------------------------------------------------
 
@@ -93,7 +105,8 @@ export async function uploadAndLinkAttachment({
   const storagePath = buildMessageMediaPath({ conversationId, messageId, ext });
 
   // Read file as ArrayBuffer (required by shared uploadFile on Expo)
-  const FileSystem = await import("expo-file-system");
+  // Use legacy import — readAsStringAsync is deprecated in the main expo-file-system export
+  const FileSystem = await import("expo-file-system/legacy");
   const base64 = await FileSystem.readAsStringAsync(fileUri, {
     encoding: "base64" as const,
   });
