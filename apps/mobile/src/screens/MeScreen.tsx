@@ -7,10 +7,14 @@ import {
   Text,
   View,
 } from "react-native";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import type { MeStackParamList } from "../navigation/MeStack";
 import { useAuth } from "../state/auth";
 import { useMyProfile } from "../state/profile";
 
-export default function MeScreen() {
+type Props = NativeStackScreenProps<MeStackParamList, "MeHome">;
+
+export default function MeScreen({ navigation }: Props) {
   const { signOut } = useAuth();
   const { profile, avatarUrl, loading, error, refresh } = useMyProfile();
 
@@ -58,6 +62,11 @@ export default function MeScreen() {
       ) : null}
 
       <View style={styles.spacer} />
+      <Button
+        title="Edit Profile"
+        onPress={() => navigation.navigate("EditProfile")}
+      />
+      <View style={styles.spacerSmall} />
       <Button title="Refresh" onPress={refresh} />
       <View style={styles.spacerSmall} />
       <Button title="Sign Out" onPress={signOut} color="#c00" />
