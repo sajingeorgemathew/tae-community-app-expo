@@ -4,6 +4,7 @@ import type { NavigatorScreenParams } from "@react-navigation/native";
 import FeedStack, { type FeedStackParamList } from "./FeedStack";
 import MessagesStack, { type MessagesStackParamList } from "./MessagesStack";
 import DirectoryStack from "./DirectoryStack";
+import FacultyStack, { type FacultyStackParamList } from "./FacultyStack";
 import QuestionsStack, { type QuestionsStackParamList } from "./QuestionsStack";
 import MeStack, { type MeStackParamList } from "./MeStack";
 
@@ -11,6 +12,7 @@ export type AppTabsParamList = {
   Feed: NavigatorScreenParams<FeedStackParamList>;
   Messages: NavigatorScreenParams<MessagesStackParamList>;
   Directory: undefined;
+  Faculty: NavigatorScreenParams<FacultyStackParamList>;
   Questions: NavigatorScreenParams<QuestionsStackParamList>;
   Me: NavigatorScreenParams<MeStackParamList>;
 };
@@ -33,6 +35,11 @@ export default function AppTabs() {
       <Tab.Screen
         name="Directory"
         component={DirectoryStack}
+        options={{ headerShown: false }}
+      />
+      <Tab.Screen
+        name="Faculty"
+        component={FacultyStack}
         options={{ headerShown: false }}
       />
       <Tab.Screen
