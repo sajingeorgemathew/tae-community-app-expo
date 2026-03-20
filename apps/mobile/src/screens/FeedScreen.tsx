@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import type { FeedStackParamList } from "../navigation/FeedStack";
 import { fetchFeedPosts, type FeedPost } from "../lib/posts";
 
@@ -73,6 +73,13 @@ export default function FeedScreen() {
     load();
   }, [load]);
 
+  // Refresh feed every time the screen comes into focus (e.g. after creating a post)
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -96,31 +103,40 @@ export default function FeedScreen() {
       <View style={styles.center}>
         <Text style={styles.emptyText}>No posts yet</Text>
         <View style={styles.spacer} />
+        <Button title="New Post" onPress={() => navigation.navigate("NewPost")} />
+        <View style={styles.spacer} />
         <Button title="Refresh" onPress={load} />
       </View>
     );
   }
 
   return (
-    <FlatList
-      data={posts}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={styles.list}
-      renderItem={({ item }) => (
-        <PostCard
-          post={item}
-          onPress={() => navigation.navigate("PostDetail", { postId: item.id })}
-        />
-      )}
-    />
+    <View style={styles.root}>
+      <View style={styles.newPostBar}>
+        <Button title="New Post" onPress={() => navigation.navigate("NewPost")} />
+      </View>
+      <FlatList
+        data={posts}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.list}
+        renderItem={({ item }) => (
+          <PostCard
+            post={item}
+            onPress={() => navigation.navigate("PostDetail", { postId: item.id })}
+          />
+        )}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center", padding: 24 },
   errorText: { fontSize: 16, color: "#c00", textAlign: "center" },
   emptyText: { fontSize: 16, color: "#666", textAlign: "center" },
   spacer: { height: 16 },
+  newPostBar: { padding: 12, alignItems: "flex-end" },
   list: { padding: 16 },
   card: {
     backgroundColor: "#fff",

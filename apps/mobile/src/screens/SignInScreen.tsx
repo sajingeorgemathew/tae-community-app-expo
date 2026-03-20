@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import {
   Alert,
   Button,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -28,7 +30,10 @@ export default function SignInScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       <Text style={styles.title}>TAE Community</Text>
 
       <TextInput
@@ -52,7 +57,7 @@ export default function SignInScreen() {
         onPress={handleSignIn}
         disabled={busy}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

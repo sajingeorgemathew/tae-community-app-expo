@@ -3,6 +3,8 @@ import {
   ActivityIndicator,
   Alert,
   Button,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -132,7 +134,12 @@ export default function EditProfileScreen({ navigation }: Props) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
+    >
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <Field
         label="Full Name"
         value={form.full_name}
@@ -187,6 +194,7 @@ export default function EditProfileScreen({ navigation }: Props) {
         )}
       </View>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -218,6 +226,7 @@ function Field({
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   container: { padding: 16, paddingBottom: 48 },
   field: { marginBottom: 16 },

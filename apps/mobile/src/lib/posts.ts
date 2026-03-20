@@ -1,4 +1,4 @@
-import type { PostWithAuthor, PostAttachment } from "@tae/shared";
+import type { PostWithAuthor, PostAttachment, PostInsert } from "@tae/shared";
 import { createSignedUrlsBatch, STORAGE_BUCKETS } from "@tae/shared";
 import { supabase } from "./supabase";
 
@@ -57,6 +57,19 @@ export async function resolveSignedUrls(
   }
 
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// Create helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Insert a new text post for the given author.
+ */
+export async function createPost(authorId: string, content: string): Promise<void> {
+  const payload: PostInsert = { author_id: authorId, content };
+  const { error } = await supabase.from("posts").insert(payload);
+  if (error) throw new Error(error.message);
 }
 
 // ---------------------------------------------------------------------------
