@@ -144,7 +144,7 @@ export default function HomeScreen() {
           <Pressable
             style={styles.actionButton}
             onPress={() =>
-              navigation.navigate("Questions", { screen: "QuestionsList" })
+              navigation.navigate("More", { screen: "QuestionsList" })
             }
           >
             <Text style={styles.actionButtonText}>Ask Question</Text>
@@ -164,7 +164,7 @@ export default function HomeScreen() {
           <SummaryCard
             label="Q&A Topics"
             value={String(data?.questionsCount ?? 0)}
-            onPress={() => navigation.navigate("Questions", { screen: "QuestionsList" })}
+            onPress={() => navigation.navigate("More", { screen: "QuestionsList" })}
           />
           <SummaryCard
             label="Online Members"
@@ -178,7 +178,9 @@ export default function HomeScreen() {
       <View style={styles.section}>
         <Pressable
           style={styles.directoryShortcut}
-          onPress={() => navigation.navigate("Directory")}
+          onPress={() =>
+            navigation.navigate("More", { screen: "DirectoryList" })
+          }
         >
           <Text style={styles.directoryShortcutText}>
             Browse Member Directory →
