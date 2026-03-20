@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Profile } from "@tae/shared";
-import { createSignedUrl, STORAGE_BUCKETS } from "@tae/shared";
+import {
+  buildAvatarPath,
+  createSignedUrl,
+  extractExtension,
+  STORAGE_BUCKETS,
+  uploadFile,
+} from "@tae/shared";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./auth";
 
@@ -74,5 +80,47 @@ export function useMyProfile() {
     fetchProfile();
   }, [fetchProfile]);
 
-  return { ...state, refresh: fetchProfile };
+  const uploadAvatar = useCallback(
+    async (fileUri: string, fileName: string, mimeType: string) => {
+      if (!userId) throw new Error("Not signed in");
+
+      const ext = extractExtension(fileName);
+      const storagePath = buildAvatarPath({ userId, ext });
+
+      // Read file as ArrayBuffer (same pattern as message attachments)
+      const FileSystem = await import("expo-file-system/legacy");
+      const base64 = await FileSystem.readAsStringAsync(fileUri, {
+        encoding: "base64" as const,
+      });
+      const binaryString = atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const body = bytes.buffer as ArrayBuffer;
+
+      const result = await uploadFile(supabase, {
+        path: storagePath,
+        bucket: STORAGE_BUCKETS.PROFILE_AVATARS,
+        contentType: mimeType,
+        body,
+        upsert: true,
+      });
+      if (result.error) throw new Error(result.error);
+
+      // Update profile row with new avatar_path
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_path: storagePath })
+        .eq("id", userId);
+      if (updateError) throw new Error(updateError.message);
+
+      // Force signed URL refresh by clearing the resolved ref
+      resolvedAvatarPath.current = null;
+      await fetchProfile();
+    },
+    [userId, fetchProfile],
+  );
+
+  return { ...state, refresh: fetchProfile, uploadAvatar };
 }
