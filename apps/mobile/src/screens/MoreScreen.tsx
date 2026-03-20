@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { MoreStackParamList } from "../navigation/MoreStack";
+import { useMyProfile } from "../state/profile";
 
 type Nav = NativeStackNavigationProp<MoreStackParamList>;
 
@@ -18,6 +19,8 @@ const MENU_ITEMS: MenuItem[] = [
 
 export default function MoreScreen() {
   const navigation = useNavigation<Nav>();
+  const { profile } = useMyProfile();
+  const isAdmin = profile?.role === "admin";
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.container}>
@@ -31,6 +34,18 @@ export default function MoreScreen() {
           <Text style={styles.chevron}>›</Text>
         </Pressable>
       ))}
+
+      {isAdmin && (
+        <Pressable
+          style={[styles.menuItem, styles.adminItem]}
+          onPress={() => navigation.navigate("AdminDashboard")}
+        >
+          <Text style={[styles.menuItemText, styles.adminItemText]}>
+            Admin Dashboard
+          </Text>
+          <Text style={styles.chevron}>›</Text>
+        </Pressable>
+      )}
     </ScrollView>
   );
 }
@@ -60,5 +75,13 @@ const styles = StyleSheet.create({
   chevron: {
     fontSize: 20,
     color: "#999",
+  },
+  adminItem: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: "#007AFF",
+  },
+  adminItemText: {
+    color: "#007AFF",
   },
 });

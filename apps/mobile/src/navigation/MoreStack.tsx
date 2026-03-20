@@ -5,6 +5,7 @@ import DirectoryScreen from "../screens/DirectoryScreen";
 import ProfileDetailScreen from "../screens/ProfileDetailScreen";
 import QuestionsScreen from "../screens/QuestionsScreen";
 import QuestionDetailScreen from "../screens/QuestionDetailScreen";
+import AdminScreen from "../screens/AdminScreen";
 
 export type MoreStackParamList = {
   MoreMenu: undefined;
@@ -12,6 +13,7 @@ export type MoreStackParamList = {
   ProfileDetail: { profileId: string };
   QuestionsList: undefined;
   QuestionDetail: { questionId: string };
+  AdminDashboard: undefined;
 };
 
 const Stack = createNativeStackNavigator<MoreStackParamList>();
@@ -43,6 +45,11 @@ export default function MoreStack() {
         name="QuestionDetail"
         component={QuestionDetailScreen}
         options={{ title: "Question" }}
+      />
+      <Stack.Screen
+        name="AdminDashboard"
+        component={AdminScreen}
+        options={{ title: "Admin" }}
       />
     </Stack.Navigator>
   );
