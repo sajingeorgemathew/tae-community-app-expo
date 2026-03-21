@@ -5,7 +5,9 @@ import {
   Button,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
+  Text,
   TextInput,
   View,
 } from "react-native";
@@ -17,10 +19,19 @@ import { createPost } from "../lib/posts";
 
 type Nav = NativeStackNavigationProp<FeedStackParamList, "NewPost">;
 
+const AUDIENCE_OPTIONS = [
+  { value: "all", label: "All Members" },
+  { value: "students", label: "Students" },
+  { value: "alumni", label: "Alumni" },
+] as const;
+
+type Audience = (typeof AUDIENCE_OPTIONS)[number]["value"];
+
 export default function NewPostScreen() {
   const navigation = useNavigation<Nav>();
   const { session } = useAuth();
   const [content, setContent] = useState("");
+  const [audience, setAudience] = useState<Audience>("all");
   const [submitting, setSubmitting] = useState(false);
 
   const canSubmit = content.trim().length > 0 && !submitting;
@@ -34,7 +45,7 @@ export default function NewPostScreen() {
 
     setSubmitting(true);
     try {
-      await createPost(userId, content.trim());
+      await createPost(userId, content.trim(), audience);
       navigation.goBack();
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Failed to create post";
@@ -50,6 +61,29 @@ export default function NewPostScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
     >
+      <View style={styles.audienceRow}>
+        {AUDIENCE_OPTIONS.map((opt) => (
+          <Pressable
+            key={opt.value}
+            style={[
+              styles.audienceChip,
+              audience === opt.value && styles.audienceChipActive,
+            ]}
+            onPress={() => setAudience(opt.value)}
+            disabled={submitting}
+          >
+            <Text
+              style={[
+                styles.audienceLabel,
+                audience === opt.value && styles.audienceLabelActive,
+              ]}
+            >
+              {opt.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
       <TextInput
         style={styles.input}
         placeholder="What's on your mind?"
@@ -72,6 +106,31 @@ export default function NewPostScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
+  audienceRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+  },
+  audienceChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    backgroundColor: "#fff",
+  },
+  audienceChipActive: {
+    backgroundColor: "#007AFF",
+    borderColor: "#007AFF",
+  },
+  audienceLabel: {
+    fontSize: 14,
+    color: "#333",
+  },
+  audienceLabelActive: {
+    color: "#fff",
+    fontWeight: "600",
+  },
   input: {
     flex: 1,
     fontSize: 16,
