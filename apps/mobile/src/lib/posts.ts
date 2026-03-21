@@ -66,8 +66,12 @@ export async function resolveSignedUrls(
 /**
  * Insert a new text post for the given author.
  */
-export async function createPost(authorId: string, content: string): Promise<void> {
-  const payload: PostInsert = { author_id: authorId, content };
+export async function createPost(
+  authorId: string,
+  content: string,
+  audience: string = "all",
+): Promise<void> {
+  const payload: PostInsert = { author_id: authorId, content, audience };
   const { error } = await supabase.from("posts").insert(payload);
   if (error) throw new Error(error.message);
 }
