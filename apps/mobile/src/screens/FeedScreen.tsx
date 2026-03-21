@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Button,
   FlatList,
-  Image,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   View,
@@ -13,51 +12,23 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import type { FeedStackParamList } from "../navigation/FeedStack";
 import { fetchFeedPosts, type FeedPost } from "../lib/posts";
+import PostCard from "../components/PostCard";
 
 type Nav = NativeStackNavigationProp<FeedStackParamList, "FeedList">;
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function PostCard({ post, onPress }: { post: FeedPost; onPress: () => void }) {
-  const authorName = post.profiles?.full_name ?? "Unknown";
-  const preview =
-    post.content.length > 140
-      ? post.content.slice(0, 140) + "…"
-      : post.content;
-
-  return (
-    <Pressable style={styles.card} onPress={onPress}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.authorName}>{authorName}</Text>
-        <Text style={styles.date}>{formatDate(post.created_at)}</Text>
-      </View>
-      <Text style={styles.content}>{preview}</Text>
-      {post.imageUrl ? (
-        <Image
-          source={{ uri: post.imageUrl }}
-          style={styles.thumbnail}
-          resizeMode="cover"
-        />
-      ) : null}
-    </Pressable>
-  );
-}
 
 export default function FeedScreen() {
   const navigation = useNavigation<Nav>();
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
     try {
       const data = await fetchFeedPosts();
@@ -66,6 +37,7 @@ export default function FeedScreen() {
       setError(e instanceof Error ? e.message : "Failed to load posts");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -80,45 +52,75 @@ export default function FeedScreen() {
     }, [load]),
   );
 
-  if (loading) {
+  // ---------- Loading ----------
+  if (loading && posts.length === 0) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#4a6fa5" />
+        <Text style={styles.loadingText}>Loading feed…</Text>
       </View>
     );
   }
 
-  if (error) {
+  // ---------- Error ----------
+  if (error && posts.length === 0) {
     return (
       <View style={styles.center}>
+        <Text style={styles.errorIcon}>!</Text>
         <Text style={styles.errorText}>{error}</Text>
-        <View style={styles.spacer} />
-        <Button title="Retry" onPress={load} />
+        <Pressable style={styles.retryButton} onPress={() => load()}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </Pressable>
       </View>
     );
   }
 
+  // ---------- Empty ----------
   if (posts.length === 0) {
     return (
       <View style={styles.center}>
-        <Text style={styles.emptyText}>No posts yet</Text>
-        <View style={styles.spacer} />
-        <Button title="New Post" onPress={() => navigation.navigate("NewPost")} />
-        <View style={styles.spacer} />
-        <Button title="Refresh" onPress={load} />
+        <Text style={styles.emptyIcon}>📝</Text>
+        <Text style={styles.emptyTitle}>No posts yet</Text>
+        <Text style={styles.emptySubtitle}>
+          Be the first to share something with the community.
+        </Text>
+        <Pressable
+          style={styles.primaryButton}
+          onPress={() => navigation.navigate("NewPost")}
+        >
+          <Text style={styles.primaryButtonText}>Create Post</Text>
+        </Pressable>
+        <Pressable style={styles.retryButton} onPress={() => load()}>
+          <Text style={styles.retryButtonText}>Refresh</Text>
+        </Pressable>
       </View>
     );
   }
 
+  // ---------- Feed list ----------
   return (
     <View style={styles.root}>
-      <View style={styles.newPostBar}>
-        <Button title="New Post" onPress={() => navigation.navigate("NewPost")} />
-      </View>
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => load(true)}
+            tintColor="#4a6fa5"
+          />
+        }
+        ListHeaderComponent={
+          <View style={styles.newPostBar}>
+            <Pressable
+              style={styles.primaryButton}
+              onPress={() => navigation.navigate("NewPost")}
+            >
+              <Text style={styles.primaryButtonText}>New Post</Text>
+            </Pressable>
+          </View>
+        }
         renderItem={({ item }) => (
           <PostCard
             post={item}
@@ -131,32 +133,61 @@ export default function FeedScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  center: { flex: 1, justifyContent: "center", alignItems: "center", padding: 24 },
-  errorText: { fontSize: 16, color: "#c00", textAlign: "center" },
-  emptyText: { fontSize: 16, color: "#666", textAlign: "center" },
-  spacer: { height: 16 },
-  newPostBar: { padding: 12, alignItems: "flex-end" },
-  list: { padding: 16 },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  root: { flex: 1, backgroundColor: "#f5f6f8" },
+  center: {
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
-    marginBottom: 8,
+    padding: 32,
+    backgroundColor: "#f5f6f8",
   },
-  authorName: { fontSize: 15, fontWeight: "600" },
-  date: { fontSize: 12, color: "#888" },
-  content: { fontSize: 14, color: "#333", lineHeight: 20, marginBottom: 8 },
-  thumbnail: { width: "100%", height: 180, borderRadius: 6 },
+  list: { padding: 16, paddingTop: 0 },
+  newPostBar: { paddingVertical: 12, alignItems: "flex-end" },
+
+  // Loading
+  loadingText: { fontSize: 14, color: "#999", marginTop: 12 },
+
+  // Error
+  errorIcon: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#fff",
+    backgroundColor: "#d44",
+    width: 48,
+    height: 48,
+    lineHeight: 48,
+    borderRadius: 24,
+    textAlign: "center",
+    overflow: "hidden",
+    marginBottom: 16,
+  },
+  errorText: { fontSize: 15, color: "#c00", textAlign: "center", marginBottom: 16 },
+
+  // Empty
+  emptyIcon: { fontSize: 40, marginBottom: 12 },
+  emptyTitle: { fontSize: 18, fontWeight: "600", color: "#333", marginBottom: 6 },
+  emptySubtitle: {
+    fontSize: 14,
+    color: "#888",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+
+  // Buttons
+  primaryButton: {
+    backgroundColor: "#4a6fa5",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  primaryButtonText: { color: "#fff", fontSize: 15, fontWeight: "600" },
+  retryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ccc",
+  },
+  retryButtonText: { color: "#555", fontSize: 14 },
 });

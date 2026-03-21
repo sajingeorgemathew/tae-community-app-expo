@@ -4,7 +4,6 @@ import {
   Alert,
   Button,
   Image,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,6 +18,7 @@ import type { MeStackParamList } from "../navigation/MeStack";
 import { useAuth } from "../state/auth";
 import { useMyProfile } from "../state/profile";
 import { fetchUserPosts, type FeedPost } from "../lib/posts";
+import PostCard from "../components/PostCard";
 
 type Props = NativeStackScreenProps<MeStackParamList, "MeHome">;
 
@@ -65,15 +65,6 @@ function computeCompleteness(profile: Profile) {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -179,34 +170,6 @@ function CompletenessCard({
   );
 }
 
-function MyPostCard({
-  post,
-  onPress,
-}: {
-  post: FeedPost;
-  onPress: () => void;
-}) {
-  const preview =
-    post.content.length > 140
-      ? post.content.slice(0, 140) + "…"
-      : post.content;
-
-  return (
-    <Pressable style={styles.postCard} onPress={onPress}>
-      <View style={styles.postCardHeader}>
-        <Text style={styles.postDate}>{formatDate(post.created_at)}</Text>
-      </View>
-      <Text style={styles.postContent}>{preview}</Text>
-      {post.imageUrl ? (
-        <Image
-          source={{ uri: post.imageUrl }}
-          style={styles.postThumbnail}
-          resizeMode="cover"
-        />
-      ) : null}
-    </Pressable>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Main screen
@@ -342,9 +305,10 @@ export default function MeScreen({ navigation }: Props) {
           </Text>
         ) : (
           myPosts.map((post) => (
-            <MyPostCard
+            <PostCard
               key={post.id}
               post={post}
+              hideAuthor
               onPress={() =>
                 navigation.navigate("PostDetail", { postId: post.id })
               }
@@ -439,21 +403,6 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 12 },
   postsLoader: { marginVertical: 16 },
   emptyText: { fontSize: 14, color: "#999", textAlign: "center" },
-  postCard: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
-  },
-  postCardHeader: { marginBottom: 6 },
-  postDate: { fontSize: 12, color: "#888" },
-  postContent: { fontSize: 14, color: "#333", lineHeight: 20, marginBottom: 6 },
-  postThumbnail: { width: "100%", height: 160, borderRadius: 6 },
 
   // General
   errorText: { fontSize: 16, color: "#c00", textAlign: "center" },
