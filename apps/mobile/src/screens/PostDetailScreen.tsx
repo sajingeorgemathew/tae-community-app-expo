@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Button,
   Image,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -27,6 +27,23 @@ function formatDate(iso: string): string {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function authorInitial(name: string | null): string {
+  return (name ?? "?")[0]?.toUpperCase() ?? "?";
+}
+
+function DetailImage({ uri }: { uri: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  return (
+    <Image
+      source={{ uri }}
+      style={styles.image}
+      resizeMode="contain"
+      onError={() => setFailed(true)}
+    />
+  );
 }
 
 export default function PostDetailScreen({ route }: Props) {
@@ -55,7 +72,8 @@ export default function PostDetailScreen({ route }: Props) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#4a6fa5" />
+        <Text style={styles.loadingText}>Loading post…</Text>
       </View>
     );
   }
@@ -64,8 +82,9 @@ export default function PostDetailScreen({ route }: Props) {
     return (
       <View style={styles.center}>
         <Text style={styles.errorText}>{error ?? "Post not found"}</Text>
-        <View style={styles.spacer} />
-        <Button title="Retry" onPress={load} />
+        <Pressable style={styles.retryButton} onPress={load}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </Pressable>
       </View>
     );
   }
@@ -75,35 +94,71 @@ export default function PostDetailScreen({ route }: Props) {
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
-      <Text style={styles.authorName}>{authorName}</Text>
-      <Text style={styles.date}>{formatDate(post.created_at)}</Text>
+      {/* Author row */}
+      <View style={styles.authorRow}>
+        <View style={styles.avatarCircle}>
+          <Text style={styles.avatarText}>{authorInitial(authorName)}</Text>
+        </View>
+        <View style={styles.authorMeta}>
+          <Text style={styles.authorName}>{authorName}</Text>
+          <Text style={styles.date}>{formatDate(post.created_at)}</Text>
+        </View>
+      </View>
 
+      {/* Content */}
       <Text style={styles.content}>{post.content}</Text>
 
+      {/* Images */}
       {imageAttachments.map((a) => {
         const url = post.imageUrls.get(a.storage_path);
         if (!url) return null;
-        return (
-          <Image
-            key={a.id}
-            source={{ uri: url }}
-            style={styles.image}
-            resizeMode="contain"
-          />
-        );
+        return <DetailImage key={a.id} uri={url} />;
       })}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, justifyContent: "center", alignItems: "center", padding: 24 },
-  errorText: { fontSize: 16, color: "#c00", textAlign: "center" },
-  spacer: { height: 16 },
-  scroll: { flex: 1 },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+    backgroundColor: "#f5f6f8",
+  },
+  loadingText: { fontSize: 14, color: "#999", marginTop: 12 },
+  errorText: { fontSize: 15, color: "#c00", textAlign: "center", marginBottom: 16 },
+  retryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ccc",
+  },
+  retryButtonText: { color: "#555", fontSize: 14 },
+  scroll: { flex: 1, backgroundColor: "#f5f6f8" },
   container: { padding: 20 },
-  authorName: { fontSize: 18, fontWeight: "bold", marginBottom: 4 },
-  date: { fontSize: 13, color: "#888", marginBottom: 16 },
+  // Author
+  authorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  avatarCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#e0e7ef",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  avatarText: { fontSize: 16, fontWeight: "700", color: "#4a6fa5" },
+  authorMeta: { flex: 1 },
+  authorName: { fontSize: 16, fontWeight: "bold", color: "#1a1a1a" },
+  date: { fontSize: 13, color: "#888", marginTop: 2 },
+  // Content
   content: { fontSize: 15, color: "#222", lineHeight: 22, marginBottom: 16 },
+  // Images
   image: { width: "100%", height: 250, borderRadius: 8, marginBottom: 12 },
 });
