@@ -10,9 +10,12 @@ import {
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { FeedStackParamList } from "../navigation/FeedStack";
+import type { MeStackParamList } from "../navigation/MeStack";
 import { fetchPostById, type PostDetail } from "../lib/posts";
 
-type Props = NativeStackScreenProps<FeedStackParamList, "PostDetail">;
+type Props =
+  | NativeStackScreenProps<FeedStackParamList, "PostDetail">
+  | NativeStackScreenProps<MeStackParamList, "PostDetail">;
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
