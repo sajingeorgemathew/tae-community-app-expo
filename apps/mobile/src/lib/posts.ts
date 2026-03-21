@@ -149,6 +149,63 @@ export interface PostDetail extends PostWithAuthor {
 /**
  * Fetch a single post by ID with author and all attachments (with signed URLs).
  */
+/**
+ * Fetch the latest posts authored by a specific user.
+ */
+const MY_POSTS_LIMIT = 5;
+
+export async function fetchUserPosts(userId: string): Promise<FeedPost[]> {
+  const { data: posts, error } = await supabase
+    .from("posts")
+    .select("id, author_id, content, audience, created_at, profiles(full_name, avatar_path)")
+    .eq("author_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(MY_POSTS_LIMIT);
+
+  if (error) throw new Error(error.message);
+  if (!posts || posts.length === 0) return [];
+
+  const postIds = posts.map((p: { id: string }) => p.id);
+
+  const { data: attachments } = await supabase
+    .from("post_attachments")
+    .select("id, post_id, type, storage_path, url")
+    .in("post_id", postIds);
+
+  const attachmentsByPost = new Map<string, PostAttachment[]>();
+  if (attachments) {
+    for (const a of attachments as PostAttachment[]) {
+      const list = attachmentsByPost.get(a.post_id) ?? [];
+      list.push(a);
+      attachmentsByPost.set(a.post_id, list);
+    }
+  }
+
+  const firstImagePaths: string[] = [];
+  const postIdToFirstImagePath = new Map<string, string>();
+
+  for (const p of posts as { id: string }[]) {
+    const postAttachments = attachmentsByPost.get(p.id) ?? [];
+    const firstImage = postAttachments.find((a) => a.type === "image");
+    if (firstImage) {
+      firstImagePaths.push(firstImage.storage_path);
+      postIdToFirstImagePath.set(p.id, firstImage.storage_path);
+    }
+  }
+
+  const signedUrls = await resolveSignedUrls(firstImagePaths);
+
+  return (posts as unknown as PostWithAuthor[]).map((p) => {
+    const postAttachments = attachmentsByPost.get(p.id) ?? [];
+    const firstImagePath = postIdToFirstImagePath.get(p.id);
+    return {
+      ...p,
+      attachments: postAttachments,
+      imageUrl: firstImagePath ? signedUrls.get(firstImagePath) ?? null : null,
+    };
+  });
+}
+
 export async function fetchPostById(postId: string): Promise<PostDetail> {
   const { data: post, error } = await supabase
     .from("posts")
