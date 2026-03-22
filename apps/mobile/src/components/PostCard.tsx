@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import type { FeedPost } from "../lib/posts";
 
@@ -37,13 +37,23 @@ function authorInitial(name: string | null): string {
 interface PostCardProps {
   post: FeedPost;
   onPress: () => void;
+  /** Called when the user taps the image preview */
+  onImagePress?: (uri: string) => void;
   /** Hide the author row (e.g. on My Posts where it's redundant) */
   hideAuthor?: boolean;
 }
 
 const CONTENT_PREVIEW_LIMIT = 200;
 
-export default function PostCard({ post, onPress, hideAuthor }: PostCardProps) {
+// Preview aspect-ratio bounds: clamp between 1:1 (square) and 2.5:1 (wide banner).
+// Images within the "normal" range use cover; extreme ratios use contain so the
+// full image is visible with letterboxing instead of aggressive cropping.
+const MIN_PREVIEW_AR = 1; // tallest allowed (square)
+const MAX_PREVIEW_AR = 2.5; // widest allowed
+const NORMAL_AR_LOW = 0.8; // below this → contain (very tall)
+const NORMAL_AR_HIGH = 2.2; // above this → contain (very wide)
+
+export default function PostCard({ post, onPress, onImagePress, hideAuthor }: PostCardProps) {
   const authorName = post.profiles?.full_name ?? "Unknown";
   const preview =
     post.content.length > CONTENT_PREVIEW_LIMIT
@@ -51,6 +61,29 @@ export default function PostCard({ post, onPress, hideAuthor }: PostCardProps) {
       : post.content;
   const imageCount = post.attachments.filter((a) => a.type === "image").length;
   const [imgError, setImgError] = useState(false);
+  const [detectedAR, setDetectedAR] = useState<number | null>(null);
+
+  // Detect the actual image aspect ratio so we can size the preview container
+  useEffect(() => {
+    if (!post.imageUrl) return;
+    Image.getSize(
+      post.imageUrl,
+      (w, h) => {
+        if (h > 0) setDetectedAR(w / h);
+      },
+      () => {
+        /* ignore – fall back to default 16:9 */
+      },
+    );
+  }, [post.imageUrl]);
+
+  // Compute preview container aspect ratio & resize mode
+  const previewAR = detectedAR
+    ? Math.min(MAX_PREVIEW_AR, Math.max(MIN_PREVIEW_AR, detectedAR))
+    : 16 / 9;
+  const useContain =
+    detectedAR != null &&
+    (detectedAR < NORMAL_AR_LOW || detectedAR > NORMAL_AR_HIGH);
 
   return (
     <Pressable
@@ -86,11 +119,20 @@ export default function PostCard({ post, onPress, hideAuthor }: PostCardProps) {
 
       {/* Image preview */}
       {post.imageUrl && !imgError ? (
-        <View style={styles.imageWrapper}>
+        <Pressable
+          style={[
+            styles.imageWrapper,
+            useContain && styles.imageWrapperContain,
+          ]}
+          onPress={(e) => {
+            e.stopPropagation?.();
+            if (onImagePress && post.imageUrl) onImagePress(post.imageUrl);
+          }}
+        >
           <Image
             source={{ uri: post.imageUrl }}
-            style={styles.thumbnail}
-            resizeMode="cover"
+            style={[styles.thumbnail, { aspectRatio: previewAR }]}
+            resizeMode={useContain ? "contain" : "cover"}
             onError={() => setImgError(true)}
           />
           {imageCount > 1 && (
@@ -98,7 +140,7 @@ export default function PostCard({ post, onPress, hideAuthor }: PostCardProps) {
               <Text style={styles.imageCountText}>+{imageCount - 1}</Text>
             </View>
           )}
-        </View>
+        </Pressable>
       ) : null}
     </Pressable>
   );
@@ -174,10 +216,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: "hidden",
   },
+  imageWrapperContain: {
+    backgroundColor: "#f0f0f0",
+  },
   thumbnail: {
     width: "100%",
-    height: 200,
+    // aspectRatio is set dynamically via inline style
     borderRadius: 8,
+    maxHeight: 300,
   },
   imageCountBadge: {
     position: "absolute",

@@ -173,6 +173,7 @@ export default function FeedScreen() {
           <PostCard
             post={item}
             onPress={() => navigation.navigate("PostDetail", { postId: item.id })}
+            onImagePress={(uri) => navigation.navigate("ImageViewer", { uri })}
           />
         )}
       />
