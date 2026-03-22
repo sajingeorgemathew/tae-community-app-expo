@@ -16,9 +16,18 @@ import PostCard from "../components/PostCard";
 
 type Nav = NativeStackNavigationProp<FeedStackParamList, "FeedList">;
 
+type AudienceFilter = "all" | "students" | "alumni";
+
+const FILTER_OPTIONS: { value: AudienceFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "students", label: "Students" },
+  { value: "alumni", label: "Alumni" },
+];
+
 export default function FeedScreen() {
   const navigation = useNavigation<Nav>();
   const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [filter, setFilter] = useState<AudienceFilter>("all");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +61,15 @@ export default function FeedScreen() {
     }, [load]),
   );
 
+  // Client-side filtering matching web behavior:
+  // "all" → show everything
+  // "students" → posts with audience "students" OR "all"
+  // "alumni" → posts with audience "alumni" OR "all"
+  const filteredPosts =
+    filter === "all"
+      ? posts
+      : posts.filter((p) => p.audience === filter || p.audience === "all");
+
   // ---------- Loading ----------
   if (loading && posts.length === 0) {
     return (
@@ -76,7 +94,7 @@ export default function FeedScreen() {
   }
 
   // ---------- Empty ----------
-  if (posts.length === 0) {
+  if (filteredPosts.length === 0 && posts.length === 0) {
     return (
       <View style={styles.center}>
         <Text style={styles.emptyIcon}>📝</Text>
@@ -101,7 +119,7 @@ export default function FeedScreen() {
   return (
     <View style={styles.root}>
       <FlatList
-        data={posts}
+        data={filteredPosts}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         refreshControl={
@@ -112,13 +130,43 @@ export default function FeedScreen() {
           />
         }
         ListHeaderComponent={
-          <View style={styles.newPostBar}>
-            <Pressable
-              style={styles.primaryButton}
-              onPress={() => navigation.navigate("NewPost")}
-            >
-              <Text style={styles.primaryButtonText}>New Post</Text>
-            </Pressable>
+          <View>
+            <View style={styles.filterRow}>
+              {FILTER_OPTIONS.map((opt) => (
+                <Pressable
+                  key={opt.value}
+                  style={[
+                    styles.filterChip,
+                    filter === opt.value && styles.filterChipActive,
+                  ]}
+                  onPress={() => setFilter(opt.value)}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      filter === opt.value && styles.filterChipTextActive,
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <View style={styles.newPostBar}>
+              <Pressable
+                style={styles.primaryButton}
+                onPress={() => navigation.navigate("NewPost")}
+              >
+                <Text style={styles.primaryButtonText}>New Post</Text>
+              </Pressable>
+            </View>
+          </View>
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyFiltered}>
+            <Text style={styles.emptyFilteredText}>
+              No posts for this filter.
+            </Text>
           </View>
         }
         renderItem={({ item }) => (
@@ -142,7 +190,40 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f6f8",
   },
   list: { padding: 16, paddingTop: 0 },
+  filterRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingTop: 12,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    backgroundColor: "#fff",
+  },
+  filterChipActive: {
+    backgroundColor: "#4a6fa5",
+    borderColor: "#4a6fa5",
+  },
+  filterChipText: {
+    fontSize: 13,
+    color: "#555",
+    fontWeight: "500",
+  },
+  filterChipTextActive: {
+    color: "#fff",
+  },
   newPostBar: { paddingVertical: 12, alignItems: "flex-end" },
+  emptyFiltered: {
+    paddingVertical: 32,
+    alignItems: "center",
+  },
+  emptyFilteredText: {
+    fontSize: 14,
+    color: "#888",
+  },
 
   // Loading
   loadingText: { fontSize: 14, color: "#999", marginTop: 12 },
