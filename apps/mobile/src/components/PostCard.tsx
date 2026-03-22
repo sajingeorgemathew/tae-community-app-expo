@@ -170,6 +170,27 @@ export default function PostCard({ post, onPress, onImagePress, onReactionPress,
           );
         })}
       </View>
+
+      {/* Comment preview */}
+      {(post.commentCount > 0 || post.latestComment) && (
+        <View style={styles.commentPreview}>
+          {post.commentCount > 0 && (
+            <Text style={styles.commentCountText}>
+              {post.commentCount} {post.commentCount === 1 ? "comment" : "comments"}
+            </Text>
+          )}
+          {post.latestComment && (
+            <View style={styles.latestCommentRow}>
+              <Text style={styles.latestCommentAuthor} numberOfLines={1}>
+                {post.latestComment.author_name}
+              </Text>
+              <Text style={styles.latestCommentContent} numberOfLines={2}>
+                {post.latestComment.content}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -298,5 +319,35 @@ const styles = StyleSheet.create({
   },
   reactionCountActive: {
     color: "#4a6fa5",
+  },
+  // Comment preview
+  commentPreview: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
+  },
+  commentCountText: {
+    fontSize: 12,
+    color: "#888",
+    fontWeight: "500",
+    marginBottom: 4,
+  },
+  latestCommentRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+  },
+  latestCommentAuthor: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#4a6fa5",
+    flexShrink: 0,
+  },
+  latestCommentContent: {
+    fontSize: 13,
+    color: "#555",
+    flex: 1,
+    lineHeight: 18,
   },
 });
