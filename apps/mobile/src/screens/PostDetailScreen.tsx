@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -13,7 +14,16 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { FeedStackParamList } from "../navigation/FeedStack";
 import type { MeStackParamList } from "../navigation/MeStack";
-import { fetchPostById, toggleReaction, EMOJI_SET, type PostDetail, type Emoji } from "../lib/posts";
+import {
+  fetchPostById,
+  toggleReaction,
+  fetchComments,
+  addComment,
+  EMOJI_SET,
+  type PostDetail,
+  type Emoji,
+  type CommentWithAuthor,
+} from "../lib/posts";
 
 type Props =
   | NativeStackScreenProps<FeedStackParamList, "PostDetail">
@@ -26,6 +36,16 @@ function formatDate(iso: string): string {
     month: "short",
     day: "numeric",
     year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatCommentDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
     hour: "numeric",
     minute: "2-digit",
   });
@@ -57,6 +77,13 @@ export default function PostDetailScreen({ route }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Comments state
+  const [comments, setComments] = useState<CommentWithAuthor[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsError, setCommentsError] = useState<string | null>(null);
+  const [newComment, setNewComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -70,9 +97,39 @@ export default function PostDetailScreen({ route }: Props) {
     }
   }, [postId]);
 
+  const loadComments = useCallback(async () => {
+    setCommentsLoading(true);
+    setCommentsError(null);
+    try {
+      const data = await fetchComments(postId);
+      setComments(data);
+    } catch (e: unknown) {
+      setCommentsError(e instanceof Error ? e.message : "Failed to load comments");
+    } finally {
+      setCommentsLoading(false);
+    }
+  }, [postId]);
+
   useEffect(() => {
     load();
-  }, [load]);
+    loadComments();
+  }, [load, loadComments]);
+
+  const handleSubmitComment = async () => {
+    const trimmed = newComment.trim();
+    if (!trimmed || submitting) return;
+
+    setSubmitting(true);
+    try {
+      const created = await addComment(postId, trimmed);
+      setComments((prev) => [...prev, created]);
+      setNewComment("");
+    } catch (e: unknown) {
+      setCommentsError(e instanceof Error ? e.message : "Failed to add comment");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -170,6 +227,72 @@ export default function PostDetailScreen({ route }: Props) {
           );
         })}
       </View>
+
+      {/* Comments section */}
+      <View style={styles.commentsSection}>
+        <Text style={styles.commentsHeader}>
+          Comments{comments.length > 0 ? ` (${comments.length})` : ""}
+        </Text>
+
+        {commentsLoading && comments.length === 0 && (
+          <ActivityIndicator size="small" color="#4a6fa5" style={styles.commentsLoader} />
+        )}
+
+        {commentsError && (
+          <View style={styles.commentsErrorRow}>
+            <Text style={styles.commentsErrorText}>{commentsError}</Text>
+            <Pressable onPress={loadComments}>
+              <Text style={styles.commentsRetryText}>Retry</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {!commentsLoading && !commentsError && comments.length === 0 && (
+          <Text style={styles.noComments}>No comments yet. Be the first!</Text>
+        )}
+
+        {comments.map((c) => (
+          <View key={c.id} style={styles.commentCard}>
+            <View style={styles.commentHeader}>
+              <View style={styles.commentAvatar}>
+                <Text style={styles.commentAvatarText}>{authorInitial(c.author_name)}</Text>
+              </View>
+              <View style={styles.commentMeta}>
+                <Text style={styles.commentAuthor}>{c.author_name}</Text>
+                <Text style={styles.commentDate}>{formatCommentDate(c.created_at)}</Text>
+              </View>
+            </View>
+            <Text style={styles.commentContent}>{c.content}</Text>
+          </View>
+        ))}
+
+        {/* Add comment input */}
+        <View style={styles.addCommentRow}>
+          <TextInput
+            style={styles.commentInput}
+            placeholder="Write a comment…"
+            placeholderTextColor="#999"
+            value={newComment}
+            onChangeText={setNewComment}
+            multiline
+            editable={!submitting}
+          />
+          <Pressable
+            style={[
+              styles.sendButton,
+              (!newComment.trim() || submitting) && styles.sendButtonDisabled,
+            ]}
+            onPress={handleSubmitComment}
+            disabled={!newComment.trim() || submitting}
+          >
+            {submitting ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.sendButtonText}>Send</Text>
+            )}
+          </Pressable>
+        </View>
+      </View>
     </ScrollView>
   );
 }
@@ -249,5 +372,122 @@ const styles = StyleSheet.create({
   },
   reactionCountActive: {
     color: "#4a6fa5",
+  },
+  // Comments
+  commentsSection: {
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#e8e8e8",
+    paddingTop: 16,
+  },
+  commentsHeader: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1a1a1a",
+    marginBottom: 12,
+  },
+  commentsLoader: {
+    marginVertical: 16,
+  },
+  commentsErrorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
+  commentsErrorText: {
+    fontSize: 13,
+    color: "#c00",
+    flex: 1,
+  },
+  commentsRetryText: {
+    fontSize: 13,
+    color: "#4a6fa5",
+    fontWeight: "600",
+  },
+  noComments: {
+    fontSize: 14,
+    color: "#999",
+    fontStyle: "italic",
+    marginBottom: 16,
+  },
+  commentCard: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+  commentHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  commentAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#e0e7ef",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
+  },
+  commentAvatarText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#4a6fa5",
+  },
+  commentMeta: {
+    flex: 1,
+  },
+  commentAuthor: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1a1a1a",
+  },
+  commentDate: {
+    fontSize: 11,
+    color: "#999",
+  },
+  commentContent: {
+    fontSize: 14,
+    color: "#333",
+    lineHeight: 20,
+  },
+  // Add comment
+  addCommentRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 8,
+    marginTop: 8,
+  },
+  commentInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: "#222",
+    backgroundColor: "#fff",
+    maxHeight: 100,
+  },
+  sendButton: {
+    backgroundColor: "#4a6fa5",
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sendButtonDisabled: {
+    opacity: 0.5,
+  },
+  sendButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });

@@ -1,4 +1,4 @@
-import type { PostWithAuthor, PostAttachment, PostInsert, PostReaction } from "@tae/shared";
+import type { PostWithAuthor, PostAttachment, PostInsert, PostReaction, PostComment } from "@tae/shared";
 import { createSignedUrlsBatch, STORAGE_BUCKETS } from "@tae/shared";
 import { supabase } from "./supabase";
 
@@ -98,6 +98,13 @@ export async function createPost(
 
 const FEED_LIMIT = 50;
 
+export interface FeedCommentPreview {
+  id: string;
+  author_name: string;
+  content: string;
+  created_at: string;
+}
+
 export interface FeedPost extends PostWithAuthor {
   attachments: PostAttachment[];
   /** Signed URL for first image attachment (if any) */
@@ -106,6 +113,49 @@ export interface FeedPost extends PostWithAuthor {
   reactionCounts: ReactionCounts;
   /** Emojis the current user has reacted with */
   userReactions: Emoji[];
+  /** Total number of comments on this post */
+  commentCount: number;
+  /** Latest comment preview (if any) */
+  latestComment: FeedCommentPreview | null;
+}
+
+/**
+ * Batch-fetch comment counts and latest comment preview for a set of post IDs.
+ * Returns maps keyed by post_id.
+ */
+async function fetchCommentPreviews(postIds: string[]): Promise<{
+  countByPost: Map<string, number>;
+  latestByPost: Map<string, FeedCommentPreview>;
+}> {
+  const countByPost = new Map<string, number>();
+  const latestByPost = new Map<string, FeedCommentPreview>();
+
+  if (postIds.length === 0) return { countByPost, latestByPost };
+
+  const { data: commentsData } = await supabase
+    .from("post_comments")
+    .select("id, post_id, author_id, content, created_at, profiles(full_name)")
+    .in("post_id", postIds)
+    .order("created_at", { ascending: false });
+
+  if (commentsData) {
+    for (const c of commentsData as Record<string, unknown>[]) {
+      const pid = c.post_id as string;
+      countByPost.set(pid, (countByPost.get(pid) ?? 0) + 1);
+      // Keep only the latest (first encountered since ordered desc)
+      if (!latestByPost.has(pid)) {
+        const profile = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles;
+        latestByPost.set(pid, {
+          id: c.id as string,
+          author_name: (profile as { full_name?: string } | null)?.full_name ?? "Unknown",
+          content: c.content as string,
+          created_at: c.created_at as string,
+        });
+      }
+    }
+  }
+
+  return { countByPost, latestByPost };
 }
 
 /**
@@ -156,6 +206,9 @@ export async function fetchFeedPosts(): Promise<FeedPost[]> {
     }
   }
 
+  // Fetch comment previews for all posts
+  const { countByPost, latestByPost } = await fetchCommentPreviews(postIds);
+
   // Collect first-image storage paths for batch signing
   const firstImagePaths: string[] = [];
   const postIdToFirstImagePath = new Map<string, string>();
@@ -188,6 +241,8 @@ export async function fetchFeedPosts(): Promise<FeedPost[]> {
       imageUrl: firstImagePath ? signedUrls.get(firstImagePath) ?? null : null,
       reactionCounts,
       userReactions,
+      commentCount: countByPost.get(p.id) ?? 0,
+      latestComment: latestByPost.get(p.id) ?? null,
     };
   });
 }
@@ -255,6 +310,9 @@ export async function fetchUserPosts(userId: string): Promise<FeedPost[]> {
     }
   }
 
+  // Fetch comment previews for user posts
+  const { countByPost, latestByPost } = await fetchCommentPreviews(postIds);
+
   const firstImagePaths: string[] = [];
   const postIdToFirstImagePath = new Map<string, string>();
 
@@ -286,6 +344,8 @@ export async function fetchUserPosts(userId: string): Promise<FeedPost[]> {
       imageUrl: firstImagePath ? signedUrls.get(firstImagePath) ?? null : null,
       reactionCounts,
       userReactions,
+      commentCount: countByPost.get(p.id) ?? 0,
+      latestComment: latestByPost.get(p.id) ?? null,
     };
   });
 }
@@ -335,6 +395,69 @@ export async function fetchPostById(postId: string): Promise<PostDetail> {
     imageUrls,
     reactionCounts,
     userReactions,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Comment helpers
+// ---------------------------------------------------------------------------
+
+export interface CommentWithAuthor extends PostComment {
+  author_name: string;
+}
+
+/**
+ * Fetch all comments for a post, oldest first, with author names.
+ */
+export async function fetchComments(postId: string): Promise<CommentWithAuthor[]> {
+  const { data, error } = await supabase
+    .from("post_comments")
+    .select("id, post_id, author_id, content, created_at, updated_at, profiles(full_name)")
+    .eq("post_id", postId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((c: Record<string, unknown>) => {
+    const profile = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles;
+    return {
+      id: c.id as string,
+      post_id: c.post_id as string,
+      author_id: c.author_id as string,
+      content: c.content as string,
+      created_at: c.created_at as string,
+      updated_at: (c.updated_at as string) ?? null,
+      author_name: (profile as { full_name?: string } | null)?.full_name ?? "Unknown",
+    };
+  });
+}
+
+/**
+ * Add a comment to a post. Returns the newly created comment with author name.
+ */
+export async function addComment(postId: string, content: string): Promise<CommentWithAuthor> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const userId = sessionData?.session?.user?.id;
+  if (!userId) throw new Error("Not signed in");
+
+  const { data, error } = await supabase
+    .from("post_comments")
+    .insert({ post_id: postId, author_id: userId, content: content.trim() })
+    .select("id, post_id, author_id, content, created_at, updated_at, profiles(full_name)")
+    .single();
+
+  if (error || !data) throw new Error(error?.message ?? "Failed to add comment");
+
+  const row = data as Record<string, unknown>;
+  const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+  return {
+    id: row.id as string,
+    post_id: row.post_id as string,
+    author_id: row.author_id as string,
+    content: row.content as string,
+    created_at: row.created_at as string,
+    updated_at: (row.updated_at as string) ?? null,
+    author_name: (profile as { full_name?: string } | null)?.full_name ?? "Unknown",
   };
 }
 
