@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -10,20 +11,24 @@ import {
   View,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { FeedStackParamList } from "../navigation/FeedStack";
 import type { MeStackParamList } from "../navigation/MeStack";
 import {
   fetchPostById,
   toggleReaction,
+  deletePost,
   fetchComments,
   addComment,
+  deleteComment,
   EMOJI_SET,
   type PostDetail,
   type Emoji,
   type CommentWithAuthor,
 } from "../lib/posts";
+import { useAuth } from "../state/auth";
+import { useMyProfile } from "../state/profile";
 
 type Props =
   | NativeStackScreenProps<FeedStackParamList, "PostDetail">
@@ -73,6 +78,10 @@ function DetailImage({ uri, onPress }: { uri: string; onPress?: () => void }) {
 export default function PostDetailScreen({ route }: Props) {
   const { postId } = route.params;
   const navigation = useNavigation<NativeStackNavigationProp<FeedStackParamList>>();
+  const { session } = useAuth();
+  const { profile } = useMyProfile();
+  const currentUserId = session?.user?.id ?? null;
+  const isAdmin = profile?.role === "admin";
   const [post, setPost] = useState<PostDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -110,10 +119,31 @@ export default function PostDetailScreen({ route }: Props) {
     }
   }, [postId]);
 
-  useEffect(() => {
-    load();
-    loadComments();
-  }, [load, loadComments]);
+  // Reload post when screen gains focus (e.g. returning from EditPost)
+  useFocusEffect(
+    useCallback(() => {
+      load();
+      loadComments();
+    }, [load, loadComments]),
+  );
+
+  const handleDeleteComment = (commentId: string) => {
+    Alert.alert("Delete Comment", "Are you sure you want to delete this comment?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteComment(commentId);
+            setComments((prev) => prev.filter((c) => c.id !== commentId));
+          } catch (e: unknown) {
+            Alert.alert("Error", e instanceof Error ? e.message : "Failed to delete comment");
+          }
+        },
+      },
+    ]);
+  };
 
   const handleSubmitComment = async () => {
     const trimmed = newComment.trim();
@@ -153,6 +183,31 @@ export default function PostDetailScreen({ route }: Props) {
 
   const authorName = post.profiles?.full_name ?? "Unknown";
   const imageAttachments = post.attachments.filter((a) => a.type === "image");
+  const isOwner = currentUserId != null && post.author_id === currentUserId;
+  const canEdit = isOwner;
+  const canDelete = isOwner || isAdmin;
+
+  const handleEdit = () => {
+    navigation.navigate("EditPost", { postId: post.id, content: post.content });
+  };
+
+  const handleDeletePost = () => {
+    Alert.alert("Delete Post", "Are you sure you want to delete this post?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deletePost(post.id);
+            navigation.goBack();
+          } catch (e: unknown) {
+            Alert.alert("Error", e instanceof Error ? e.message : "Failed to delete post");
+          }
+        },
+      },
+    ]);
+  };
 
   const handleReaction = async (emoji: Emoji) => {
     if (!post) return;
@@ -189,6 +244,22 @@ export default function PostDetailScreen({ route }: Props) {
           <Text style={styles.date}>{formatDate(post.created_at)}</Text>
         </View>
       </View>
+
+      {/* Owner / admin actions */}
+      {(canEdit || canDelete) && (
+        <View style={styles.actionsRow}>
+          {canEdit && (
+            <Pressable style={styles.actionButton} onPress={handleEdit}>
+              <Text style={styles.actionButtonText}>Edit</Text>
+            </Pressable>
+          )}
+          {canDelete && (
+            <Pressable style={styles.actionButtonDestructive} onPress={handleDeletePost}>
+              <Text style={styles.actionButtonDestructiveText}>Delete</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
 
       {/* Content */}
       <Text style={styles.content}>{post.content}</Text>
@@ -251,20 +322,33 @@ export default function PostDetailScreen({ route }: Props) {
           <Text style={styles.noComments}>No comments yet. Be the first!</Text>
         )}
 
-        {comments.map((c) => (
-          <View key={c.id} style={styles.commentCard}>
-            <View style={styles.commentHeader}>
-              <View style={styles.commentAvatar}>
-                <Text style={styles.commentAvatarText}>{authorInitial(c.author_name)}</Text>
+        {comments.map((c) => {
+          const canDeleteComment =
+            currentUserId != null && (c.author_id === currentUserId || isAdmin);
+          return (
+            <View key={c.id} style={styles.commentCard}>
+              <View style={styles.commentHeader}>
+                <View style={styles.commentAvatar}>
+                  <Text style={styles.commentAvatarText}>{authorInitial(c.author_name)}</Text>
+                </View>
+                <View style={styles.commentMeta}>
+                  <Text style={styles.commentAuthor}>{c.author_name}</Text>
+                  <Text style={styles.commentDate}>{formatCommentDate(c.created_at)}</Text>
+                </View>
+                {canDeleteComment && (
+                  <Pressable
+                    style={styles.commentDeleteButton}
+                    onPress={() => handleDeleteComment(c.id)}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.commentDeleteText}>Delete</Text>
+                  </Pressable>
+                )}
               </View>
-              <View style={styles.commentMeta}>
-                <Text style={styles.commentAuthor}>{c.author_name}</Text>
-                <Text style={styles.commentDate}>{formatCommentDate(c.created_at)}</Text>
-              </View>
+              <Text style={styles.commentContent}>{c.content}</Text>
             </View>
-            <Text style={styles.commentContent}>{c.content}</Text>
-          </View>
-        ))}
+          );
+        })}
 
         {/* Add comment input */}
         <View style={styles.addCommentRow}>
@@ -336,6 +420,36 @@ const styles = StyleSheet.create({
   authorMeta: { flex: 1 },
   authorName: { fontSize: 16, fontWeight: "bold", color: "#1a1a1a" },
   date: { fontSize: 13, color: "#888", marginTop: 2 },
+  // Actions
+  actionsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 12,
+  },
+  actionButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#4a6fa5",
+  },
+  actionButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#4a6fa5",
+  },
+  actionButtonDestructive: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#c00",
+  },
+  actionButtonDestructiveText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#c00",
+  },
   // Content
   content: { fontSize: 15, color: "#222", lineHeight: 22, marginBottom: 16 },
   // Images
@@ -454,6 +568,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#333",
     lineHeight: 20,
+  },
+  commentDeleteButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  commentDeleteText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#c00",
   },
   // Add comment
   addCommentRow: {

@@ -93,6 +93,47 @@ export async function createPost(
 }
 
 // ---------------------------------------------------------------------------
+// Update / Delete helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Update the text content of an owned post (RLS: author_id = auth.uid()).
+ */
+export async function updatePost(postId: string, content: string): Promise<void> {
+  const { error } = await supabase
+    .from("posts")
+    .update({ content: content.trim() })
+    .eq("id", postId);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Delete a post with storage cleanup (matches web pattern).
+ * RLS allows owner OR admin to delete.
+ */
+export async function deletePost(postId: string): Promise<void> {
+  // Fetch attachments to clean up storage files
+  const { data: attachments } = await supabase
+    .from("post_attachments")
+    .select("storage_path, type")
+    .eq("post_id", postId);
+
+  const storagePaths = (attachments ?? [])
+    .filter((a: { type: string; storage_path: string }) =>
+      (a.type === "image" || a.type === "video") && a.storage_path,
+    )
+    .map((a: { storage_path: string }) => a.storage_path);
+
+  if (storagePaths.length > 0) {
+    await supabase.storage.from("post-media").remove(storagePaths);
+  }
+
+  // Delete post (cascades to post_attachments, post_reactions, post_comments)
+  const { error } = await supabase.from("posts").delete().eq("id", postId);
+  if (error) throw new Error(error.message);
+}
+
+// ---------------------------------------------------------------------------
 // Fetch helpers
 // ---------------------------------------------------------------------------
 
@@ -430,6 +471,18 @@ export async function fetchComments(postId: string): Promise<CommentWithAuthor[]
       author_name: (profile as { full_name?: string } | null)?.full_name ?? "Unknown",
     };
   });
+}
+
+/**
+ * Delete a comment by ID.
+ * RLS allows owner (author_id = auth.uid()) OR admin to delete.
+ */
+export async function deleteComment(commentId: string): Promise<void> {
+  const { error } = await supabase
+    .from("post_comments")
+    .delete()
+    .eq("id", commentId);
+  if (error) throw new Error(error.message);
 }
 
 /**
