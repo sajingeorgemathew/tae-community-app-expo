@@ -3,12 +3,14 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import FeedScreen from "../screens/FeedScreen";
 import PostDetailScreen from "../screens/PostDetailScreen";
 import NewPostScreen from "../screens/NewPostScreen";
+import EditPostScreen from "../screens/EditPostScreen";
 import ImageViewerScreen from "../screens/ImageViewerScreen";
 
 export type FeedStackParamList = {
   FeedList: undefined;
   PostDetail: { postId: string };
   NewPost: undefined;
+  EditPost: { postId: string; content: string };
   ImageViewer: { uri: string };
 };
 
@@ -31,6 +33,11 @@ export default function FeedStack() {
         name="NewPost"
         component={NewPostScreen}
         options={{ title: "New Post" }}
+      />
+      <Stack.Screen
+        name="EditPost"
+        component={EditPostScreen}
+        options={{ title: "Edit Post" }}
       />
       <Stack.Screen
         name="ImageViewer"

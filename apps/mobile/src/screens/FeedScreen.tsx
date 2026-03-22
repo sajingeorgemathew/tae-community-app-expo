@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -11,8 +12,10 @@ import {
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import type { FeedStackParamList } from "../navigation/FeedStack";
-import { fetchFeedPosts, toggleReaction, type FeedPost, type Emoji } from "../lib/posts";
+import { fetchFeedPosts, toggleReaction, deletePost, type FeedPost, type Emoji } from "../lib/posts";
 import PostCard from "../components/PostCard";
+import { useAuth } from "../state/auth";
+import { useMyProfile } from "../state/profile";
 
 type Nav = NativeStackNavigationProp<FeedStackParamList, "FeedList">;
 
@@ -26,6 +29,10 @@ const FILTER_OPTIONS: { value: AudienceFilter; label: string }[] = [
 
 export default function FeedScreen() {
   const navigation = useNavigation<Nav>();
+  const { session } = useAuth();
+  const { profile } = useMyProfile();
+  const currentUserId = session?.user?.id ?? null;
+  const isAdmin = profile?.role === "admin";
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [filter, setFilter] = useState<AudienceFilter>("all");
   const [loading, setLoading] = useState(true);
@@ -80,6 +87,24 @@ export default function FeedScreen() {
       load();
     }
   }, [posts, load]);
+
+  const handleDelete = useCallback((postId: string) => {
+    Alert.alert("Delete Post", "Are you sure you want to delete this post?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deletePost(postId);
+            setPosts((prev) => prev.filter((p) => p.id !== postId));
+          } catch (e: unknown) {
+            Alert.alert("Error", e instanceof Error ? e.message : "Failed to delete post");
+          }
+        },
+      },
+    ]);
+  }, []);
 
   // Refresh feed every time the screen comes into focus (e.g. after creating a post)
   useFocusEffect(
@@ -196,14 +221,21 @@ export default function FeedScreen() {
             </Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <PostCard
-            post={item}
-            onPress={() => navigation.navigate("PostDetail", { postId: item.id })}
-            onImagePress={(uri) => navigation.navigate("ImageViewer", { uri })}
-            onReactionPress={(emoji) => handleReaction(item.id, emoji)}
-          />
-        )}
+        renderItem={({ item }) => {
+          const isOwner = currentUserId != null && item.author_id === currentUserId;
+          return (
+            <PostCard
+              post={item}
+              onPress={() => navigation.navigate("PostDetail", { postId: item.id })}
+              onImagePress={(uri) => navigation.navigate("ImageViewer", { uri })}
+              onReactionPress={(emoji) => handleReaction(item.id, emoji)}
+              isOwner={isOwner}
+              isAdmin={isAdmin}
+              onEdit={isOwner ? () => navigation.navigate("EditPost", { postId: item.id, content: item.content }) : undefined}
+              onDelete={isOwner || isAdmin ? () => handleDelete(item.id) : undefined}
+            />
+          );
+        }}
       />
     </View>
   );

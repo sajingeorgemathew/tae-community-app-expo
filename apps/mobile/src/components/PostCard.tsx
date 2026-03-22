@@ -44,6 +44,14 @@ interface PostCardProps {
   onReactionPress?: (emoji: Emoji) => void;
   /** Hide the author row (e.g. on My Posts where it's redundant) */
   hideAuthor?: boolean;
+  /** Whether the current user owns this post */
+  isOwner?: boolean;
+  /** Whether the current user is an admin */
+  isAdmin?: boolean;
+  /** Called when the user taps Edit */
+  onEdit?: () => void;
+  /** Called when the user taps Delete */
+  onDelete?: () => void;
 }
 
 const CONTENT_PREVIEW_LIMIT = 200;
@@ -56,8 +64,10 @@ const MAX_PREVIEW_AR = 2.5; // widest allowed
 const NORMAL_AR_LOW = 0.8; // below this → contain (very tall)
 const NORMAL_AR_HIGH = 2.2; // above this → contain (very wide)
 
-export default function PostCard({ post, onPress, onImagePress, onReactionPress, hideAuthor }: PostCardProps) {
+export default function PostCard({ post, onPress, onImagePress, onReactionPress, hideAuthor, isOwner, isAdmin, onEdit, onDelete }: PostCardProps) {
   const authorName = post.profiles?.full_name ?? "Unknown";
+  const showActions = isOwner || isAdmin;
+  const [menuOpen, setMenuOpen] = useState(false);
   const preview =
     post.content.length > CONTENT_PREVIEW_LIMIT
       ? post.content.slice(0, CONTENT_PREVIEW_LIMIT) + "…"
@@ -105,12 +115,68 @@ export default function PostCard({ post, onPress, onImagePress, onReactionPress,
             </Text>
             <Text style={styles.timestamp}>{relativeTime(post.created_at)}</Text>
           </View>
+          {showActions && (
+            <Pressable
+              style={styles.menuTrigger}
+              onPress={(e) => {
+                e.stopPropagation?.();
+                setMenuOpen((v) => !v);
+              }}
+              hitSlop={8}
+            >
+              <Text style={styles.menuDots}>···</Text>
+            </Pressable>
+          )}
         </View>
       )}
 
       {/* Date-only row when author is hidden */}
       {hideAuthor && (
-        <Text style={styles.timestampOnly}>{relativeTime(post.created_at)}</Text>
+        <View style={styles.hiddenAuthorRow}>
+          <Text style={styles.timestampOnly}>{relativeTime(post.created_at)}</Text>
+          {showActions && (
+            <Pressable
+              style={styles.menuTrigger}
+              onPress={(e) => {
+                e.stopPropagation?.();
+                setMenuOpen((v) => !v);
+              }}
+              hitSlop={8}
+            >
+              <Text style={styles.menuDots}>···</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
+
+      {/* Action menu */}
+      {menuOpen && showActions && (
+        <View style={styles.actionMenu}>
+          {isOwner && onEdit && (
+            <Pressable
+              style={styles.actionItem}
+              onPress={(e) => {
+                e.stopPropagation?.();
+                setMenuOpen(false);
+                onEdit();
+              }}
+            >
+              <Text style={styles.actionText}>Edit</Text>
+            </Pressable>
+          )}
+          {onDelete && (
+            <Pressable
+              style={styles.actionItem}
+              onPress={(e) => {
+                e.stopPropagation?.();
+                setMenuOpen(false);
+                onDelete();
+              }}
+            >
+              <Text style={[styles.actionText, styles.actionTextDestructive]}>Delete</Text>
+            </Pressable>
+          )}
+        </View>
       )}
 
       {/* Content */}
@@ -250,7 +316,43 @@ const styles = StyleSheet.create({
   timestampOnly: {
     fontSize: 12,
     color: "#999",
+    marginBottom: 0,
+  },
+  hiddenAuthorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 8,
+  },
+  menuTrigger: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  menuDots: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: "#888",
+    letterSpacing: 1,
+  },
+  actionMenu: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    marginBottom: 8,
+    overflow: "hidden",
+  },
+  actionItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  actionText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#333",
+  },
+  actionTextDestructive: {
+    color: "#c00",
   },
   // Content
   content: {
