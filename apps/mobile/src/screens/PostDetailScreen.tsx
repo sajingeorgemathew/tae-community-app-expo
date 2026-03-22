@@ -9,6 +9,8 @@ import {
   View,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { FeedStackParamList } from "../navigation/FeedStack";
 import type { MeStackParamList } from "../navigation/MeStack";
 import { fetchPostById, type PostDetail } from "../lib/posts";
@@ -33,21 +35,24 @@ function authorInitial(name: string | null): string {
   return (name ?? "?")[0]?.toUpperCase() ?? "?";
 }
 
-function DetailImage({ uri }: { uri: string }) {
+function DetailImage({ uri, onPress }: { uri: string; onPress?: () => void }) {
   const [failed, setFailed] = useState(false);
   if (failed) return null;
   return (
-    <Image
-      source={{ uri }}
-      style={styles.image}
-      resizeMode="contain"
-      onError={() => setFailed(true)}
-    />
+    <Pressable onPress={onPress}>
+      <Image
+        source={{ uri }}
+        style={styles.image}
+        resizeMode="contain"
+        onError={() => setFailed(true)}
+      />
+    </Pressable>
   );
 }
 
 export default function PostDetailScreen({ route }: Props) {
   const { postId } = route.params;
+  const navigation = useNavigation<NativeStackNavigationProp<FeedStackParamList>>();
   const [post, setPost] = useState<PostDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -112,7 +117,13 @@ export default function PostDetailScreen({ route }: Props) {
       {imageAttachments.map((a) => {
         const url = post.imageUrls.get(a.storage_path);
         if (!url) return null;
-        return <DetailImage key={a.id} uri={url} />;
+        return (
+          <DetailImage
+            key={a.id}
+            uri={url}
+            onPress={() => navigation.navigate("ImageViewer", { uri: url })}
+          />
+        );
       })}
     </ScrollView>
   );
@@ -160,5 +171,5 @@ const styles = StyleSheet.create({
   // Content
   content: { fontSize: 15, color: "#222", lineHeight: 22, marginBottom: 16 },
   // Images
-  image: { width: "100%", height: 250, borderRadius: 8, marginBottom: 12 },
+  image: { width: "100%", aspectRatio: 16 / 9, borderRadius: 8, marginBottom: 12 },
 });

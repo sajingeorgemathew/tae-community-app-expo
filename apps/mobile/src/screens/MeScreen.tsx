@@ -312,6 +312,9 @@ export default function MeScreen({ navigation }: Props) {
               onPress={() =>
                 navigation.navigate("PostDetail", { postId: post.id })
               }
+              onImagePress={(uri) =>
+                navigation.navigate("ImageViewer", { uri })
+              }
             />
           ))
         )}
