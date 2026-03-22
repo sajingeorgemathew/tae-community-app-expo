@@ -1,6 +1,22 @@
-import type { PostWithAuthor, PostAttachment, PostInsert } from "@tae/shared";
+import type { PostWithAuthor, PostAttachment, PostInsert, PostReaction } from "@tae/shared";
 import { createSignedUrlsBatch, STORAGE_BUCKETS } from "@tae/shared";
 import { supabase } from "./supabase";
+
+// ---------------------------------------------------------------------------
+// Reaction constants & types (aligned with web EMOJI_SET + DB check constraint)
+// ---------------------------------------------------------------------------
+
+export const EMOJI_SET = ["\u2764\uFE0F", "\uD83D\uDC4D", "\uD83D\uDE02"] as const;
+export type Emoji = (typeof EMOJI_SET)[number];
+
+export interface ReactionCounts {
+  [emoji: string]: number;
+}
+
+export interface ReactionState {
+  counts: ReactionCounts;
+  userReactions: Emoji[];
+}
 
 // ---------------------------------------------------------------------------
 // Signed URL cache (keyed by storage_path, shared across screens)
@@ -86,6 +102,10 @@ export interface FeedPost extends PostWithAuthor {
   attachments: PostAttachment[];
   /** Signed URL for first image attachment (if any) */
   imageUrl: string | null;
+  /** Reaction counts per emoji */
+  reactionCounts: ReactionCounts;
+  /** Emojis the current user has reacted with */
+  userReactions: Emoji[];
 }
 
 /**
@@ -118,6 +138,24 @@ export async function fetchFeedPosts(): Promise<FeedPost[]> {
     }
   }
 
+  // Fetch reactions for all posts
+  const { data: reactionsData } = await supabase
+    .from("post_reactions")
+    .select("post_id, user_id, emoji")
+    .in("post_id", postIds);
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  const currentUserId = sessionData?.session?.user?.id ?? null;
+
+  const reactionsByPost = new Map<string, PostReaction[]>();
+  if (reactionsData) {
+    for (const r of reactionsData as PostReaction[]) {
+      const list = reactionsByPost.get(r.post_id) ?? [];
+      list.push(r);
+      reactionsByPost.set(r.post_id, list);
+    }
+  }
+
   // Collect first-image storage paths for batch signing
   const firstImagePaths: string[] = [];
   const postIdToFirstImagePath = new Map<string, string>();
@@ -136,10 +174,20 @@ export async function fetchFeedPosts(): Promise<FeedPost[]> {
   return (posts as unknown as PostWithAuthor[]).map((p) => {
     const postAttachments = attachmentsByPost.get(p.id) ?? [];
     const firstImagePath = postIdToFirstImagePath.get(p.id);
+    const postReactions = reactionsByPost.get(p.id) ?? [];
+    const reactionCounts: ReactionCounts = {};
+    for (const r of postReactions) {
+      reactionCounts[r.emoji] = (reactionCounts[r.emoji] ?? 0) + 1;
+    }
+    const userReactions = currentUserId
+      ? postReactions.filter((r) => r.user_id === currentUserId).map((r) => r.emoji as Emoji)
+      : [];
     return {
       ...p,
       attachments: postAttachments,
       imageUrl: firstImagePath ? signedUrls.get(firstImagePath) ?? null : null,
+      reactionCounts,
+      userReactions,
     };
   });
 }
@@ -148,6 +196,10 @@ export interface PostDetail extends PostWithAuthor {
   attachments: PostAttachment[];
   /** Signed URLs keyed by storage_path */
   imageUrls: Map<string, string>;
+  /** Reaction counts per emoji */
+  reactionCounts: ReactionCounts;
+  /** Emojis the current user has reacted with */
+  userReactions: Emoji[];
 }
 
 /**
@@ -185,6 +237,24 @@ export async function fetchUserPosts(userId: string): Promise<FeedPost[]> {
     }
   }
 
+  // Fetch reactions for user posts
+  const { data: reactionsData } = await supabase
+    .from("post_reactions")
+    .select("post_id, user_id, emoji")
+    .in("post_id", postIds);
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  const currentUserId = sessionData?.session?.user?.id ?? null;
+
+  const reactionsByPost = new Map<string, PostReaction[]>();
+  if (reactionsData) {
+    for (const r of reactionsData as PostReaction[]) {
+      const list = reactionsByPost.get(r.post_id) ?? [];
+      list.push(r);
+      reactionsByPost.set(r.post_id, list);
+    }
+  }
+
   const firstImagePaths: string[] = [];
   const postIdToFirstImagePath = new Map<string, string>();
 
@@ -202,10 +272,20 @@ export async function fetchUserPosts(userId: string): Promise<FeedPost[]> {
   return (posts as unknown as PostWithAuthor[]).map((p) => {
     const postAttachments = attachmentsByPost.get(p.id) ?? [];
     const firstImagePath = postIdToFirstImagePath.get(p.id);
+    const postReactions = reactionsByPost.get(p.id) ?? [];
+    const reactionCounts: ReactionCounts = {};
+    for (const r of postReactions) {
+      reactionCounts[r.emoji] = (reactionCounts[r.emoji] ?? 0) + 1;
+    }
+    const userReactions = currentUserId
+      ? postReactions.filter((r) => r.user_id === currentUserId).map((r) => r.emoji as Emoji)
+      : [];
     return {
       ...p,
       attachments: postAttachments,
       imageUrl: firstImagePath ? signedUrls.get(firstImagePath) ?? null : null,
+      reactionCounts,
+      userReactions,
     };
   });
 }
@@ -231,9 +311,58 @@ export async function fetchPostById(postId: string): Promise<PostDetail> {
 
   const imageUrls = await resolveSignedUrls(imagePaths);
 
+  // Fetch reactions for this post
+  const { data: reactionsData } = await supabase
+    .from("post_reactions")
+    .select("post_id, user_id, emoji")
+    .eq("post_id", postId);
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  const currentUserId = sessionData?.session?.user?.id ?? null;
+
+  const postReactions = (reactionsData ?? []) as PostReaction[];
+  const reactionCounts: ReactionCounts = {};
+  for (const r of postReactions) {
+    reactionCounts[r.emoji] = (reactionCounts[r.emoji] ?? 0) + 1;
+  }
+  const userReactions = currentUserId
+    ? postReactions.filter((r) => r.user_id === currentUserId).map((r) => r.emoji as Emoji)
+    : [];
+
   return {
     ...(post as unknown as PostWithAuthor),
     attachments: postAttachments,
     imageUrls,
+    reactionCounts,
+    userReactions,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Reaction toggle (matches web pattern: delete if exists, insert if not)
+// ---------------------------------------------------------------------------
+
+export async function toggleReaction(
+  postId: string,
+  emoji: Emoji,
+  hasReacted: boolean,
+): Promise<void> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const userId = sessionData?.session?.user?.id;
+  if (!userId) throw new Error("Not signed in");
+
+  if (hasReacted) {
+    const { error } = await supabase
+      .from("post_reactions")
+      .delete()
+      .eq("post_id", postId)
+      .eq("user_id", userId)
+      .eq("emoji", emoji);
+    if (error) throw new Error(error.message);
+  } else {
+    const { error } = await supabase
+      .from("post_reactions")
+      .insert({ post_id: postId, user_id: userId, emoji });
+    if (error) throw new Error(error.message);
+  }
 }
