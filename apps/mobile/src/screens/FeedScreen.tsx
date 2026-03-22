@@ -11,7 +11,7 @@ import {
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import type { FeedStackParamList } from "../navigation/FeedStack";
-import { fetchFeedPosts, type FeedPost } from "../lib/posts";
+import { fetchFeedPosts, toggleReaction, type FeedPost, type Emoji } from "../lib/posts";
 import PostCard from "../components/PostCard";
 
 type Nav = NativeStackNavigationProp<FeedStackParamList, "FeedList">;
@@ -53,6 +53,33 @@ export default function FeedScreen() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const handleReaction = useCallback(async (postId: string, emoji: Emoji) => {
+    const post = posts.find((p) => p.id === postId);
+    if (!post) return;
+    const hasReacted = post.userReactions.includes(emoji);
+
+    // Optimistic update
+    setPosts((prev) =>
+      prev.map((p) => {
+        if (p.id !== postId) return p;
+        const newCounts = { ...p.reactionCounts };
+        const newUserReactions = hasReacted
+          ? p.userReactions.filter((e) => e !== emoji)
+          : [...p.userReactions, emoji];
+        newCounts[emoji] = (newCounts[emoji] ?? 0) + (hasReacted ? -1 : 1);
+        if (newCounts[emoji] <= 0) delete newCounts[emoji];
+        return { ...p, reactionCounts: newCounts, userReactions: newUserReactions };
+      }),
+    );
+
+    try {
+      await toggleReaction(postId, emoji, hasReacted);
+    } catch {
+      // Revert on error by reloading
+      load();
+    }
+  }, [posts, load]);
 
   // Refresh feed every time the screen comes into focus (e.g. after creating a post)
   useFocusEffect(
@@ -174,6 +201,7 @@ export default function FeedScreen() {
             post={item}
             onPress={() => navigation.navigate("PostDetail", { postId: item.id })}
             onImagePress={(uri) => navigation.navigate("ImageViewer", { uri })}
+            onReactionPress={(emoji) => handleReaction(item.id, emoji)}
           />
         )}
       />

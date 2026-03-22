@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import type { FeedPost } from "../lib/posts";
+import { EMOJI_SET, type Emoji } from "../lib/posts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -39,6 +40,8 @@ interface PostCardProps {
   onPress: () => void;
   /** Called when the user taps the image preview */
   onImagePress?: (uri: string) => void;
+  /** Called when the user taps a reaction emoji */
+  onReactionPress?: (emoji: Emoji) => void;
   /** Hide the author row (e.g. on My Posts where it's redundant) */
   hideAuthor?: boolean;
 }
@@ -53,7 +56,7 @@ const MAX_PREVIEW_AR = 2.5; // widest allowed
 const NORMAL_AR_LOW = 0.8; // below this → contain (very tall)
 const NORMAL_AR_HIGH = 2.2; // above this → contain (very wide)
 
-export default function PostCard({ post, onPress, onImagePress, hideAuthor }: PostCardProps) {
+export default function PostCard({ post, onPress, onImagePress, onReactionPress, hideAuthor }: PostCardProps) {
   const authorName = post.profiles?.full_name ?? "Unknown";
   const preview =
     post.content.length > CONTENT_PREVIEW_LIMIT
@@ -142,6 +145,31 @@ export default function PostCard({ post, onPress, onImagePress, hideAuthor }: Po
           )}
         </Pressable>
       ) : null}
+
+      {/* Reaction bar */}
+      <View style={styles.reactionBar}>
+        {EMOJI_SET.map((emoji) => {
+          const count = post.reactionCounts[emoji] ?? 0;
+          const active = post.userReactions.includes(emoji);
+          return (
+            <Pressable
+              key={emoji}
+              style={[styles.reactionButton, active && styles.reactionButtonActive]}
+              onPress={(e) => {
+                e.stopPropagation?.();
+                onReactionPress?.(emoji);
+              }}
+            >
+              <Text style={styles.reactionEmoji}>{emoji}</Text>
+              {count > 0 && (
+                <Text style={[styles.reactionCount, active && styles.reactionCountActive]}>
+                  {count}
+                </Text>
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
     </Pressable>
   );
 }
@@ -238,5 +266,37 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 12,
     fontWeight: "600",
+  },
+  // Reactions
+  reactionBar: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10,
+  },
+  reactionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    backgroundColor: "#fafafa",
+  },
+  reactionButtonActive: {
+    borderColor: "#4a6fa5",
+    backgroundColor: "#e8eef6",
+  },
+  reactionEmoji: {
+    fontSize: 16,
+  },
+  reactionCount: {
+    fontSize: 13,
+    color: "#666",
+    marginLeft: 4,
+    fontWeight: "500",
+  },
+  reactionCountActive: {
+    color: "#4a6fa5",
   },
 });

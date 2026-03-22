@@ -13,7 +13,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { FeedStackParamList } from "../navigation/FeedStack";
 import type { MeStackParamList } from "../navigation/MeStack";
-import { fetchPostById, type PostDetail } from "../lib/posts";
+import { fetchPostById, toggleReaction, EMOJI_SET, type PostDetail, type Emoji } from "../lib/posts";
 
 type Props =
   | NativeStackScreenProps<FeedStackParamList, "PostDetail">
@@ -97,6 +97,29 @@ export default function PostDetailScreen({ route }: Props) {
   const authorName = post.profiles?.full_name ?? "Unknown";
   const imageAttachments = post.attachments.filter((a) => a.type === "image");
 
+  const handleReaction = async (emoji: Emoji) => {
+    if (!post) return;
+    const hasReacted = post.userReactions.includes(emoji);
+
+    // Optimistic update
+    setPost((prev) => {
+      if (!prev) return prev;
+      const newCounts = { ...prev.reactionCounts };
+      const newUserReactions = hasReacted
+        ? prev.userReactions.filter((e) => e !== emoji)
+        : [...prev.userReactions, emoji];
+      newCounts[emoji] = (newCounts[emoji] ?? 0) + (hasReacted ? -1 : 1);
+      if (newCounts[emoji] <= 0) delete newCounts[emoji];
+      return { ...prev, reactionCounts: newCounts, userReactions: newUserReactions };
+    });
+
+    try {
+      await toggleReaction(postId, emoji, hasReacted);
+    } catch {
+      load();
+    }
+  };
+
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
       {/* Author row */}
@@ -125,6 +148,28 @@ export default function PostDetailScreen({ route }: Props) {
           />
         );
       })}
+
+      {/* Reactions */}
+      <View style={styles.reactionBar}>
+        {EMOJI_SET.map((emoji) => {
+          const count = post.reactionCounts[emoji] ?? 0;
+          const active = post.userReactions.includes(emoji);
+          return (
+            <Pressable
+              key={emoji}
+              style={[styles.reactionButton, active && styles.reactionButtonActive]}
+              onPress={() => handleReaction(emoji)}
+            >
+              <Text style={styles.reactionEmoji}>{emoji}</Text>
+              {count > 0 && (
+                <Text style={[styles.reactionCount, active && styles.reactionCountActive]}>
+                  {count}
+                </Text>
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
     </ScrollView>
   );
 }
@@ -172,4 +217,37 @@ const styles = StyleSheet.create({
   content: { fontSize: 15, color: "#222", lineHeight: 22, marginBottom: 16 },
   // Images
   image: { width: "100%", aspectRatio: 16 / 9, borderRadius: 8, marginBottom: 12 },
+  // Reactions
+  reactionBar: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  reactionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    backgroundColor: "#fafafa",
+  },
+  reactionButtonActive: {
+    borderColor: "#4a6fa5",
+    backgroundColor: "#e8eef6",
+  },
+  reactionEmoji: {
+    fontSize: 16,
+  },
+  reactionCount: {
+    fontSize: 13,
+    color: "#666",
+    marginLeft: 4,
+    fontWeight: "500",
+  },
+  reactionCountActive: {
+    color: "#4a6fa5",
+  },
 });
