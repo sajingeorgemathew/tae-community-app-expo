@@ -38,6 +38,7 @@ export async function fetchQuestionsFeed(): Promise<QuestionFeedRow[]> {
 interface ProfileJoin {
   full_name: string | null;
   avatar_path: string | null;
+  role: string | null;
 }
 
 interface QuestionRow {
@@ -56,6 +57,7 @@ export interface QuestionDetail {
   author_id: string;
   created_at: string;
   author_name: string;
+  author_avatar_path: string | null;
 }
 
 export async function fetchQuestionById(
@@ -64,7 +66,7 @@ export async function fetchQuestionById(
   const { data, error } = await supabase
     .from("questions")
     .select(
-      "id, title, body, author_id, created_at, author:profiles!questions_author_id_fkey(full_name, avatar_path)",
+      "id, title, body, author_id, created_at, author:profiles!questions_author_id_fkey(full_name, avatar_path, role)",
     )
     .eq("id", questionId)
     .single();
@@ -81,6 +83,7 @@ export async function fetchQuestionById(
     author_id: row.author_id,
     created_at: row.created_at,
     author_name: profile?.full_name ?? "Unknown",
+    author_avatar_path: profile?.avatar_path ?? null,
   };
 }
 
@@ -102,6 +105,8 @@ export interface AnswerDetail {
   author_id: string;
   created_at: string;
   author_name: string;
+  author_avatar_path: string | null;
+  author_role: string | null;
 }
 
 export async function fetchAnswersForQuestion(
@@ -110,7 +115,7 @@ export async function fetchAnswersForQuestion(
   const { data, error } = await supabase
     .from("answers")
     .select(
-      "id, body, author_id, created_at, author:profiles!answers_author_id_fkey(full_name, avatar_path)",
+      "id, body, author_id, created_at, author:profiles!answers_author_id_fkey(full_name, avatar_path, role)",
     )
     .eq("question_id", questionId)
     .order("created_at", { ascending: true });
@@ -125,6 +130,8 @@ export async function fetchAnswersForQuestion(
       author_id: row.author_id,
       created_at: row.created_at,
       author_name: profile?.full_name ?? "Unknown",
+      author_avatar_path: profile?.avatar_path ?? null,
+      author_role: profile?.role ?? null,
     };
   });
 }
