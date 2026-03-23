@@ -3,6 +3,8 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -22,6 +24,7 @@ import {
   fetchComments,
   addComment,
   deleteComment,
+  updateComment,
   EMOJI_SET,
   type PostDetail,
   type Emoji,
@@ -92,6 +95,9 @@ export default function PostDetailScreen({ route }: Props) {
   const [commentsError, setCommentsError] = useState<string | null>(null);
   const [newComment, setNewComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -158,6 +164,38 @@ export default function PostDetailScreen({ route }: Props) {
       setCommentsError(e instanceof Error ? e.message : "Failed to add comment");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleEditComment = (comment: CommentWithAuthor) => {
+    setEditingCommentId(comment.id);
+    setEditContent(comment.content);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditContent("");
+  };
+
+  const handleSaveEdit = async () => {
+    const trimmed = editContent.trim();
+    if (!trimmed || !editingCommentId || editSaving) return;
+
+    setEditSaving(true);
+    try {
+      await updateComment(editingCommentId, trimmed);
+      const now = new Date().toISOString();
+      setComments((prev) =>
+        prev.map((c) =>
+          c.id === editingCommentId ? { ...c, content: trimmed, updated_at: now } : c,
+        ),
+      );
+      setEditingCommentId(null);
+      setEditContent("");
+    } catch (e: unknown) {
+      Alert.alert("Error", e instanceof Error ? e.message : "Failed to update comment");
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -233,7 +271,17 @@ export default function PostDetailScreen({ route }: Props) {
   };
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.kbAvoid}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 80}
+    >
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+    >
       {/* Author row */}
       <View style={styles.authorRow}>
         <View style={styles.avatarCircle}>
@@ -323,8 +371,11 @@ export default function PostDetailScreen({ route }: Props) {
         )}
 
         {comments.map((c) => {
+          const isCommentOwner = currentUserId != null && c.author_id === currentUserId;
+          const canEditComment = isCommentOwner;
           const canDeleteComment =
             currentUserId != null && (c.author_id === currentUserId || isAdmin);
+          const isEditing = editingCommentId === c.id;
           return (
             <View key={c.id} style={styles.commentCard}>
               <View style={styles.commentHeader}>
@@ -333,9 +384,21 @@ export default function PostDetailScreen({ route }: Props) {
                 </View>
                 <View style={styles.commentMeta}>
                   <Text style={styles.commentAuthor}>{c.author_name}</Text>
-                  <Text style={styles.commentDate}>{formatCommentDate(c.created_at)}</Text>
+                  <Text style={styles.commentDate}>
+                    {formatCommentDate(c.created_at)}
+                    {c.updated_at && c.updated_at !== c.created_at ? " (edited)" : ""}
+                  </Text>
                 </View>
-                {canDeleteComment && (
+                {!isEditing && canEditComment && (
+                  <Pressable
+                    style={styles.commentEditButton}
+                    onPress={() => handleEditComment(c)}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.commentEditText}>Edit</Text>
+                  </Pressable>
+                )}
+                {!isEditing && canDeleteComment && (
                   <Pressable
                     style={styles.commentDeleteButton}
                     onPress={() => handleDeleteComment(c.id)}
@@ -345,7 +408,43 @@ export default function PostDetailScreen({ route }: Props) {
                   </Pressable>
                 )}
               </View>
-              <Text style={styles.commentContent}>{c.content}</Text>
+              {isEditing ? (
+                <View>
+                  <TextInput
+                    style={styles.editCommentInput}
+                    value={editContent}
+                    onChangeText={setEditContent}
+                    multiline
+                    autoFocus
+                    editable={!editSaving}
+                  />
+                  <View style={styles.editCommentActions}>
+                    <Pressable
+                      style={styles.editCancelButton}
+                      onPress={handleCancelEdit}
+                      disabled={editSaving}
+                    >
+                      <Text style={styles.editCancelText}>Cancel</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[
+                        styles.editSaveButton,
+                        (!editContent.trim() || editSaving) && styles.sendButtonDisabled,
+                      ]}
+                      onPress={handleSaveEdit}
+                      disabled={!editContent.trim() || editSaving}
+                    >
+                      {editSaving ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={styles.editSaveText}>Save</Text>
+                      )}
+                    </Pressable>
+                  </View>
+                </View>
+              ) : (
+                <Text style={styles.commentContent}>{c.content}</Text>
+              )}
             </View>
           );
         })}
@@ -378,6 +477,7 @@ export default function PostDetailScreen({ route }: Props) {
         </View>
       </View>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -399,8 +499,9 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
   },
   retryButtonText: { color: "#555", fontSize: 14 },
+  kbAvoid: { flex: 1, backgroundColor: "#f5f6f8" },
   scroll: { flex: 1, backgroundColor: "#f5f6f8" },
-  container: { padding: 20 },
+  container: { padding: 20, paddingBottom: 120 },
   // Author
   authorRow: {
     flexDirection: "row",
@@ -569,6 +670,15 @@ const styles = StyleSheet.create({
     color: "#333",
     lineHeight: 20,
   },
+  commentEditButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  commentEditText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#4a6fa5",
+  },
   commentDeleteButton: {
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -577,6 +687,46 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: "#c00",
+  },
+  editCommentInput: {
+    borderWidth: 1,
+    borderColor: "#4a6fa5",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: "#222",
+    backgroundColor: "#fff",
+    maxHeight: 100,
+    marginBottom: 8,
+  },
+  editCommentActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+  editCancelButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#ccc",
+  },
+  editCancelText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#666",
+  },
+  editSaveButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: "#4a6fa5",
+  },
+  editSaveText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#fff",
   },
   // Add comment
   addCommentRow: {
