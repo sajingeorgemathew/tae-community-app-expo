@@ -1,23 +1,33 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Button,
   FlatList,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   Text,
+  TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { createSignedUrl, STORAGE_BUCKETS } from "@tae/shared";
 import type { QuestionsStackParamList } from "../navigation/QuestionsStack";
 import {
   fetchQuestionById,
   fetchAnswersForQuestion,
+  createAnswer,
+  canSubmitAnswer,
   type QuestionDetail,
   type AnswerDetail,
 } from "../lib/questions";
 import { supabase } from "../lib/supabase";
+import { useAuth } from "../state/auth";
+import { useMyProfile } from "../state/profile";
 
 type Props = NativeStackScreenProps<QuestionsStackParamList, "QuestionDetail">;
 
@@ -155,10 +165,18 @@ function AnswerCard({
 
 export default function QuestionDetailScreen({ route }: Props) {
   const { questionId } = route.params;
+  const { session } = useAuth();
+  const { profile } = useMyProfile();
+  const insets = useSafeAreaInsets();
   const [question, setQuestion] = useState<QuestionDetail | null>(null);
   const [answers, setAnswers] = useState<AnswerDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Answer composer state
+  const [answerBody, setAnswerBody] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const userCanAnswer = canSubmitAnswer(profile?.role);
 
   // Avatar signed URL cache & state
   const avatarCache = useRef<Map<string, string>>(new Map());
@@ -228,6 +246,33 @@ export default function QuestionDetailScreen({ route }: Props) {
     load();
   }, [load]);
 
+  const handleSubmitAnswer = useCallback(async () => {
+    const trimmed = answerBody.trim();
+    if (!trimmed) {
+      Alert.alert("Empty answer", "Please write something before submitting.");
+      return;
+    }
+    const userId = session?.user.id;
+    if (!userId) return;
+
+    setSubmitting(true);
+    try {
+      await createAnswer(questionId, userId, trimmed);
+      setAnswerBody("");
+      // Refresh answers list
+      const updated = await fetchAnswersForQuestion(questionId);
+      setAnswers(updated);
+      if (question) resolveAvatars(question, updated);
+    } catch (e: unknown) {
+      Alert.alert(
+        "Error",
+        e instanceof Error ? e.message : "Failed to post answer",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }, [answerBody, session, questionId, question, resolveAvatars]);
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -287,25 +332,80 @@ export default function QuestionDetailScreen({ route }: Props) {
   );
 
   return (
-    <FlatList
-      data={answers}
-      keyExtractor={(item) => item.id}
-      ListHeaderComponent={header}
-      contentContainerStyle={styles.container}
-      renderItem={({ item }) => (
-        <AnswerCard
-          answer={item}
-          avatarUrl={getAvatarUrl(item.author_avatar_path)}
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
+    >
+      <View style={styles.flex}>
+        <FlatList
+          data={answers}
+          keyExtractor={(item) => item.id}
+          ListHeaderComponent={header}
+          contentContainerStyle={styles.listContent}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => (
+            <AnswerCard
+              answer={item}
+              avatarUrl={getAvatarUrl(item.author_avatar_path)}
+            />
+          )}
+          ListEmptyComponent={
+            <View style={styles.emptyAnswers}>
+              <Text style={styles.emptyText}>
+                No answers have been posted yet.
+              </Text>
+            </View>
+          }
         />
-      )}
-      ListEmptyComponent={
-        <View style={styles.emptyAnswers}>
-          <Text style={styles.emptyText}>
-            No answers have been posted yet.
-          </Text>
-        </View>
-      }
-    />
+
+        {/* Answer composer / read-only notice */}
+        {userCanAnswer ? (
+          <View
+            style={[
+              styles.composerBar,
+              { paddingBottom: Math.max(insets.bottom, 12) + 8 },
+            ]}
+          >
+            <TextInput
+              style={styles.composerInput}
+              placeholder="Write an answer..."
+              placeholderTextColor="#94a3b8"
+              value={answerBody}
+              onChangeText={setAnswerBody}
+              multiline
+              editable={!submitting}
+            />
+            <TouchableOpacity
+              style={[
+                styles.composerButton,
+                (!answerBody.trim() || submitting) &&
+                  styles.composerButtonDisabled,
+              ]}
+              onPress={handleSubmitAnswer}
+              disabled={!answerBody.trim() || submitting}
+            >
+              {submitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.composerButtonText}>Post</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View
+            style={[
+              styles.readOnlyBar,
+              { paddingBottom: Math.max(insets.bottom, 12) + 8 },
+            ]}
+          >
+            <Text style={styles.readOnlyText}>
+              Only tutors and admins can answer questions
+            </Text>
+          </View>
+        )}
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -322,7 +422,7 @@ const styles = StyleSheet.create({
   },
   errorText: { fontSize: 16, color: "#c00", textAlign: "center" },
   spacer: { height: 16 },
-  container: { padding: 16, paddingBottom: 32 },
+  listContent: { padding: 16, paddingBottom: 80 },
 
   // Question section
   questionSection: { marginBottom: 8 },
@@ -429,4 +529,61 @@ const styles = StyleSheet.create({
   // Empty answers
   emptyAnswers: { alignItems: "center", paddingVertical: 24 },
   emptyText: { fontSize: 14, color: "#888", fontStyle: "italic" },
+
+  // Layout
+  flex: { flex: 1 },
+
+  // Answer composer
+  composerBar: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    padding: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#e2e8f0",
+    backgroundColor: "#fff",
+  },
+  composerInput: {
+    flex: 1,
+    minHeight: 40,
+    maxHeight: 100,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: "#1e293b",
+    backgroundColor: "#f8fafc",
+  },
+  composerButton: {
+    marginLeft: 8,
+    backgroundColor: "#3b82f6",
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  composerButtonDisabled: {
+    opacity: 0.5,
+  },
+  composerButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+
+  // Read-only notice
+  readOnlyBar: {
+    padding: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#e2e8f0",
+    backgroundColor: "#f8fafc",
+    alignItems: "center",
+  },
+  readOnlyText: {
+    fontSize: 13,
+    color: "#94a3b8",
+    fontStyle: "italic",
+  },
 });

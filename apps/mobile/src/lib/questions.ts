@@ -1,3 +1,4 @@
+import type { ProfileRole } from "@tae/shared";
 import { supabase } from "./supabase";
 
 // ---------------------------------------------------------------------------
@@ -134,4 +135,48 @@ export async function fetchAnswersForQuestion(
       author_role: profile?.role ?? null,
     };
   });
+}
+
+// ---------------------------------------------------------------------------
+// Create an answer
+// ---------------------------------------------------------------------------
+
+export async function createAnswer(
+  questionId: string,
+  authorId: string,
+  body: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("answers")
+    .insert({ question_id: questionId, body, author_id: authorId });
+  if (error) throw new Error(error.message);
+}
+
+// ---------------------------------------------------------------------------
+// Create a question
+// ---------------------------------------------------------------------------
+
+export async function createQuestion(
+  authorId: string,
+  title: string,
+  body: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("questions")
+    .insert({ title, body, author_id: authorId });
+  if (error) throw new Error(error.message);
+}
+
+// ---------------------------------------------------------------------------
+// Role helpers
+// ---------------------------------------------------------------------------
+
+/** Roles that are allowed to submit answers. */
+const ANSWER_ROLES: ReadonlySet<ProfileRole> = new Set<ProfileRole>([
+  "tutor",
+  "admin",
+]);
+
+export function canSubmitAnswer(role: ProfileRole | null | undefined): boolean {
+  return !!role && ANSWER_ROLES.has(role);
 }
