@@ -5,6 +5,7 @@ import DirectoryScreen from "../screens/DirectoryScreen";
 import ProfileDetailScreen from "../screens/ProfileDetailScreen";
 import QuestionsScreen from "../screens/QuestionsScreen";
 import QuestionDetailScreen from "../screens/QuestionDetailScreen";
+import NewQuestionScreen from "../screens/NewQuestionScreen";
 import AdminScreen from "../screens/AdminScreen";
 
 export type MoreStackParamList = {
@@ -13,6 +14,7 @@ export type MoreStackParamList = {
   ProfileDetail: { profileId: string };
   QuestionsList: undefined;
   QuestionDetail: { questionId: string };
+  NewQuestion: undefined;
   AdminDashboard: undefined;
 };
 
@@ -45,6 +47,11 @@ export default function MoreStack() {
         name="QuestionDetail"
         component={QuestionDetailScreen}
         options={{ title: "Question" }}
+      />
+      <Stack.Screen
+        name="NewQuestion"
+        component={NewQuestionScreen}
+        options={{ title: "Ask a Question" }}
       />
       <Stack.Screen
         name="AdminDashboard"

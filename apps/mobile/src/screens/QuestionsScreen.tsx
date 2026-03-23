@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Button,
@@ -7,6 +7,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -207,6 +208,20 @@ export default function QuestionsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Header "Ask" button
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => navigation.navigate("NewQuestion" as never)}
+          style={styles.headerButton}
+        >
+          <Text style={styles.headerButtonText}>Ask</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
+
   // Avatar signed URL cache & state
   const avatarCache = useRef<Map<string, string>>(new Map());
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({});
@@ -290,6 +305,8 @@ export default function QuestionsScreen() {
     return (
       <View style={styles.center}>
         <Text style={styles.emptyText}>No questions yet</Text>
+        <View style={styles.spacer} />
+        <Button title="Ask a Question" onPress={() => navigation.navigate("NewQuestion" as never)} />
         <View style={styles.spacer} />
         <Button title="Refresh" onPress={load} />
       </View>
@@ -413,5 +430,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     color: "#3b82f6",
+  },
+  // Header button
+  headerButton: {
+    backgroundColor: "#3b82f6",
+    borderRadius: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  headerButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
   },
 });
