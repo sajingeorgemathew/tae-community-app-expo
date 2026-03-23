@@ -141,9 +141,11 @@ const FEED_LIMIT = 50;
 
 export interface FeedCommentPreview {
   id: string;
+  author_id: string;
   author_name: string;
   content: string;
   created_at: string;
+  updated_at: string | null;
 }
 
 export interface FeedPost extends PostWithAuthor {
@@ -188,9 +190,11 @@ async function fetchCommentPreviews(postIds: string[]): Promise<{
         const profile = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles;
         latestByPost.set(pid, {
           id: c.id as string,
+          author_id: c.author_id as string,
           author_name: (profile as { full_name?: string } | null)?.full_name ?? "Unknown",
           content: c.content as string,
           created_at: c.created_at as string,
+          updated_at: (c.updated_at as string) ?? null,
         });
       }
     }
@@ -481,6 +485,19 @@ export async function deleteComment(commentId: string): Promise<void> {
   const { error } = await supabase
     .from("post_comments")
     .delete()
+    .eq("id", commentId);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Update a comment's content.
+ * RLS allows only the comment author (author_id = auth.uid()) to update.
+ */
+export async function updateComment(commentId: string, content: string): Promise<void> {
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("post_comments")
+    .update({ content: content.trim(), updated_at: now })
     .eq("id", commentId);
   if (error) throw new Error(error.message);
 }

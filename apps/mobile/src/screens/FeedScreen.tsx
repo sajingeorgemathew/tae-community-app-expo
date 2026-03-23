@@ -3,6 +3,8 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -12,7 +14,17 @@ import {
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import type { FeedStackParamList } from "../navigation/FeedStack";
-import { fetchFeedPosts, toggleReaction, deletePost, type FeedPost, type Emoji } from "../lib/posts";
+import {
+  fetchFeedPosts,
+  toggleReaction,
+  deletePost,
+  addComment,
+  updateComment,
+  deleteComment,
+  type FeedPost,
+  type FeedCommentPreview,
+  type Emoji,
+} from "../lib/posts";
 import PostCard from "../components/PostCard";
 import { useAuth } from "../state/auth";
 import { useMyProfile } from "../state/profile";
@@ -106,6 +118,72 @@ export default function FeedScreen() {
     ]);
   }, []);
 
+  // Comment handlers for feed cards
+  const handleAddComment = useCallback(async (postId: string, content: string): Promise<FeedCommentPreview | null> => {
+    try {
+      const created = await addComment(postId, content);
+      // Update the post's comment data in feed state
+      setPosts((prev) =>
+        prev.map((p) => {
+          if (p.id !== postId) return p;
+          const preview: FeedCommentPreview = {
+            id: created.id,
+            author_id: created.author_id,
+            author_name: created.author_name,
+            content: created.content,
+            created_at: created.created_at,
+            updated_at: created.updated_at,
+          };
+          return {
+            ...p,
+            commentCount: p.commentCount + 1,
+            latestComment: preview,
+          };
+        }),
+      );
+      return {
+        id: created.id,
+        author_id: created.author_id,
+        author_name: created.author_name,
+        content: created.content,
+        created_at: created.created_at,
+        updated_at: created.updated_at,
+      };
+    } catch (e: unknown) {
+      Alert.alert("Error", e instanceof Error ? e.message : "Failed to add comment");
+      return null;
+    }
+  }, []);
+
+  const handleEditComment = useCallback(async (commentId: string, content: string): Promise<boolean> => {
+    try {
+      await updateComment(commentId, content);
+      return true;
+    } catch (e: unknown) {
+      Alert.alert("Error", e instanceof Error ? e.message : "Failed to update comment");
+      return false;
+    }
+  }, []);
+
+  const handleDeleteComment = useCallback((postId: string, commentId: string) => {
+    (async () => {
+      try {
+        await deleteComment(commentId);
+        // Update feed state
+        setPosts((prev) =>
+          prev.map((p) => {
+            if (p.id !== postId) return p;
+            const newCount = Math.max(0, p.commentCount - 1);
+            const newLatest = p.latestComment?.id === commentId ? null : p.latestComment;
+            return { ...p, commentCount: newCount, latestComment: newLatest };
+          }),
+        );
+      } catch (e: unknown) {
+        Alert.alert("Error", e instanceof Error ? e.message : "Failed to delete comment");
+      }
+    })();
+  }, []);
+
   // Refresh feed every time the screen comes into focus (e.g. after creating a post)
   useFocusEffect(
     useCallback(() => {
@@ -169,11 +247,17 @@ export default function FeedScreen() {
 
   // ---------- Feed list ----------
   return (
-    <View style={styles.root}>
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 80}
+    >
       <FlatList
         data={filteredPosts}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -222,22 +306,26 @@ export default function FeedScreen() {
           </View>
         }
         renderItem={({ item }) => {
-          const isOwner = currentUserId != null && item.author_id === currentUserId;
+          const itemIsOwner = currentUserId != null && item.author_id === currentUserId;
           return (
             <PostCard
               post={item}
               onPress={() => navigation.navigate("PostDetail", { postId: item.id })}
               onImagePress={(uri) => navigation.navigate("ImageViewer", { uri })}
               onReactionPress={(emoji) => handleReaction(item.id, emoji)}
-              isOwner={isOwner}
+              isOwner={itemIsOwner}
               isAdmin={isAdmin}
-              onEdit={isOwner ? () => navigation.navigate("EditPost", { postId: item.id, content: item.content }) : undefined}
-              onDelete={isOwner || isAdmin ? () => handleDelete(item.id) : undefined}
+              onEdit={itemIsOwner ? () => navigation.navigate("EditPost", { postId: item.id, content: item.content }) : undefined}
+              onDelete={itemIsOwner || isAdmin ? () => handleDelete(item.id) : undefined}
+              currentUserId={currentUserId}
+              onAddComment={handleAddComment}
+              onEditComment={handleEditComment}
+              onDeleteComment={handleDeleteComment}
             />
           );
         }}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -250,7 +338,7 @@ const styles = StyleSheet.create({
     padding: 32,
     backgroundColor: "#f5f6f8",
   },
-  list: { padding: 16, paddingTop: 0 },
+  list: { padding: 16, paddingTop: 0, paddingBottom: 120 },
   filterRow: {
     flexDirection: "row",
     gap: 8,
