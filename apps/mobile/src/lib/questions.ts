@@ -168,6 +168,65 @@ export async function createQuestion(
 }
 
 // ---------------------------------------------------------------------------
+// Update / Delete helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Update an owned question (RLS: author_id = auth.uid()).
+ */
+export async function updateQuestion(
+  questionId: string,
+  title: string,
+  body: string,
+): Promise<void> {
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("questions")
+    .update({ title: title.trim(), body: body.trim(), updated_at: now })
+    .eq("id", questionId);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Delete a question.
+ * RLS allows owner (author_id = auth.uid()) OR admin to delete.
+ */
+export async function deleteQuestion(questionId: string): Promise<void> {
+  const { error } = await supabase
+    .from("questions")
+    .delete()
+    .eq("id", questionId);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Update an owned answer (RLS: author_id = auth.uid()).
+ */
+export async function updateAnswer(
+  answerId: string,
+  body: string,
+): Promise<void> {
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("answers")
+    .update({ body: body.trim(), updated_at: now })
+    .eq("id", answerId);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Delete an answer.
+ * RLS allows owner (author_id = auth.uid()) OR admin to delete.
+ */
+export async function deleteAnswer(answerId: string): Promise<void> {
+  const { error } = await supabase
+    .from("answers")
+    .delete()
+    .eq("id", answerId);
+  if (error) throw new Error(error.message);
+}
+
+// ---------------------------------------------------------------------------
 // Role helpers
 // ---------------------------------------------------------------------------
 

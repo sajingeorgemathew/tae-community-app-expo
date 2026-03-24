@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { createSignedUrl, STORAGE_BUCKETS } from "@tae/shared";
 import type { QuestionsStackParamList } from "../navigation/QuestionsStack";
 import {
@@ -279,9 +279,11 @@ export default function QuestionsScreen() {
     }
   }, [resolveAvatars]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
   if (loading) {
     return (
