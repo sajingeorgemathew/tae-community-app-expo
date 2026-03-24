@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -12,23 +11,12 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Profile } from "@tae/shared";
 import { createSignedUrl, STORAGE_BUCKETS } from "@tae/shared";
 import { supabase } from "../lib/supabase";
-import { displayRole } from "../lib/roles";
+import MemberCard from "../components/MemberCard";
 import type { FacultyStackParamList } from "../navigation/FacultyStack";
 
 type Props = NativeStackScreenProps<FacultyStackParamList, "FacultyList">;
 
 const FETCH_LIMIT = 100;
-
-function displayName(profile: Profile): string {
-  return profile.full_name || "Unknown";
-}
-
-function secondaryLine(profile: Profile): string {
-  const parts: string[] = [displayRole(profile.role)];
-  if (profile.program) parts.push(profile.program);
-  if (profile.qualifications) parts.push(profile.qualifications);
-  return parts.join(" · ");
-}
 
 export default function FacultyScreen({ navigation }: Props) {
   const [faculty, setFaculty] = useState<Profile[]>([]);
@@ -127,35 +115,15 @@ export default function FacultyScreen({ navigation }: Props) {
       data={faculty}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.list}
-      renderItem={({ item }) => {
-        const url = getAvatarUrl(item.avatar_path);
-        return (
-          <Pressable
-            style={styles.row}
-            onPress={() =>
-              navigation.navigate("FacultyDetail", { profileId: item.id })
-            }
-          >
-            {url ? (
-              <Image source={{ uri: url }} style={styles.avatar} />
-            ) : (
-              <View style={[styles.avatar, styles.avatarPlaceholder]}>
-                <Text style={styles.avatarInitial}>
-                  {displayName(item)[0].toUpperCase()}
-                </Text>
-              </View>
-            )}
-            <View style={styles.info}>
-              <Text style={styles.name} numberOfLines={1}>
-                {displayName(item)}
-              </Text>
-              <Text style={styles.secondary} numberOfLines={1}>
-                {secondaryLine(item)}
-              </Text>
-            </View>
-          </Pressable>
-        );
-      }}
+      renderItem={({ item }) => (
+        <MemberCard
+          profile={item}
+          avatarUrl={getAvatarUrl(item.avatar_path)}
+          onPressProfile={() =>
+            navigation.navigate("FacultyDetail", { profileId: item.id })
+          }
+        />
+      )}
     />
   );
 }
@@ -178,22 +146,4 @@ const styles = StyleSheet.create({
   },
   retryText: { color: "#fff", fontWeight: "600" },
   list: { paddingVertical: 8 },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#e0e0e0",
-  },
-  avatar: { width: 48, height: 48, borderRadius: 24 },
-  avatarPlaceholder: {
-    backgroundColor: "#ddd",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  avatarInitial: { fontSize: 20, fontWeight: "bold", color: "#555" },
-  info: { marginLeft: 12, flex: 1 },
-  name: { fontSize: 16, fontWeight: "600", color: "#111" },
-  secondary: { fontSize: 13, color: "#666", marginTop: 2 },
 });

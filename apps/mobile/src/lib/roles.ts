@@ -20,3 +20,25 @@ export function displayRole(role: string): string {
     role.charAt(0).toUpperCase() + role.slice(1)
   );
 }
+
+/** Colour set for role badges. */
+export interface RoleBadgeColors {
+  bg: string;
+  text: string;
+  border: string;
+}
+
+const ROLE_BADGE_COLORS: Record<string, RoleBadgeColors> = {
+  tutor: { bg: "#d1fae5", text: "#047857", border: "#a7f3d0" },
+  admin: { bg: "#dbeafe", text: "#1d4ed8", border: "#bfdbfe" },
+};
+
+const DEFAULT_BADGE_COLORS: RoleBadgeColors = {
+  bg: "#f1f5f9",
+  text: "#475569",
+  border: "#e2e8f0",
+};
+
+export function roleBadgeColors(role: string): RoleBadgeColors {
+  return ROLE_BADGE_COLORS[role] ?? DEFAULT_BADGE_COLORS;
+}

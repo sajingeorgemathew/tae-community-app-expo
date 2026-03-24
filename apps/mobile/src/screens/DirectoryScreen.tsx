@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -12,32 +11,19 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Profile } from "@tae/shared";
 import { createSignedUrl, STORAGE_BUCKETS } from "@tae/shared";
 import { supabase } from "../lib/supabase";
-import { displayRole } from "../lib/roles";
+import MemberCard from "../components/MemberCard";
 import type { DirectoryStackParamList } from "../navigation/DirectoryStack";
 
 type Props = NativeStackScreenProps<DirectoryStackParamList, "DirectoryList">;
 
 const FETCH_LIMIT = 100;
 
-/** Resolve display name with safe fallback order. */
-function displayName(profile: Profile): string {
-  return profile.full_name || "Unknown";
-}
-
-/** Secondary line: role + program/grad_year when available. */
-function secondaryLine(profile: Profile): string {
-  const parts: string[] = [displayRole(profile.role)];
-  if (profile.program) parts.push(profile.program);
-  if (profile.grad_year) parts.push(String(profile.grad_year));
-  return parts.join(" · ");
-}
-
 export default function DirectoryScreen({ navigation }: Props) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Cache: avatar_path → signed URL
+  // Cache: avatar_path -> signed URL
   const avatarCache = useRef<Map<string, string>>(new Map());
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({});
 
@@ -121,35 +107,15 @@ export default function DirectoryScreen({ navigation }: Props) {
       data={profiles}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.list}
-      renderItem={({ item }) => {
-        const url = getAvatarUrl(item.avatar_path);
-        return (
-          <Pressable
-            style={styles.row}
-            onPress={() =>
-              navigation.navigate("ProfileDetail", { profileId: item.id })
-            }
-          >
-            {url ? (
-              <Image source={{ uri: url }} style={styles.avatar} />
-            ) : (
-              <View style={[styles.avatar, styles.avatarPlaceholder]}>
-                <Text style={styles.avatarInitial}>
-                  {displayName(item)[0].toUpperCase()}
-                </Text>
-              </View>
-            )}
-            <View style={styles.info}>
-              <Text style={styles.name} numberOfLines={1}>
-                {displayName(item)}
-              </Text>
-              <Text style={styles.secondary} numberOfLines={1}>
-                {secondaryLine(item)}
-              </Text>
-            </View>
-          </Pressable>
-        );
-      }}
+      renderItem={({ item }) => (
+        <MemberCard
+          profile={item}
+          avatarUrl={getAvatarUrl(item.avatar_path)}
+          onPressProfile={() =>
+            navigation.navigate("ProfileDetail", { profileId: item.id })
+          }
+        />
+      )}
     />
   );
 }
@@ -171,22 +137,4 @@ const styles = StyleSheet.create({
   },
   retryText: { color: "#fff", fontWeight: "600" },
   list: { paddingVertical: 8 },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#e0e0e0",
-  },
-  avatar: { width: 48, height: 48, borderRadius: 24 },
-  avatarPlaceholder: {
-    backgroundColor: "#ddd",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  avatarInitial: { fontSize: 20, fontWeight: "bold", color: "#555" },
-  info: { marginLeft: 12, flex: 1 },
-  name: { fontSize: 16, fontWeight: "600", color: "#111" },
-  secondary: { fontSize: 13, color: "#666", marginTop: 2 },
 });
