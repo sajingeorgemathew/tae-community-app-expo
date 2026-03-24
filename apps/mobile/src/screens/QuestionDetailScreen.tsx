@@ -7,12 +7,14 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { createSignedUrl, STORAGE_BUCKETS } from "@tae/shared";
@@ -22,6 +24,10 @@ import {
   fetchAnswersForQuestion,
   createAnswer,
   canSubmitAnswer,
+  deleteQuestion,
+  updateQuestion,
+  deleteAnswer,
+  updateAnswer,
   type QuestionDetail,
   type AnswerDetail,
 } from "../lib/questions";
@@ -131,9 +137,29 @@ function RoleBadge({ role }: { role: string }) {
 function AnswerCard({
   answer,
   avatarUrl,
+  canEdit,
+  canDelete,
+  onEdit,
+  onDelete,
+  isEditing,
+  editBody,
+  onEditBodyChange,
+  onEditSave,
+  onEditCancel,
+  editSaving,
 }: {
   answer: AnswerDetail;
   avatarUrl?: string;
+  canEdit: boolean;
+  canDelete: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  isEditing: boolean;
+  editBody: string;
+  onEditBodyChange: (text: string) => void;
+  onEditSave: () => void;
+  onEditCancel: () => void;
+  editSaving: boolean;
 }) {
   const showBadge =
     answer.author_role === "tutor" || answer.author_role === "admin";
@@ -154,7 +180,62 @@ function AnswerCard({
           </Text>
         </View>
       </View>
-      <Text style={styles.answerBody}>{answer.body}</Text>
+
+      {isEditing ? (
+        <View>
+          <TextInput
+            style={styles.editInput}
+            value={editBody}
+            onChangeText={onEditBodyChange}
+            multiline
+            editable={!editSaving}
+            autoFocus
+          />
+          <View style={styles.editActions}>
+            <Pressable
+              style={styles.editCancelButton}
+              onPress={onEditCancel}
+              disabled={editSaving}
+            >
+              <Text style={styles.editCancelText}>Cancel</Text>
+            </Pressable>
+            <Pressable
+              style={[
+                styles.editSaveButton,
+                (!editBody.trim() || editSaving) && styles.editSaveButtonDisabled,
+              ]}
+              onPress={onEditSave}
+              disabled={!editBody.trim() || editSaving}
+            >
+              {editSaving ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.editSaveText}>Save</Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      ) : (
+        <Text style={styles.answerBody}>{answer.body}</Text>
+      )}
+
+      {!isEditing && (canEdit || canDelete) && (
+        <View style={styles.actionsRow}>
+          {canEdit && (
+            <Pressable style={styles.actionButton} onPress={onEdit}>
+              <Text style={styles.actionButtonText}>Edit</Text>
+            </Pressable>
+          )}
+          {canDelete && (
+            <Pressable
+              style={styles.actionButtonDestructive}
+              onPress={onDelete}
+            >
+              <Text style={styles.actionButtonDestructiveText}>Delete</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -163,7 +244,7 @@ function AnswerCard({
 // QuestionDetailScreen
 // ---------------------------------------------------------------------------
 
-export default function QuestionDetailScreen({ route }: Props) {
+export default function QuestionDetailScreen({ route, navigation }: Props) {
   const { questionId } = route.params;
   const { session } = useAuth();
   const { profile } = useMyProfile();
@@ -177,6 +258,21 @@ export default function QuestionDetailScreen({ route }: Props) {
   const [answerBody, setAnswerBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const userCanAnswer = canSubmitAnswer(profile?.role);
+
+  // Inline question editing state
+  const [editingQuestion, setEditingQuestion] = useState(false);
+  const [editQuestionTitle, setEditQuestionTitle] = useState("");
+  const [editQuestionBody, setEditQuestionBody] = useState("");
+  const [editQuestionSaving, setEditQuestionSaving] = useState(false);
+
+  // Inline answer editing state
+  const [editingAnswerId, setEditingAnswerId] = useState<string | null>(null);
+  const [editingAnswerBody, setEditingAnswerBody] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+
+  // Current user info
+  const currentUserId = session?.user?.id ?? null;
+  const isAdmin = profile?.role === "admin";
 
   // Avatar signed URL cache & state
   const avatarCache = useRef<Map<string, string>>(new Map());
@@ -242,9 +338,11 @@ export default function QuestionDetailScreen({ route }: Props) {
     }
   }, [questionId, resolveAvatars]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
   const handleSubmitAnswer = useCallback(async () => {
     const trimmed = answerBody.trim();
@@ -273,6 +371,135 @@ export default function QuestionDetailScreen({ route }: Props) {
     }
   }, [answerBody, session, questionId, question, resolveAvatars]);
 
+  // -- Question actions --
+  const handleEditQuestion = useCallback(() => {
+    if (!question) return;
+    setEditQuestionTitle(question.title);
+    setEditQuestionBody(question.body);
+    setEditingQuestion(true);
+  }, [question]);
+
+  const handleEditQuestionCancel = useCallback(() => {
+    setEditingQuestion(false);
+    setEditQuestionTitle("");
+    setEditQuestionBody("");
+  }, []);
+
+  const handleEditQuestionSave = useCallback(async () => {
+    if (!question || !editQuestionTitle.trim() || !editQuestionBody.trim()) return;
+    setEditQuestionSaving(true);
+    try {
+      await updateQuestion(question.id, editQuestionTitle, editQuestionBody);
+      // Optimistic local update so the UI reflects changes immediately
+      setQuestion((prev) =>
+        prev
+          ? { ...prev, title: editQuestionTitle.trim(), body: editQuestionBody.trim() }
+          : prev,
+      );
+      setEditingQuestion(false);
+      setEditQuestionTitle("");
+      setEditQuestionBody("");
+      // Background refetch to sync with server truth
+      fetchQuestionById(questionId).then((updated) => setQuestion(updated)).catch(() => {});
+    } catch (e: unknown) {
+      Alert.alert(
+        "Error",
+        e instanceof Error ? e.message : "Failed to update question",
+      );
+    } finally {
+      setEditQuestionSaving(false);
+    }
+  }, [question, editQuestionTitle, editQuestionBody, questionId]);
+
+  const handleDeleteQuestion = useCallback(() => {
+    Alert.alert(
+      "Delete Question",
+      "Are you sure you want to delete this question?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteQuestion(questionId);
+              navigation.goBack();
+            } catch (e: unknown) {
+              Alert.alert(
+                "Error",
+                e instanceof Error ? e.message : "Failed to delete question",
+              );
+            }
+          },
+        },
+      ],
+    );
+  }, [questionId, navigation]);
+
+  // -- Answer actions --
+  const handleEditAnswer = useCallback((answer: AnswerDetail) => {
+    setEditingAnswerId(answer.id);
+    setEditingAnswerBody(answer.body);
+  }, []);
+
+  const handleEditAnswerCancel = useCallback(() => {
+    setEditingAnswerId(null);
+    setEditingAnswerBody("");
+  }, []);
+
+  const handleEditAnswerSave = useCallback(async () => {
+    if (!editingAnswerId || !editingAnswerBody.trim()) return;
+    setEditSaving(true);
+    try {
+      await updateAnswer(editingAnswerId, editingAnswerBody);
+      setEditingAnswerId(null);
+      setEditingAnswerBody("");
+      const updated = await fetchAnswersForQuestion(questionId);
+      setAnswers(updated);
+      if (question) resolveAvatars(question, updated);
+    } catch (e: unknown) {
+      Alert.alert(
+        "Error",
+        e instanceof Error ? e.message : "Failed to update answer",
+      );
+    } finally {
+      setEditSaving(false);
+    }
+  }, [editingAnswerId, editingAnswerBody, questionId, question, resolveAvatars]);
+
+  const handleDeleteAnswer = useCallback(
+    (answerId: string) => {
+      Alert.alert(
+        "Delete Answer",
+        "Are you sure you want to delete this answer?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await deleteAnswer(answerId);
+                const updated = await fetchAnswersForQuestion(questionId);
+                setAnswers(updated);
+                if (question) resolveAvatars(question, updated);
+              } catch (e: unknown) {
+                Alert.alert(
+                  "Error",
+                  e instanceof Error
+                    ? e.message
+                    : "Failed to delete answer",
+                );
+              }
+            },
+          },
+        ],
+      );
+    },
+    [questionId, question, resolveAvatars],
+  );
+
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -291,31 +518,120 @@ export default function QuestionDetailScreen({ route }: Props) {
     );
   }
 
+  const isQuestionOwner =
+    currentUserId != null && question.author_id === currentUserId;
+  const canEditQuestion = isQuestionOwner;
+  const canDeleteQuestion = isQuestionOwner || isAdmin;
+
+  const editQuestionChanged =
+    editQuestionTitle.trim() !== question.title.trim() ||
+    editQuestionBody.trim() !== question.body.trim();
+  const canSaveQuestionEdit =
+    editQuestionTitle.trim().length > 0 &&
+    editQuestionBody.trim().length > 0 &&
+    editQuestionChanged &&
+    !editQuestionSaving;
+
   const header = (
     <View style={styles.questionSection}>
       {/* Question header card */}
       <View style={styles.questionCard}>
-        <Text style={styles.questionTitle}>{question.title}</Text>
-
-        {/* Author row */}
-        <View style={styles.authorRow}>
-          <Avatar
-            name={question.author_name}
-            uri={getAvatarUrl(question.author_avatar_path)}
-            size={36}
-          />
-          <View style={styles.authorMeta}>
-            <Text style={styles.authorName} numberOfLines={1}>
-              {question.author_name}
-            </Text>
-            <Text style={styles.authorDate}>
-              {relativeTime(question.created_at)}
-            </Text>
+        {editingQuestion ? (
+          <View>
+            <Text style={styles.editLabel}>Title</Text>
+            <TextInput
+              style={styles.editTitleInput}
+              value={editQuestionTitle}
+              onChangeText={setEditQuestionTitle}
+              editable={!editQuestionSaving}
+              autoFocus
+            />
+            <Text style={styles.editLabel}>Body</Text>
+            <TextInput
+              style={styles.editInput}
+              value={editQuestionBody}
+              onChangeText={setEditQuestionBody}
+              multiline
+              editable={!editQuestionSaving}
+            />
+            <View style={styles.editActions}>
+              <Pressable
+                style={styles.editCancelButton}
+                onPress={handleEditQuestionCancel}
+                disabled={editQuestionSaving}
+              >
+                <Text style={styles.editCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.editSaveButton,
+                  !canSaveQuestionEdit && styles.editSaveButtonDisabled,
+                ]}
+                onPress={handleEditQuestionSave}
+                disabled={!canSaveQuestionEdit}
+              >
+                {editQuestionSaving ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.editSaveText}>Save</Text>
+                )}
+              </Pressable>
+            </View>
           </View>
-        </View>
+        ) : (
+          <>
+            <Text style={styles.questionTitle}>{question.title}</Text>
 
-        {/* Body */}
-        <Text style={styles.questionBody}>{question.body}</Text>
+            {/* Author row */}
+            <View style={styles.authorRow}>
+              <Avatar
+                name={question.author_name}
+                uri={getAvatarUrl(question.author_avatar_path)}
+                size={36}
+              />
+              <View style={styles.authorMeta}>
+                <Text style={styles.authorName} numberOfLines={1}>
+                  {question.author_name}
+                </Text>
+                <Text style={styles.authorDate}>
+                  {relativeTime(question.created_at)}
+                </Text>
+              </View>
+            </View>
+
+            {/* Body */}
+            <Text style={styles.questionBody}>{question.body}</Text>
+
+            {/* Owner / admin actions */}
+            {(canEditQuestion || canDeleteQuestion) && (
+              <View style={styles.questionActionsContainer}>
+                <Text style={styles.questionActionsLabel}>
+                  Question actions
+                </Text>
+                <View style={styles.actionsRow}>
+                  {canEditQuestion && (
+                    <Pressable
+                      style={styles.actionButton}
+                      onPress={handleEditQuestion}
+                    >
+                      <Text style={styles.actionButtonText}>Edit</Text>
+                    </Pressable>
+                  )}
+                  {canDeleteQuestion && (
+                    <Pressable
+                      style={styles.actionButtonDestructive}
+                      onPress={handleDeleteQuestion}
+                    >
+                      <Text style={styles.actionButtonDestructiveText}>
+                        Delete
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+            )}
+          </>
+        )}
       </View>
 
       {/* Answers heading */}
@@ -344,12 +660,26 @@ export default function QuestionDetailScreen({ route }: Props) {
           ListHeaderComponent={header}
           contentContainerStyle={styles.listContent}
           keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) => (
-            <AnswerCard
-              answer={item}
-              avatarUrl={getAvatarUrl(item.author_avatar_path)}
-            />
-          )}
+          renderItem={({ item }) => {
+            const isAnswerOwner =
+              currentUserId != null && item.author_id === currentUserId;
+            return (
+              <AnswerCard
+                answer={item}
+                avatarUrl={getAvatarUrl(item.author_avatar_path)}
+                canEdit={isAnswerOwner}
+                canDelete={isAnswerOwner || isAdmin}
+                onEdit={() => handleEditAnswer(item)}
+                onDelete={() => handleDeleteAnswer(item.id)}
+                isEditing={editingAnswerId === item.id}
+                editBody={editingAnswerBody}
+                onEditBodyChange={setEditingAnswerBody}
+                onEditSave={handleEditAnswerSave}
+                onEditCancel={handleEditAnswerCancel}
+                editSaving={editSaving}
+              />
+            );
+          }}
           ListEmptyComponent={
             <View style={styles.emptyAnswers}>
               <Text style={styles.emptyText}>
@@ -524,6 +854,115 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     color: "#3b82f6",
+  },
+
+  // Question actions container
+  questionActionsContainer: {
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#e2e8f0",
+  },
+  questionActionsLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#94a3b8",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  // Owner / admin actions
+  actionsRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  // Inline question editing
+  editLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#64748b",
+    marginBottom: 4,
+    marginTop: 8,
+  },
+  editTitleInput: {
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: "#1e293b",
+    backgroundColor: "#f8fafc",
+  },
+  actionButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#4a6fa5",
+  },
+  actionButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#4a6fa5",
+  },
+  actionButtonDestructive: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#c00",
+  },
+  actionButtonDestructiveText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#c00",
+  },
+
+  // Inline answer editing
+  editInput: {
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: "#1e293b",
+    backgroundColor: "#f8fafc",
+    minHeight: 60,
+    textAlignVertical: "top",
+  },
+  editActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+    marginTop: 8,
+  },
+  editCancelButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#94a3b8",
+  },
+  editCancelText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  editSaveButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: "#3b82f6",
+  },
+  editSaveButtonDisabled: {
+    opacity: 0.5,
+  },
+  editSaveText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#fff",
   },
 
   // Empty answers

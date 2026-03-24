@@ -3,7 +3,6 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import QuestionsScreen from "../screens/QuestionsScreen";
 import QuestionDetailScreen from "../screens/QuestionDetailScreen";
 import NewQuestionScreen from "../screens/NewQuestionScreen";
-
 export type QuestionsStackParamList = {
   QuestionsList: undefined;
   QuestionDetail: { questionId: string };
