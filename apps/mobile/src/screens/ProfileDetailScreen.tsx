@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -8,11 +9,13 @@ import {
   Text,
   View,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Profile } from "@tae/shared";
 import { createSignedUrl, STORAGE_BUCKETS } from "@tae/shared";
 import { supabase } from "../lib/supabase";
-import { displayRole } from "../lib/roles";
+import { displayRole, roleBadgeColors } from "../lib/roles";
+import { useAuth } from "../state/auth";
 import type { DirectoryStackParamList } from "../navigation/DirectoryStack";
 
 type Props = NativeStackScreenProps<DirectoryStackParamList, "ProfileDetail">;
@@ -23,10 +26,13 @@ function displayName(profile: Profile): string {
 
 export default function ProfileDetailScreen({ route }: Props) {
   const { profileId } = route.params;
+  const { session } = useAuth();
+  const rootNav = useNavigation<any>();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [messaging, setMessaging] = useState(false);
 
   const resolvedAvatarPath = useRef<string | null>(null);
 
@@ -70,6 +76,29 @@ export default function ProfileDetailScreen({ route }: Props) {
     fetchProfile();
   }, [fetchProfile]);
 
+  const isSelf = session?.user?.id === profileId;
+
+  const handleMessage = async () => {
+    if (!profile || messaging || isSelf) return;
+    setMessaging(true);
+    try {
+      const { data, error: rpcError } = await supabase.rpc(
+        "create_conversation_1to1",
+        { other_user_id: profile.id },
+      );
+      if (rpcError) throw new Error(rpcError.message);
+      const conversationId = data as string;
+      rootNav.navigate("Messages", {
+        screen: "Conversation",
+        params: { conversationId, otherUserName: displayName(profile) },
+      });
+    } catch (e: any) {
+      Alert.alert("Error", e.message ?? "Could not start conversation");
+    } finally {
+      setMessaging(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -89,6 +118,8 @@ export default function ProfileDetailScreen({ route }: Props) {
     );
   }
 
+  const badge = roleBadgeColors(profile.role);
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {avatarUrl ? (
@@ -102,7 +133,17 @@ export default function ProfileDetailScreen({ route }: Props) {
       )}
 
       <Text style={styles.name}>{displayName(profile)}</Text>
-      <Text style={styles.role}>{displayRole(profile.role)}</Text>
+
+      <View
+        style={[
+          styles.badge,
+          { backgroundColor: badge.bg, borderColor: badge.border },
+        ]}
+      >
+        <Text style={[styles.badgeText, { color: badge.text }]}>
+          {displayRole(profile.role).toUpperCase()}
+        </Text>
+      </View>
 
       {profile.headline ? (
         <Text style={styles.headline}>{profile.headline}</Text>
@@ -110,8 +151,23 @@ export default function ProfileDetailScreen({ route }: Props) {
 
       {profile.program || profile.grad_year ? (
         <Text style={styles.detail}>
-          {[profile.program, profile.grad_year].filter(Boolean).join(" · ")}
+          {[profile.program, profile.grad_year].filter(Boolean).join(" \u00B7 ")}
         </Text>
+      ) : null}
+
+      {/* Action buttons */}
+      {!isSelf ? (
+        <Pressable
+          style={[styles.messageBtn, messaging && styles.messageBtnDisabled]}
+          onPress={handleMessage}
+          disabled={messaging}
+        >
+          {messaging ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.messageBtnText}>Message</Text>
+          )}
+        </Pressable>
       ) : null}
 
       {profile.current_work ? (
@@ -161,12 +217,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   avatarInitial: { fontSize: 36, fontWeight: "bold", color: "#555" },
-  name: { fontSize: 22, fontWeight: "bold", marginBottom: 4 },
-  role: {
-    fontSize: 14,
-    color: "#888",
+  name: { fontSize: 22, fontWeight: "bold", marginBottom: 6 },
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
     marginBottom: 8,
   },
+  badgeText: { fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
   headline: {
     fontSize: 14,
     color: "#444",
@@ -174,6 +233,17 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   detail: { fontSize: 13, color: "#666", marginBottom: 12 },
+  messageBtn: {
+    width: "100%",
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: "#111",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  messageBtnDisabled: { opacity: 0.6 },
+  messageBtnText: { fontSize: 14, fontWeight: "600", color: "#fff" },
   section: {
     width: "100%",
     marginTop: 16,
