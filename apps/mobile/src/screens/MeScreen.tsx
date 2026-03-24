@@ -16,6 +16,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { Profile } from "@tae/shared";
 import type { MeStackParamList } from "../navigation/MeStack";
 import { useAuth } from "../state/auth";
+import { displayRole } from "../lib/roles";
 import { useMyProfile } from "../state/profile";
 import { fetchUserPosts, type FeedPost } from "../lib/posts";
 import PostCard from "../components/PostCard";
@@ -101,7 +102,7 @@ function ProfileHeader({
       </TouchableOpacity>
 
       <Text style={styles.name}>{profile.full_name ?? "No name"}</Text>
-      <Text style={styles.role}>{profile.role}</Text>
+      <Text style={styles.role}>{displayRole(profile.role)}</Text>
 
       {profile.headline ? (
         <Text style={styles.headline}>{profile.headline}</Text>
@@ -356,7 +357,6 @@ const styles = StyleSheet.create({
   role: {
     fontSize: 14,
     color: "#888",
-    textTransform: "capitalize",
     marginBottom: 6,
   },
   headline: {

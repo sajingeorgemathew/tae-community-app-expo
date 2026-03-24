@@ -19,6 +19,7 @@ import {
   type QuestionFeedRow,
 } from "../lib/questions";
 import { supabase } from "../lib/supabase";
+import { displayRole } from "../lib/roles";
 
 type Nav = NativeStackNavigationProp<QuestionsStackParamList, "QuestionsList">;
 
@@ -116,7 +117,7 @@ function Avatar({
 function RoleBadge({ role }: { role: string }) {
   return (
     <View style={styles.badge}>
-      <Text style={styles.badgeText}>{role}</Text>
+      <Text style={styles.badgeText}>{displayRole(role)}</Text>
     </View>
   );
 }
