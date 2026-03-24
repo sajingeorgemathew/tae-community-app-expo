@@ -12,6 +12,7 @@ import type { Profile } from "@tae/shared";
 import { createSignedUrl, STORAGE_BUCKETS } from "@tae/shared";
 import { supabase } from "../lib/supabase";
 import MemberCard from "../components/MemberCard";
+import { useOnlineUsers } from "../hooks/useOnlineUsers";
 import type { FacultyStackParamList } from "../navigation/FacultyStack";
 
 type Props = NativeStackScreenProps<FacultyStackParamList, "FacultyList">;
@@ -25,6 +26,9 @@ export default function FacultyScreen({ navigation }: Props) {
 
   const avatarCache = useRef<Map<string, string>>(new Map());
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({});
+
+  const facultyIds = faculty.map((p) => p.id);
+  const onlineUsers = useOnlineUsers(facultyIds);
 
   const fetchFaculty = useCallback(async () => {
     setLoading(true);
@@ -119,6 +123,7 @@ export default function FacultyScreen({ navigation }: Props) {
         <MemberCard
           profile={item}
           avatarUrl={getAvatarUrl(item.avatar_path)}
+          isOnline={onlineUsers.has(item.id)}
           onPressProfile={() =>
             navigation.navigate("FacultyDetail", { profileId: item.id })
           }

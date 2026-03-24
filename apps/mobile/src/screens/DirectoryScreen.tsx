@@ -12,6 +12,7 @@ import type { Profile } from "@tae/shared";
 import { createSignedUrl, STORAGE_BUCKETS } from "@tae/shared";
 import { supabase } from "../lib/supabase";
 import MemberCard from "../components/MemberCard";
+import { useOnlineUsers } from "../hooks/useOnlineUsers";
 import type { DirectoryStackParamList } from "../navigation/DirectoryStack";
 
 type Props = NativeStackScreenProps<DirectoryStackParamList, "DirectoryList">;
@@ -26,6 +27,9 @@ export default function DirectoryScreen({ navigation }: Props) {
   // Cache: avatar_path -> signed URL
   const avatarCache = useRef<Map<string, string>>(new Map());
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({});
+
+  const profileIds = profiles.map((p) => p.id);
+  const onlineUsers = useOnlineUsers(profileIds);
 
   const fetchProfiles = useCallback(async () => {
     setLoading(true);
@@ -111,6 +115,7 @@ export default function DirectoryScreen({ navigation }: Props) {
         <MemberCard
           profile={item}
           avatarUrl={getAvatarUrl(item.avatar_path)}
+          isOnline={onlineUsers.has(item.id)}
           onPressProfile={() =>
             navigation.navigate("ProfileDetail", { profileId: item.id })
           }

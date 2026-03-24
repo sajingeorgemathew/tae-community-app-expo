@@ -148,7 +148,6 @@ export default function ConversationScreen({ route, navigation }: Props) {
   const [attachment, setAttachment] =
     useState<ImagePicker.ImagePickerAsset | null>(null);
   const listRef = useRef<FlatList<MessageWithAttachments>>(null);
-  const initialScrollDone = useRef(false);
 
   useEffect(() => {
     if (otherUserName) {
@@ -185,15 +184,11 @@ export default function ConversationScreen({ route, navigation }: Props) {
     load();
   }, [load]);
 
-  // Auto-scroll to bottom on initial load
-  useEffect(() => {
-    if (!loading && messages.length > 0 && !initialScrollDone.current) {
-      initialScrollDone.current = true;
-      setTimeout(() => {
-        listRef.current?.scrollToEnd({ animated: false });
-      }, 100);
-    }
-  }, [loading, messages.length]);
+  // Reversed copy for the inverted FlatList (newest-first in data order).
+  const reversedMessages = React.useMemo(
+    () => [...messages].reverse(),
+    [messages],
+  );
 
   const pickAttachment = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -257,9 +252,6 @@ export default function ConversationScreen({ route, navigation }: Props) {
       setText("");
       setAttachment(null);
       await load();
-      setTimeout(() => {
-        listRef.current?.scrollToEnd({ animated: true });
-      }, 100);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to send message";
       setSendError(attachment ? `Attachment failed: ${msg}` : msg);
@@ -310,22 +302,29 @@ export default function ConversationScreen({ route, navigation }: Props) {
       ) : (
         <FlatList
           ref={listRef}
-          data={messages}
+          data={reversedMessages}
+          inverted
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           style={styles.listBg}
           renderItem={({ item, index }) => {
             const isMine = item.sender_id === myUserId;
-            const prevMessage = index > 0 ? messages[index - 1] : null;
-            const nextMessage =
-              index < messages.length - 1 ? messages[index + 1] : null;
+            // In the inverted list the visual message "above" is at index+1
+            // and the visual message "below" is at index-1.
+            const aboveMessage =
+              index < reversedMessages.length - 1
+                ? reversedMessages[index + 1]
+                : null;
+            const belowMessage =
+              index > 0 ? reversedMessages[index - 1] : null;
             const showDate =
-              !prevMessage ||
+              !aboveMessage ||
               new Date(item.created_at).toDateString() !==
-                new Date(prevMessage.created_at).toDateString();
-            const isGrouped = !showDate && isSameGroup(item, prevMessage);
+                new Date(aboveMessage.created_at).toDateString();
+            const isGrouped =
+              !showDate && isSameGroup(item, aboveMessage);
             const isLast =
-              !nextMessage || !isSameGroup(nextMessage, item);
+              !belowMessage || !isSameGroup(belowMessage, item);
 
             return (
               <>

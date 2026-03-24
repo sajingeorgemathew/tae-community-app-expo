@@ -15,6 +15,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { ConversationListItem } from "@tae/shared";
 import type { MessagesStackParamList } from "../navigation/MessagesStack";
 import { fetchMyConversations, resolveAvatarUrl } from "../lib/messages";
+import { useOnlineUsers } from "../hooks/useOnlineUsers";
 
 type Nav = NativeStackNavigationProp<MessagesStackParamList, "MessagesList">;
 
@@ -43,10 +44,12 @@ function ConversationRow({
   item,
   avatarUrl,
   onPress,
+  isOnline,
 }: {
   item: ConversationListItem;
   avatarUrl: string | null;
   onPress: () => void;
+  isOnline: boolean;
 }) {
   const name = item.other_user_name || "Unknown";
   const preview = item.last_message_content
@@ -61,15 +64,18 @@ function ConversationRow({
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
       onPress={onPress}
     >
-      {avatarUrl ? (
-        <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-      ) : (
-        <View style={[styles.avatar, styles.avatarPlaceholder]}>
-          <Text style={styles.avatarInitial}>
-            {name.charAt(0).toUpperCase()}
-          </Text>
-        </View>
-      )}
+      <View>
+        {avatarUrl ? (
+          <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+        ) : (
+          <View style={[styles.avatar, styles.avatarPlaceholder]}>
+            <Text style={styles.avatarInitial}>
+              {name.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+        )}
+        {isOnline ? <View style={styles.presenceDot} /> : null}
+      </View>
       <View style={styles.rowContent}>
         <View style={styles.rowTop}>
           <Text
@@ -122,6 +128,9 @@ export default function MessagesScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const otherUserIds = conversations.map((c) => c.other_user_id);
+  const onlineUsers = useOnlineUsers(otherUserIds);
 
   const load = useCallback(async (isRefresh = false) => {
     if (!isRefresh) setLoading(true);
@@ -211,6 +220,7 @@ export default function MessagesScreen() {
         <ConversationRow
           item={item}
           avatarUrl={avatarUrls.get(item.conversation_id) ?? null}
+          isOnline={onlineUsers.has(item.other_user_id)}
           onPress={() =>
             navigation.navigate("Conversation", {
               conversationId: item.conversation_id,
@@ -296,6 +306,17 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 26,
     marginRight: 12,
+  },
+  presenceDot: {
+    position: "absolute",
+    bottom: 0,
+    right: 12,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#34C759",
+    borderWidth: 2,
+    borderColor: "#fff",
   },
   avatarPlaceholder: {
     backgroundColor: "#007AFF",
