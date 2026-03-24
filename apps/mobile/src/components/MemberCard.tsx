@@ -23,6 +23,8 @@ interface MemberCardProps {
   avatarUrl?: string;
   /** Called when avatar or name is tapped. Falls back to no-op. */
   onPressProfile?: () => void;
+  /** Show green presence dot on the avatar. */
+  isOnline?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -48,6 +50,7 @@ export default function MemberCard({
   profile,
   avatarUrl,
   onPressProfile,
+  isOnline,
 }: MemberCardProps) {
   const { session } = useAuth();
   const navigation = useNavigation<any>();
@@ -82,15 +85,18 @@ export default function MemberCard({
     <View style={styles.card}>
       {/* Header: avatar + name + badge */}
       <Pressable style={styles.header} onPress={onPressProfile}>
-        {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-        ) : (
-          <View style={[styles.avatar, styles.avatarPlaceholder]}>
-            <Text style={styles.avatarInitial}>
-              {name[0].toUpperCase()}
-            </Text>
-          </View>
-        )}
+        <View>
+          {avatarUrl ? (
+            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+              <Text style={styles.avatarInitial}>
+                {name[0].toUpperCase()}
+              </Text>
+            </View>
+          )}
+          {isOnline ? <View style={styles.presenceDot} /> : null}
+        </View>
         <View style={styles.headerText}>
           <View style={styles.nameRow}>
             <Text style={styles.name} numberOfLines={1}>
@@ -166,6 +172,17 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   avatar: { width: 52, height: 52, borderRadius: 26 },
+  presenceDot: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#34C759",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
   avatarPlaceholder: {
     backgroundColor: "#ddd",
     justifyContent: "center",
