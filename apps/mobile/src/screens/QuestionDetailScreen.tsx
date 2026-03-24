@@ -32,6 +32,7 @@ import {
   type AnswerDetail,
 } from "../lib/questions";
 import { supabase } from "../lib/supabase";
+import { displayRole } from "../lib/roles";
 import { useAuth } from "../state/auth";
 import { useMyProfile } from "../state/profile";
 
@@ -125,7 +126,7 @@ function Avatar({
 function RoleBadge({ role }: { role: string }) {
   return (
     <View style={styles.badge}>
-      <Text style={styles.badgeText}>{role}</Text>
+      <Text style={styles.badgeText}>{displayRole(role)}</Text>
     </View>
   );
 }
@@ -730,7 +731,7 @@ export default function QuestionDetailScreen({ route, navigation }: Props) {
             ]}
           >
             <Text style={styles.readOnlyText}>
-              Only tutors and admins can answer questions
+              Only Instructors and admins can answer questions
             </Text>
           </View>
         )}

@@ -12,6 +12,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Profile } from "@tae/shared";
 import { createSignedUrl, STORAGE_BUCKETS } from "@tae/shared";
 import { supabase } from "../lib/supabase";
+import { displayRole } from "../lib/roles";
 import type { DirectoryStackParamList } from "../navigation/DirectoryStack";
 
 type Props = NativeStackScreenProps<DirectoryStackParamList, "DirectoryList">;
@@ -25,7 +26,7 @@ function displayName(profile: Profile): string {
 
 /** Secondary line: role + program/grad_year when available. */
 function secondaryLine(profile: Profile): string {
-  const parts: string[] = [profile.role];
+  const parts: string[] = [displayRole(profile.role)];
   if (profile.program) parts.push(profile.program);
   if (profile.grad_year) parts.push(String(profile.grad_year));
   return parts.join(" · ");

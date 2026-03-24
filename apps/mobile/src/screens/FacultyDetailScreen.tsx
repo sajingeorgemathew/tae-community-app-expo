@@ -12,6 +12,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Profile } from "@tae/shared";
 import { createSignedUrl, STORAGE_BUCKETS } from "@tae/shared";
 import { supabase } from "../lib/supabase";
+import { displayRole } from "../lib/roles";
 import type { FacultyStackParamList } from "../navigation/FacultyStack";
 
 type Props = NativeStackScreenProps<FacultyStackParamList, "FacultyDetail">;
@@ -100,7 +101,7 @@ export default function FacultyDetailScreen({ route }: Props) {
       )}
 
       <Text style={styles.name}>{displayName(profile)}</Text>
-      <Text style={styles.role}>{profile.role}</Text>
+      <Text style={styles.role}>{displayRole(profile.role)}</Text>
 
       {profile.headline ? (
         <Text style={styles.headline}>{profile.headline}</Text>
@@ -163,7 +164,6 @@ const styles = StyleSheet.create({
   role: {
     fontSize: 14,
     color: "#888",
-    textTransform: "capitalize",
     marginBottom: 8,
   },
   headline: {
