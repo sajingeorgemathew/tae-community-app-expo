@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Button,
   FlatList,
   Image,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -50,12 +51,16 @@ function ConversationRow({
   const name = item.other_user_name || "Unknown";
   const preview = item.last_message_content
     ? item.last_message_content.length > 80
-      ? item.last_message_content.slice(0, 80) + "…"
+      ? item.last_message_content.slice(0, 80) + "\u2026"
       : item.last_message_content
     : "No messages yet";
+  const hasUnreadBadge = item.is_unread && item.unread_count > 0;
 
   return (
-    <Pressable style={styles.row} onPress={onPress}>
+    <Pressable
+      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+      onPress={onPress}
+    >
       {avatarUrl ? (
         <Image source={{ uri: avatarUrl }} style={styles.avatar} />
       ) : (
@@ -73,16 +78,34 @@ function ConversationRow({
           >
             {name}
           </Text>
-          {item.last_message_at ? (
-            <Text style={styles.time}>{formatTime(item.last_message_at)}</Text>
+          <View style={styles.rowTopRight}>
+            {item.last_message_at ? (
+              <Text
+                style={[
+                  styles.time,
+                  item.is_unread && styles.timeUnread,
+                ]}
+              >
+                {formatTime(item.last_message_at)}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+        <View style={styles.rowBottom}>
+          <Text
+            style={[styles.preview, item.is_unread && styles.previewBold]}
+            numberOfLines={1}
+          >
+            {preview}
+          </Text>
+          {hasUnreadBadge ? (
+            <View style={styles.unreadBadge}>
+              <Text style={styles.unreadBadgeText}>
+                {item.unread_count > 99 ? "99+" : item.unread_count}
+              </Text>
+            </View>
           ) : null}
         </View>
-        <Text
-          style={[styles.preview, item.is_unread && styles.previewBold]}
-          numberOfLines={1}
-        >
-          {preview}
-        </Text>
       </View>
     </Pressable>
   );
@@ -97,10 +120,11 @@ export default function MessagesScreen() {
     new Map(),
   );
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
     setError(null);
     try {
       const data = await fetchMyConversations();
@@ -129,6 +153,7 @@ export default function MessagesScreen() {
       );
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -136,10 +161,16 @@ export default function MessagesScreen() {
     load();
   }, [load]);
 
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    load(true);
+  }, [load]);
+
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading conversations...</Text>
       </View>
     );
   }
@@ -147,9 +178,12 @@ export default function MessagesScreen() {
   if (error) {
     return (
       <View style={styles.center}>
+        <Text style={styles.errorIcon}>!</Text>
         <Text style={styles.errorText}>{error}</Text>
         <View style={styles.spacer} />
-        <Button title="Retry" onPress={load} />
+        <TouchableOpacity style={styles.retryButton} onPress={() => load()}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -157,9 +191,14 @@ export default function MessagesScreen() {
   if (conversations.length === 0) {
     return (
       <View style={styles.center}>
-        <Text style={styles.emptyText}>No conversations yet</Text>
+        <Text style={styles.emptyIcon}>No messages</Text>
+        <Text style={styles.emptyText}>
+          Your conversations will appear here
+        </Text>
         <View style={styles.spacer} />
-        <Button title="Refresh" onPress={load} />
+        <TouchableOpacity style={styles.retryButton} onPress={() => load()}>
+          <Text style={styles.retryButtonText}>Refresh</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -181,6 +220,14 @@ export default function MessagesScreen() {
         />
       )}
       ItemSeparatorComponent={() => <View style={styles.separator} />}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor="#007AFF"
+        />
+      }
+      contentContainerStyle={styles.listContent}
     />
   );
 }
@@ -191,10 +238,49 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
+    backgroundColor: "#fff",
   },
-  errorText: { fontSize: 16, color: "#c00", textAlign: "center" },
-  emptyText: { fontSize: 16, color: "#666", textAlign: "center" },
+  loadingText: {
+    fontSize: 14,
+    color: "#888",
+    marginTop: 12,
+  },
+  errorIcon: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#c00",
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: "#c00",
+    textAlign: "center",
+    lineHeight: 44,
+    marginBottom: 12,
+  },
+  errorText: { fontSize: 15, color: "#c00", textAlign: "center" },
+  emptyIcon: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#888",
+    marginBottom: 4,
+  },
+  emptyText: { fontSize: 14, color: "#999", textAlign: "center" },
   spacer: { height: 16 },
+  retryButton: {
+    backgroundColor: "#007AFF",
+    borderRadius: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  listContent: {
+    backgroundColor: "#fff",
+  },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -202,18 +288,21 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: "#fff",
   },
+  rowPressed: {
+    backgroundColor: "#f5f5f5",
+  },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     marginRight: 12,
   },
   avatarPlaceholder: {
-    backgroundColor: "#ddd",
+    backgroundColor: "#007AFF",
     justifyContent: "center",
     alignItems: "center",
   },
-  avatarInitial: { fontSize: 18, fontWeight: "600", color: "#666" },
+  avatarInitial: { fontSize: 20, fontWeight: "600", color: "#fff" },
   rowContent: { flex: 1 },
   rowTop: {
     flexDirection: "row",
@@ -221,10 +310,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 4,
   },
-  name: { fontSize: 15, color: "#111", flex: 1, marginRight: 8 },
+  rowTopRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 8,
+  },
+  name: { fontSize: 16, color: "#111", flex: 1, marginRight: 8 },
   nameBold: { fontWeight: "700" },
   time: { fontSize: 12, color: "#888" },
-  preview: { fontSize: 13, color: "#666" },
+  timeUnread: { color: "#007AFF", fontWeight: "500" },
+  rowBottom: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  preview: { fontSize: 14, color: "#666", flex: 1, marginRight: 8 },
   previewBold: { fontWeight: "600", color: "#333" },
-  separator: { height: 1, backgroundColor: "#eee", marginLeft: 76 },
+  unreadBadge: {
+    backgroundColor: "#007AFF",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 6,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  unreadBadgeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  separator: { height: StyleSheet.hairlineWidth, backgroundColor: "#e0e0e0", marginLeft: 80 },
 });

@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Button,
   FlatList,
   Image,
   KeyboardAvoidingView,
@@ -38,6 +37,13 @@ function formatTime(iso: string): string {
 
 function formatDateHeader(iso: string): string {
   const d = new Date(iso);
+  const now = new Date();
+  const today = now.toDateString();
+  const yesterday = new Date(now.getTime() - 86400000).toDateString();
+  const dateStr = d.toDateString();
+
+  if (dateStr === today) return "Today";
+  if (dateStr === yesterday) return "Yesterday";
   return d.toLocaleDateString(undefined, {
     weekday: "long",
     month: "short",
@@ -45,30 +51,51 @@ function formatDateHeader(iso: string): string {
   });
 }
 
+/** Check if two consecutive messages should be visually grouped (same sender, within 2 min). */
+function isSameGroup(
+  current: MessageWithAttachments,
+  prev: MessageWithAttachments | null,
+): boolean {
+  if (!prev) return false;
+  if (current.sender_id !== prev.sender_id) return false;
+  const diffMs =
+    new Date(current.created_at).getTime() -
+    new Date(prev.created_at).getTime();
+  return diffMs < 2 * 60 * 1000;
+}
+
 function MessageBubble({
   message,
   isMine,
   imageUrls,
+  isGrouped,
+  isLast,
 }: {
   message: MessageWithAttachments;
   isMine: boolean;
   imageUrls: Map<string, string>;
+  isGrouped: boolean;
+  isLast: boolean;
 }) {
   const imageAttachments = message.message_attachments?.filter(
     (a) => a.type === "image",
   );
+  const showTime = isLast || !isGrouped;
 
   return (
     <View
       style={[
         styles.bubbleRow,
         isMine ? styles.bubbleRowRight : styles.bubbleRowLeft,
+        isGrouped ? styles.bubbleRowGrouped : styles.bubbleRowSpaced,
       ]}
     >
       <View
         style={[
           styles.bubble,
           isMine ? styles.bubbleMine : styles.bubbleTheirs,
+          isLast && isMine && styles.bubbleMineTail,
+          isLast && !isMine && styles.bubbleTheirsTail,
         ]}
       >
         {message.content ? (
@@ -93,9 +120,13 @@ function MessageBubble({
             />
           );
         })}
-        <Text style={[styles.time, isMine ? styles.timeMine : styles.timeTheirs]}>
-          {formatTime(message.created_at)}
-        </Text>
+        {showTime ? (
+          <Text
+            style={[styles.time, isMine ? styles.timeMine : styles.timeTheirs]}
+          >
+            {formatTime(message.created_at)}
+          </Text>
+        ) : null}
       </View>
     </View>
   );
@@ -114,8 +145,10 @@ export default function ConversationScreen({ route, navigation }: Props) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
-  const [attachment, setAttachment] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [attachment, setAttachment] =
+    useState<ImagePicker.ImagePickerAsset | null>(null);
   const listRef = useRef<FlatList<MessageWithAttachments>>(null);
+  const initialScrollDone = useRef(false);
 
   useEffect(() => {
     if (otherUserName) {
@@ -152,6 +185,16 @@ export default function ConversationScreen({ route, navigation }: Props) {
     load();
   }, [load]);
 
+  // Auto-scroll to bottom on initial load
+  useEffect(() => {
+    if (!loading && messages.length > 0 && !initialScrollDone.current) {
+      initialScrollDone.current = true;
+      setTimeout(() => {
+        listRef.current?.scrollToEnd({ animated: false });
+      }, 100);
+    }
+  }, [loading, messages.length]);
+
   const pickAttachment = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images", "videos"],
@@ -184,24 +227,27 @@ export default function ConversationScreen({ route, navigation }: Props) {
 
       // 2) Upload attachment & insert linkage if present
       if (attachment) {
-        const fileName = attachment.fileName ?? `attachment.${attachment.type === "video" ? "mp4" : "jpg"}`;
+        const fileName =
+          attachment.fileName ??
+          `attachment.${attachment.type === "video" ? "mp4" : "jpg"}`;
         try {
           await uploadAndLinkAttachment({
             conversationId,
             messageId,
             fileUri: attachment.uri,
-            mimeType: attachment.mimeType ?? (attachment.type === "video" ? "video/mp4" : "image/jpeg"),
+            mimeType:
+              attachment.mimeType ??
+              (attachment.type === "video" ? "video/mp4" : "image/jpeg"),
             fileName,
             fileSize: attachment.fileSize ?? undefined,
           });
         } catch (attachErr: unknown) {
           // Attachment failed — rollback the message row if it has no text content
-          // (i.e. it would be a ghost/blank row without the attachment)
           if (!trimmed) {
             try {
               await deleteMessage(messageId);
             } catch {
-              // Best-effort rollback; the original error is more important
+              // Best-effort rollback
             }
           }
           throw attachErr;
@@ -219,9 +265,7 @@ export default function ConversationScreen({ route, navigation }: Props) {
       setSendError(attachment ? `Attachment failed: ${msg}` : msg);
       Alert.alert(
         "Send failed",
-        attachment
-          ? `Could not upload attachment. ${msg}`
-          : msg,
+        attachment ? `Could not upload attachment. ${msg}` : msg,
       );
     } finally {
       setSending(false);
@@ -233,7 +277,7 @@ export default function ConversationScreen({ route, navigation }: Props) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#007AFF" />
       </View>
     );
   }
@@ -243,7 +287,9 @@ export default function ConversationScreen({ route, navigation }: Props) {
       <View style={styles.center}>
         <Text style={styles.errorText}>{error}</Text>
         <View style={styles.spacer} />
-        <Button title="Retry" onPress={load} />
+        <TouchableOpacity style={styles.retryButton} onPress={load}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -256,7 +302,10 @@ export default function ConversationScreen({ route, navigation }: Props) {
     >
       {messages.length === 0 ? (
         <View style={styles.center}>
-          <Text style={styles.emptyText}>No messages yet</Text>
+          <Text style={styles.emptyTitle}>No messages yet</Text>
+          <Text style={styles.emptySubtitle}>
+            Send a message to start the conversation
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -264,25 +313,37 @@ export default function ConversationScreen({ route, navigation }: Props) {
           data={messages}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          style={styles.listBg}
           renderItem={({ item, index }) => {
             const isMine = item.sender_id === myUserId;
             const prevMessage = index > 0 ? messages[index - 1] : null;
+            const nextMessage =
+              index < messages.length - 1 ? messages[index + 1] : null;
             const showDate =
               !prevMessage ||
               new Date(item.created_at).toDateString() !==
                 new Date(prevMessage.created_at).toDateString();
+            const isGrouped = !showDate && isSameGroup(item, prevMessage);
+            const isLast =
+              !nextMessage || !isSameGroup(nextMessage, item);
 
             return (
               <>
                 {showDate ? (
-                  <Text style={styles.dateHeader}>
-                    {formatDateHeader(item.created_at)}
-                  </Text>
+                  <View style={styles.dateHeaderContainer}>
+                    <View style={styles.dateHeaderPill}>
+                      <Text style={styles.dateHeaderText}>
+                        {formatDateHeader(item.created_at)}
+                      </Text>
+                    </View>
+                  </View>
                 ) : null}
                 <MessageBubble
                   message={item}
                   isMine={isMine}
                   imageUrls={imageUrls}
+                  isGrouped={isGrouped}
+                  isLast={isLast}
                 />
               </>
             );
@@ -304,8 +365,11 @@ export default function ConversationScreen({ route, navigation }: Props) {
           <Text style={styles.previewName} numberOfLines={1}>
             {attachment.fileName ?? "Attachment"}
           </Text>
-          <TouchableOpacity onPress={removeAttachment} style={styles.previewRemove}>
-            <Text style={styles.previewRemoveText}>✕</Text>
+          <TouchableOpacity
+            onPress={removeAttachment}
+            style={styles.previewRemove}
+          >
+            <Text style={styles.previewRemoveText}>{"\u2715"}</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -321,7 +385,7 @@ export default function ConversationScreen({ route, navigation }: Props) {
         </TouchableOpacity>
         <TextInput
           style={styles.composerInput}
-          placeholder="Type a message…"
+          placeholder="Type a message\u2026"
           placeholderTextColor="#999"
           value={text}
           onChangeText={setText}
@@ -347,53 +411,85 @@ export default function ConversationScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
+  flex: { flex: 1, backgroundColor: "#f6f6f6" },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
+    backgroundColor: "#f6f6f6",
   },
-  errorText: { fontSize: 16, color: "#c00", textAlign: "center" },
-  emptyText: { fontSize: 16, color: "#666", textAlign: "center" },
-  spacer: { height: 16 },
-  list: { padding: 12, paddingBottom: 24 },
-  dateHeader: {
-    fontSize: 12,
+  errorText: { fontSize: 15, color: "#c00", textAlign: "center" },
+  emptyTitle: {
+    fontSize: 17,
+    fontWeight: "600",
     color: "#888",
-    textAlign: "center",
+    marginBottom: 4,
+  },
+  emptySubtitle: { fontSize: 14, color: "#999", textAlign: "center" },
+  spacer: { height: 16 },
+  retryButton: {
+    backgroundColor: "#007AFF",
+    borderRadius: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    marginTop: 16,
+  },
+  retryButtonText: { color: "#fff", fontSize: 15, fontWeight: "600" },
+  listBg: { backgroundColor: "#f6f6f6" },
+  list: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 16 },
+  dateHeaderContainer: {
+    alignItems: "center",
     marginVertical: 12,
+  },
+  dateHeaderPill: {
+    backgroundColor: "rgba(0,0,0,0.06)",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  dateHeaderText: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#666",
   },
   bubbleRow: {
     flexDirection: "row",
-    marginVertical: 2,
   },
   bubbleRowLeft: { justifyContent: "flex-start" },
   bubbleRowRight: { justifyContent: "flex-end" },
+  bubbleRowGrouped: { marginTop: 2 },
+  bubbleRowSpaced: { marginTop: 8 },
   bubble: {
-    maxWidth: "75%",
-    borderRadius: 16,
+    maxWidth: "78%",
+    borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   bubbleMine: {
     backgroundColor: "#007AFF",
+    borderBottomRightRadius: 18,
+  },
+  bubbleMineTail: {
     borderBottomRightRadius: 4,
   },
   bubbleTheirs: {
     backgroundColor: "#E9E9EB",
+    borderBottomLeftRadius: 18,
+  },
+  bubbleTheirsTail: {
     borderBottomLeftRadius: 4,
   },
-  messageText: { fontSize: 15, lineHeight: 20 },
+  messageText: { fontSize: 16, lineHeight: 21 },
   messageTextMine: { color: "#fff" },
   messageTextTheirs: { color: "#111" },
-  time: { fontSize: 10, marginTop: 4 },
-  timeMine: { color: "rgba(255,255,255,0.7)", textAlign: "right" },
+  time: { fontSize: 11, marginTop: 3 },
+  timeMine: { color: "rgba(255,255,255,0.65)", textAlign: "right" },
   timeTheirs: { color: "#888", textAlign: "left" },
   attachmentImage: {
     width: 200,
     height: 150,
-    borderRadius: 8,
+    borderRadius: 10,
     marginTop: 6,
   },
   sendErrorText: {
