@@ -27,6 +27,25 @@ export async function fetchMyConversations(): Promise<ConversationListItem[]> {
 }
 
 // ---------------------------------------------------------------------------
+// Mark conversation as read
+// ---------------------------------------------------------------------------
+
+export async function markConversationAsRead(
+  conversationId: string,
+  userId: string,
+): Promise<void> {
+  const { error } = await supabase.from("conversation_reads").upsert(
+    {
+      conversation_id: conversationId,
+      user_id: userId,
+      last_read_at: new Date().toISOString(),
+    },
+    { onConflict: "conversation_id,user_id" },
+  );
+  if (error) throw new Error(error.message);
+}
+
+// ---------------------------------------------------------------------------
 // Conversation messages
 // ---------------------------------------------------------------------------
 

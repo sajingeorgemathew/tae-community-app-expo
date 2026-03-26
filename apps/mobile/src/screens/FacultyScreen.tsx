@@ -28,7 +28,7 @@ export default function FacultyScreen({ navigation }: Props) {
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({});
 
   const facultyIds = faculty.map((p) => p.id);
-  const onlineUsers = useOnlineUsers(facultyIds);
+  const { online: onlineUsers } = useOnlineUsers(facultyIds);
 
   const fetchFaculty = useCallback(async () => {
     setLoading(true);
