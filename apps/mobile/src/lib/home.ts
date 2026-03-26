@@ -1,3 +1,4 @@
+import { PRESENCE_ONLINE_THRESHOLD_MS } from "@tae/shared";
 import { supabase } from "./supabase";
 import type { FeedPost } from "./posts";
 import { fetchFeedPosts } from "./posts";
@@ -46,6 +47,20 @@ async function fetchQuestionsActivityCount(): Promise<number> {
   }
 }
 
+async function fetchOnlineMembersCount(): Promise<number | null> {
+  try {
+    const threshold = new Date(Date.now() - PRESENCE_ONLINE_THRESHOLD_MS).toISOString();
+    const { count, error } = await supabase
+      .from("presence")
+      .select("user_id", { count: "exact", head: true })
+      .gte("last_seen_at", threshold);
+    if (error) return null;
+    return count ?? 0;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchRecentPosts(): Promise<FeedPost[]> {
   try {
     const posts = await fetchFeedPosts();
@@ -60,18 +75,18 @@ async function fetchRecentPosts(): Promise<FeedPost[]> {
 // ---------------------------------------------------------------------------
 
 export async function fetchDashboardData(userId: string): Promise<DashboardData> {
-  const [unreadMessages, questionsCount, recentPosts] = await Promise.all([
-    fetchUnreadMessagesCount(userId),
-    fetchQuestionsActivityCount(),
-    fetchRecentPosts(),
-  ]);
+  const [unreadMessages, questionsCount, onlineMembers, recentPosts] =
+    await Promise.all([
+      fetchUnreadMessagesCount(userId),
+      fetchQuestionsActivityCount(),
+      fetchOnlineMembersCount(),
+      fetchRecentPosts(),
+    ]);
 
   return {
     unreadMessages,
     questionsCount,
-    // TODO: Online member count requires a presence/heartbeat system.
-    // Using null as a placeholder until a lightweight presence contract exists.
-    onlineMembers: null,
+    onlineMembers,
     recentPosts,
   };
 }

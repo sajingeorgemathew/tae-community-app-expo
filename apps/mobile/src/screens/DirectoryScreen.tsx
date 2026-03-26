@@ -29,7 +29,7 @@ export default function DirectoryScreen({ navigation }: Props) {
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({});
 
   const profileIds = profiles.map((p) => p.id);
-  const onlineUsers = useOnlineUsers(profileIds);
+  const { online: onlineUsers } = useOnlineUsers(profileIds);
 
   const fetchProfiles = useCallback(async () => {
     setLoading(true);

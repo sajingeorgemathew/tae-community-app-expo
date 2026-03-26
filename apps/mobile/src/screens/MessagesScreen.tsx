@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -11,10 +11,11 @@ import {
   View,
 } from "react-native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { ConversationListItem } from "@tae/shared";
 import type { MessagesStackParamList } from "../navigation/MessagesStack";
 import { fetchMyConversations, resolveAvatarUrl } from "../lib/messages";
+import { onMessagingStateChange } from "../lib/messagingEvents";
 import { useOnlineUsers } from "../hooks/useOnlineUsers";
 
 type Nav = NativeStackNavigationProp<MessagesStackParamList, "MessagesList">;
@@ -130,10 +131,15 @@ export default function MessagesScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const otherUserIds = conversations.map((c) => c.other_user_id);
-  const onlineUsers = useOnlineUsers(otherUserIds);
+  const { online: onlineUsers, refetch: refetchOnline } =
+    useOnlineUsers(otherUserIds);
+
+  // Track whether initial load has completed so useFocusEffect can skip the
+  // loading spinner on subsequent focus events (screen already has data).
+  const didInitialLoad = useRef(false);
 
   const load = useCallback(async (isRefresh = false) => {
-    if (!isRefresh) setLoading(true);
+    if (!isRefresh && !didInitialLoad.current) setLoading(true);
     setError(null);
     try {
       const data = await fetchMyConversations();
@@ -161,14 +167,28 @@ export default function MessagesScreen() {
         e instanceof Error ? e.message : "Failed to load conversations",
       );
     } finally {
+      didInitialLoad.current = true;
       setLoading(false);
       setRefreshing(false);
     }
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  // Re-fetch conversations and presence every time this screen gains focus
+  // (including returning from a conversation thread).
+  useFocusEffect(
+    useCallback(() => {
+      load();
+      refetchOnline();
+      // Poll for updates while the screen stays visible (e.g. new messages
+      // from other users). The interval is cleared when the screen loses focus.
+      const id = setInterval(() => { load(true); refetchOnline(); }, 15_000);
+      return () => clearInterval(id);
+    }, [load, refetchOnline]),
+  );
+
+  // Also refresh when messaging state changes elsewhere (e.g. message sent,
+  // conversation marked as read) so the list updates without tab-switching.
+  useEffect(() => onMessagingStateChange(() => load(true)), [load]);
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Button,
@@ -15,6 +15,7 @@ import type { AppTabsParamList } from "../navigation/AppTabs";
 import { useAuth } from "../state/auth";
 import { useMyProfile } from "../state/profile";
 import { fetchDashboardData, type DashboardData } from "../lib/home";
+import { onMessagingStateChange } from "../lib/messagingEvents";
 import type { FeedPost } from "../lib/posts";
 
 type TabNav = BottomTabNavigationProp<AppTabsParamList>;
@@ -100,8 +101,16 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       load();
+      // Poll for updates while the screen stays visible (e.g. new messages
+      // from other users). The interval is cleared when the screen loses focus.
+      const id = setInterval(() => { load(); }, 15_000);
+      return () => clearInterval(id);
     }, [load]),
   );
+
+  // Refresh dashboard when messaging state changes (send/read) so the
+  // unread count updates without requiring a tab switch.
+  useEffect(() => onMessagingStateChange(load), [load]);
 
   // --- Welcome header ---
   const displayName = profile?.full_name?.split(" ")[0] ?? "Member";

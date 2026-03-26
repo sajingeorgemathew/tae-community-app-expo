@@ -19,10 +19,12 @@ import type { MessagesStackParamList } from "../navigation/MessagesStack";
 import {
   deleteMessage,
   fetchConversationMessages,
+  markConversationAsRead,
   resolveMessageSignedUrls,
   sendMessage,
   uploadAndLinkAttachment,
 } from "../lib/messages";
+import { notifyMessagingStateChange } from "../lib/messagingEvents";
 import { useAuth } from "../state/auth";
 
 type Props = NativeStackScreenProps<MessagesStackParamList, "Conversation">;
@@ -162,6 +164,15 @@ export default function ConversationScreen({ route, navigation }: Props) {
       const data = await fetchConversationMessages(conversationId);
       setMessages(data);
 
+      // Mark conversation as read now that messages are loaded
+      if (myUserId) {
+        markConversationAsRead(conversationId, myUserId)
+          .then(() => notifyMessagingStateChange())
+          .catch(() => {
+            // Non-critical — read state will sync on next focus
+          });
+      }
+
       // Resolve image attachment URLs
       const paths = data.flatMap(
         (m) =>
@@ -178,7 +189,7 @@ export default function ConversationScreen({ route, navigation }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [conversationId]);
+  }, [conversationId, myUserId]);
 
   useEffect(() => {
     load();
@@ -252,6 +263,7 @@ export default function ConversationScreen({ route, navigation }: Props) {
       setText("");
       setAttachment(null);
       await load();
+      notifyMessagingStateChange();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to send message";
       setSendError(attachment ? `Attachment failed: ${msg}` : msg);

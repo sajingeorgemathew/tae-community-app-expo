@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PRESENCE_ONLINE_THRESHOLD_MS } from "@tae/shared";
 import { supabase } from "../lib/supabase";
 
@@ -7,12 +7,17 @@ import { supabase } from "../lib/supabase";
  * currently online (within the presence threshold).
  *
  * Re-fetches when userIds changes (by joined-string identity).
+ * Exposes a `refetch` callback so callers can trigger a refresh (e.g. on
+ * screen focus).
  */
-export function useOnlineUsers(userIds: string[]): Set<string> {
+export function useOnlineUsers(userIds: string[]): {
+  online: Set<string>;
+  refetch: () => void;
+} {
   const [online, setOnline] = useState<Set<string>>(new Set());
   const key = userIds.slice().sort().join(",");
 
-  const fetch = useCallback(async () => {
+  const fetchPresence = useCallback(async () => {
     if (userIds.length === 0) {
       setOnline(new Set());
       return;
@@ -39,8 +44,8 @@ export function useOnlineUsers(userIds: string[]): Set<string> {
   }, [key]);
 
   useEffect(() => {
-    fetch();
-  }, [fetch]);
+    fetchPresence();
+  }, [fetchPresence]);
 
-  return online;
+  return { online, refetch: fetchPresence };
 }
