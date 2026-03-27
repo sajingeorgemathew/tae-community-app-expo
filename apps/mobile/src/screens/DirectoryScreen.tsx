@@ -13,6 +13,7 @@ import { createSignedUrl, STORAGE_BUCKETS } from "@tae/shared";
 import { supabase } from "../lib/supabase";
 import MemberCard from "../components/MemberCard";
 import { useOnlineUsers } from "../hooks/useOnlineUsers";
+import { onAdminMemberChange } from "../state/adminMemberEvents";
 import type { DirectoryStackParamList } from "../navigation/DirectoryStack";
 
 type Props = NativeStackScreenProps<DirectoryStackParamList, "DirectoryList">;
@@ -79,6 +80,13 @@ export default function DirectoryScreen({ navigation }: Props) {
 
   useEffect(() => {
     fetchProfiles();
+  }, [fetchProfiles]);
+
+  // Refetch when an admin mutation is saved elsewhere
+  useEffect(() => {
+    return onAdminMemberChange(() => {
+      fetchProfiles();
+    });
   }, [fetchProfiles]);
 
   const getAvatarUrl = (path: string | null): string | undefined => {

@@ -16,6 +16,7 @@ import { createSignedUrl, STORAGE_BUCKETS } from "@tae/shared";
 import { supabase } from "../lib/supabase";
 import { displayRole, roleBadgeColors } from "../lib/roles";
 import { useAuth } from "../state/auth";
+import { emitAdminMemberChange } from "../state/adminMemberEvents";
 import type { MoreStackParamList } from "../navigation/MoreStack";
 
 type Props = NativeStackScreenProps<MoreStackParamList, "AdminMemberDetail">;
@@ -129,8 +130,9 @@ export default function AdminMemberDetailScreen({ route, navigation }: Props) {
       return;
     }
 
-    // Refresh local state from DB
+    // Refresh local state from DB and notify other surfaces
     await fetchProfile();
+    emitAdminMemberChange();
     setSaving(false);
     Alert.alert("Saved", "Member updated successfully.");
   };
