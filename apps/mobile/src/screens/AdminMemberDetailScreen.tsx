@@ -38,6 +38,11 @@ export default function AdminMemberDetailScreen({ route, navigation }: Props) {
   const [isListedAsTutor, setIsListedAsTutor] = useState(false);
   const [isDisabled, setIsDisabled] = useState(false);
 
+  // Derived governance flags
+  const selfRoleBlocked = isSelf;
+  const selfDisableBlocked = isSelf;
+  const instructorToggleDisabled = role !== "tutor";
+
   // ------------------------------------------------------------------
   // Fetch
   // ------------------------------------------------------------------
@@ -78,6 +83,18 @@ export default function AdminMemberDetailScreen({ route, navigation }: Props) {
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
+
+  // ------------------------------------------------------------------
+  // Role change handler — clears instructor listing when leaving tutor
+  // ------------------------------------------------------------------
+
+  const handleRoleChange = (newRole: ProfileRole) => {
+    if (selfRoleBlocked) return;
+    setRole(newRole);
+    if (newRole !== "tutor") {
+      setIsListedAsTutor(false);
+    }
+  };
 
   // ------------------------------------------------------------------
   // Save
@@ -187,22 +204,37 @@ export default function AdminMemberDetailScreen({ route, navigation }: Props) {
 
         {isSelf && (
           <View style={styles.selfNote}>
-            <Text style={styles.selfNoteText}>This is your account</Text>
+            <Text style={styles.selfNoteText}>
+              This is your account — role and disable controls are locked.
+              {role === "tutor"
+                ? " You can still update your Instructor listing."
+                : " Instructor listing is only available for the Instructor role."}
+            </Text>
           </View>
         )}
       </View>
 
       {/* ---- Role ---- */}
-      <View style={styles.section}>
+      <View style={[styles.section, selfRoleBlocked && styles.sectionBlocked]}>
         <Text style={styles.sectionTitle}>Role</Text>
-        <View style={styles.roleOptions}>
+        {selfRoleBlocked && (
+          <Text style={styles.blockedHint}>
+            You cannot change your own role. Another admin must do this.
+          </Text>
+        )}
+        <View style={[styles.roleOptions, selfRoleBlocked && styles.blockedOverlay]}>
           {ASSIGNABLE_ROLES.map((r) => {
             const selected = r === role;
             return (
               <Pressable
                 key={r}
-                style={[styles.roleChip, selected && styles.roleChipSelected]}
-                onPress={() => setRole(r)}
+                style={[
+                  styles.roleChip,
+                  selected && styles.roleChipSelected,
+                  selfRoleBlocked && styles.roleChipDisabled,
+                ]}
+                onPress={() => handleRoleChange(r)}
+                disabled={selfRoleBlocked}
               >
                 <Text
                   style={[
@@ -219,17 +251,20 @@ export default function AdminMemberDetailScreen({ route, navigation }: Props) {
       </View>
 
       {/* ---- Instructor listing ---- */}
-      <View style={styles.section}>
+      <View style={[styles.section, instructorToggleDisabled && styles.sectionBlocked]}>
         <View style={styles.toggleRow}>
           <View style={styles.toggleLabel}>
             <Text style={styles.sectionTitle}>Instructor Listing</Text>
             <Text style={styles.toggleHint}>
-              Show this member on the Instructors page
+              {instructorToggleDisabled
+                ? "Only applies to members with the Instructor role"
+                : "Show this member on the Instructors page"}
             </Text>
           </View>
           <Switch
             value={isListedAsTutor}
             onValueChange={setIsListedAsTutor}
+            disabled={instructorToggleDisabled}
           />
         </View>
       </View>
@@ -353,7 +388,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  selfNoteText: { fontSize: 12, color: "#1d4ed8", fontWeight: "600" },
+  selfNoteText: { fontSize: 12, color: "#1d4ed8", fontWeight: "600", textAlign: "center" },
+
+  // Blocked / disabled section styling
+  sectionBlocked: { opacity: 0.6 },
+  blockedHint: {
+    fontSize: 12,
+    color: "#b45309",
+    marginTop: 4,
+    fontStyle: "italic",
+  },
+  blockedOverlay: { opacity: 0.7 },
+  roleChipDisabled: { opacity: 0.8 },
 
   // Sections
   section: {
