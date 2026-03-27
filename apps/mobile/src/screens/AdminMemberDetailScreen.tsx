@@ -16,6 +16,7 @@ import { createSignedUrl, STORAGE_BUCKETS } from "@tae/shared";
 import { supabase } from "../lib/supabase";
 import { displayRole, roleBadgeColors } from "../lib/roles";
 import { useAuth } from "../state/auth";
+import { useMyProfile } from "../state/profile";
 import { emitAdminMemberChange } from "../state/adminMemberEvents";
 import type { MoreStackParamList } from "../navigation/MoreStack";
 
@@ -26,6 +27,7 @@ const ASSIGNABLE_ROLES: ProfileRole[] = ["member", "tutor", "admin"];
 export default function AdminMemberDetailScreen({ route, navigation }: Props) {
   const { profileId } = route.params;
   const { session } = useAuth();
+  const { profile: myProfile } = useMyProfile();
   const isSelf = session?.user?.id === profileId;
 
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -40,8 +42,12 @@ export default function AdminMemberDetailScreen({ route, navigation }: Props) {
   const [isDisabled, setIsDisabled] = useState(false);
 
   // Derived governance flags
+  const crossAdminBlocked =
+    !isSelf && myProfile?.role === "admin" && profile?.role === "admin";
   const selfRoleBlocked = isSelf;
+  const roleBlocked = selfRoleBlocked || crossAdminBlocked;
   const selfDisableBlocked = isSelf;
+  const disableBlocked = selfDisableBlocked || crossAdminBlocked;
   const instructorToggleDisabled = role !== "tutor";
 
   // ------------------------------------------------------------------
@@ -90,7 +96,7 @@ export default function AdminMemberDetailScreen({ route, navigation }: Props) {
   // ------------------------------------------------------------------
 
   const handleRoleChange = (newRole: ProfileRole) => {
-    if (selfRoleBlocked) return;
+    if (roleBlocked) return;
     setRole(newRole);
     if (newRole !== "tutor") {
       setIsListedAsTutor(false);
@@ -214,17 +220,31 @@ export default function AdminMemberDetailScreen({ route, navigation }: Props) {
             </Text>
           </View>
         )}
+
+        {crossAdminBlocked && (
+          <View style={styles.crossAdminNote}>
+            <Text style={styles.crossAdminNoteText}>
+              Admins cannot modify other admin accounts. Role and disable
+              controls are restricted.
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* ---- Role ---- */}
-      <View style={[styles.section, selfRoleBlocked && styles.sectionBlocked]}>
+      <View style={[styles.section, roleBlocked && styles.sectionBlocked]}>
         <Text style={styles.sectionTitle}>Role</Text>
         {selfRoleBlocked && (
           <Text style={styles.blockedHint}>
             You cannot change your own role. Another admin must do this.
           </Text>
         )}
-        <View style={[styles.roleOptions, selfRoleBlocked && styles.blockedOverlay]}>
+        {crossAdminBlocked && (
+          <Text style={styles.blockedHint}>
+            Admins cannot modify other admin accounts.
+          </Text>
+        )}
+        <View style={[styles.roleOptions, roleBlocked && styles.blockedOverlay]}>
           {ASSIGNABLE_ROLES.map((r) => {
             const selected = r === role;
             return (
@@ -233,10 +253,10 @@ export default function AdminMemberDetailScreen({ route, navigation }: Props) {
                 style={[
                   styles.roleChip,
                   selected && styles.roleChipSelected,
-                  selfRoleBlocked && styles.roleChipDisabled,
+                  roleBlocked && styles.roleChipDisabled,
                 ]}
                 onPress={() => handleRoleChange(r)}
-                disabled={selfRoleBlocked}
+                disabled={roleBlocked}
               >
                 <Text
                   style={[
@@ -272,20 +292,22 @@ export default function AdminMemberDetailScreen({ route, navigation }: Props) {
       </View>
 
       {/* ---- Disable / Enable ---- */}
-      <View style={styles.section}>
+      <View style={[styles.section, disableBlocked && styles.sectionBlocked]}>
         <View style={styles.toggleRow}>
           <View style={styles.toggleLabel}>
             <Text style={styles.sectionTitle}>Account Disabled</Text>
             <Text style={styles.toggleHint}>
               {isSelf
                 ? "You cannot disable your own account"
-                : "Disabled accounts cannot access the app"}
+                : crossAdminBlocked
+                  ? "Admins cannot modify other admin accounts"
+                  : "Disabled accounts cannot access the app"}
             </Text>
           </View>
           <Switch
             value={isDisabled}
             onValueChange={setIsDisabled}
-            disabled={isSelf}
+            disabled={disableBlocked}
           />
         </View>
       </View>
@@ -391,6 +413,14 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   selfNoteText: { fontSize: 12, color: "#1d4ed8", fontWeight: "600", textAlign: "center" },
+  crossAdminNote: {
+    marginTop: 10,
+    backgroundColor: "#fef3c7",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  crossAdminNoteText: { fontSize: 12, color: "#92400e", fontWeight: "600", textAlign: "center" },
 
   // Blocked / disabled section styling
   sectionBlocked: { opacity: 0.6 },
