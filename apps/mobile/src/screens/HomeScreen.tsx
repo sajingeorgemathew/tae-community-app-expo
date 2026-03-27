@@ -9,6 +9,15 @@ import {
   Text,
   View,
 } from "react-native";
+
+// ---------------------------------------------------------------------------
+// Lightweight image-preview aspect-ratio helpers (mirrors PostCard constants
+// but kept inline so Home doesn't depend on the full Feed card).
+// ---------------------------------------------------------------------------
+const MIN_PREVIEW_AR = 1; // tallest allowed (square)
+const MAX_PREVIEW_AR = 2.5; // widest allowed
+const NORMAL_AR_LOW = 0.8; // below → contain (very tall)
+const NORMAL_AR_HIGH = 2.2; // above → contain (very wide)
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { AppTabsParamList } from "../navigation/AppTabs";
@@ -54,18 +63,46 @@ function PostPreviewCard({
       ? post.content.slice(0, 100) + "…"
       : post.content;
 
+  // Detect real aspect ratio so the preview avoids aggressive cropping
+  const [detectedAR, setDetectedAR] = useState<number | null>(null);
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    if (!post.imageUrl) return;
+    Image.getSize(
+      post.imageUrl,
+      (w, h) => { if (h > 0) setDetectedAR(w / h); },
+      () => { /* fall back to default 16:9 */ },
+    );
+  }, [post.imageUrl]);
+
+  const previewAR = detectedAR
+    ? Math.min(MAX_PREVIEW_AR, Math.max(MIN_PREVIEW_AR, detectedAR))
+    : 16 / 9;
+  const useContain =
+    detectedAR != null &&
+    (detectedAR < NORMAL_AR_LOW || detectedAR > NORMAL_AR_HIGH);
+
   return (
     <Pressable style={styles.postCard} onPress={onPress}>
       <View style={styles.postHeader}>
         <Text style={styles.postAuthor}>{authorName}</Text>
       </View>
       <Text style={styles.postContent}>{preview}</Text>
-      {post.imageUrl ? (
-        <Image
-          source={{ uri: post.imageUrl }}
-          style={styles.postThumbnail}
-          resizeMode="cover"
-        />
+      {post.imageUrl && !imgError ? (
+        <View
+          style={[
+            styles.postImageWrapper,
+            useContain && styles.postImageWrapperContain,
+          ]}
+        >
+          <Image
+            source={{ uri: post.imageUrl }}
+            style={[styles.postThumbnail, { aspectRatio: previewAR }]}
+            resizeMode={useContain ? "contain" : "cover"}
+            onError={() => setImgError(true)}
+          />
+        </View>
       ) : null}
     </Pressable>
   );
@@ -342,10 +379,18 @@ const styles = StyleSheet.create({
     color: "#555",
     lineHeight: 18,
   },
+  postImageWrapper: {
+    borderRadius: 6,
+    overflow: "hidden",
+    marginTop: 8,
+  },
+  postImageWrapperContain: {
+    backgroundColor: "#f0f0f0",
+  },
   postThumbnail: {
     width: "100%",
-    height: 120,
+    // aspectRatio set dynamically via inline style
     borderRadius: 6,
-    marginTop: 8,
+    maxHeight: 200,
   },
 });

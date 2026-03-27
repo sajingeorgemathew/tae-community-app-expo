@@ -11,6 +11,7 @@ import AdminMembersScreen from "../screens/AdminMembersScreen";
 import AdminMemberDetailScreen from "../screens/AdminMemberDetailScreen";
 import AdminInstructorsScreen from "../screens/AdminInstructorsScreen";
 import AdminInstructorDetailScreen from "../screens/AdminInstructorDetailScreen";
+import AdminPostsModerationScreen from "../screens/AdminPostsModerationScreen";
 
 export type MoreStackParamList = {
   MoreMenu: undefined;
@@ -24,6 +25,7 @@ export type MoreStackParamList = {
   AdminMemberDetail: { profileId: string };
   AdminInstructors: undefined;
   AdminInstructorDetail: { profileId: string };
+  AdminPostsModeration: undefined;
 };
 
 const Stack = createNativeStackNavigator<MoreStackParamList>();
@@ -85,6 +87,11 @@ export default function MoreStack() {
         name="AdminInstructorDetail"
         component={AdminInstructorDetailScreen}
         options={{ title: "Instructor Detail" }}
+      />
+      <Stack.Screen
+        name="AdminPostsModeration"
+        component={AdminPostsModerationScreen}
+        options={{ title: "Posts Moderation" }}
       />
     </Stack.Navigator>
   );

@@ -21,7 +21,7 @@ interface AdminCard {
 const ADMIN_SECTIONS: AdminCard[] = [
   { title: "Members", description: "View and manage community members", route: "AdminMembers" },
   { title: "Instructors", description: "View and manage instructors", route: "AdminInstructors" },
-  { title: "Posts Moderation", description: "Review and moderate feed content" },
+  { title: "Posts Moderation", description: "Review and moderate feed content", route: "AdminPostsModeration" },
 ];
 
 export default function AdminScreen() {
