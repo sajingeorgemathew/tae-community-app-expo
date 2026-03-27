@@ -16,10 +16,9 @@ interface AdminCard {
 }
 
 const ADMIN_SECTIONS: AdminCard[] = [
-  { title: "Manage Members", description: "View and manage community members" },
-  { title: "Moderate Posts", description: "Review and moderate feed content" },
-  { title: "Review Questions", description: "Manage Q&A submissions" },
-  { title: "System / Metrics", description: "View app usage and metrics" },
+  { title: "Members", description: "View and manage community members" },
+  { title: "Instructors", description: "View and manage instructors" },
+  { title: "Posts Moderation", description: "Review and moderate feed content" },
 ];
 
 export default function AdminScreen() {
@@ -51,6 +50,9 @@ export default function AdminScreen() {
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.container}>
       <Text style={styles.heading}>Admin Dashboard</Text>
+      <Text style={styles.intro}>
+        Manage your community from here. Select a section below.
+      </Text>
 
       {ADMIN_SECTIONS.map((section) => (
         <View key={section.title} style={styles.card}>
@@ -75,6 +77,11 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "700",
     color: "#222",
+    marginBottom: 8,
+  },
+  intro: {
+    fontSize: 14,
+    color: "#666",
     marginBottom: 16,
   },
   card: {
