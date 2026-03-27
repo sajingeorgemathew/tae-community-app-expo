@@ -25,6 +25,8 @@ interface MemberCardProps {
   onPressProfile?: () => void;
   /** Show green presence dot on the avatar. */
   isOnline?: boolean;
+  /** Short course codes to display as tags (e.g. ["PSW", "ECA"]). */
+  courseTags?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -51,6 +53,7 @@ export default function MemberCard({
   avatarUrl,
   onPressProfile,
   isOnline,
+  courseTags,
 }: MemberCardProps) {
   const { session } = useAuth();
   const navigation = useNavigation<any>();
@@ -122,6 +125,15 @@ export default function MemberCard({
             <Text style={styles.meta} numberOfLines={1}>
               {meta}
             </Text>
+          ) : null}
+          {courseTags && courseTags.length > 0 ? (
+            <View style={styles.courseTagRow}>
+              {courseTags.map((code) => (
+                <View key={code} style={styles.courseTag}>
+                  <Text style={styles.courseTagText}>{code}</Text>
+                </View>
+              ))}
+            </View>
           ) : null}
         </View>
       </Pressable>
@@ -206,6 +218,26 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 10, fontWeight: "700", letterSpacing: 0.5 },
   headline: { fontSize: 13, color: "#555", marginTop: 3, lineHeight: 18 },
   meta: { fontSize: 12, color: "#888", marginTop: 2 },
+  courseTagRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+    marginTop: 4,
+  },
+  courseTag: {
+    backgroundColor: "#eef2ff",
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: "#c7d2fe",
+  },
+  courseTagText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#4338ca",
+    letterSpacing: 0.3,
+  },
 
   actions: {
     flexDirection: "row",

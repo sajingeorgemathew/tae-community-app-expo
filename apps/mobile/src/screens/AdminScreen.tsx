@@ -20,7 +20,7 @@ interface AdminCard {
 
 const ADMIN_SECTIONS: AdminCard[] = [
   { title: "Members", description: "View and manage community members", route: "AdminMembers" },
-  { title: "Instructors", description: "View and manage instructors" },
+  { title: "Instructors", description: "View and manage instructors", route: "AdminInstructors" },
   { title: "Posts Moderation", description: "Review and moderate feed content" },
 ];
 
@@ -61,7 +61,7 @@ export default function AdminScreen() {
         <Pressable
           key={section.title}
           style={styles.card}
-          onPress={section.route ? () => navigation.navigate(section.route! as "AdminMembers") : undefined}
+          onPress={section.route ? () => (navigation.navigate as (screen: string) => void)(section.route!) : undefined}
           disabled={!section.route}
         >
           <Text style={styles.cardTitle}>{section.title}</Text>
