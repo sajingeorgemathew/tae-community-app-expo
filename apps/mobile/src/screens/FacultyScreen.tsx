@@ -13,6 +13,7 @@ import { createSignedUrl, STORAGE_BUCKETS } from "@tae/shared";
 import { supabase } from "../lib/supabase";
 import MemberCard from "../components/MemberCard";
 import { useOnlineUsers } from "../hooks/useOnlineUsers";
+import { onAdminMemberChange } from "../state/adminMemberEvents";
 import type { FacultyStackParamList } from "../navigation/FacultyStack";
 
 type Props = NativeStackScreenProps<FacultyStackParamList, "FacultyList">;
@@ -37,7 +38,7 @@ export default function FacultyScreen({ navigation }: Props) {
     const { data, error: fetchError } = await supabase
       .from("profiles")
       .select("*")
-      .or("is_listed_as_tutor.eq.true,role.eq.tutor")
+      .eq("is_listed_as_tutor", true)
       .eq("is_disabled", false)
       .order("full_name", { ascending: true })
       .limit(FETCH_LIMIT);
@@ -79,6 +80,13 @@ export default function FacultyScreen({ navigation }: Props) {
 
   useEffect(() => {
     fetchFaculty();
+  }, [fetchFaculty]);
+
+  // Refetch when an admin mutation is saved elsewhere
+  useEffect(() => {
+    return onAdminMemberChange(() => {
+      fetchFaculty();
+    });
   }, [fetchFaculty]);
 
   const getAvatarUrl = (path: string | null): string | undefined => {
