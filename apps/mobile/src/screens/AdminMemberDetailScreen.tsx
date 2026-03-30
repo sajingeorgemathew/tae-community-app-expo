@@ -18,6 +18,7 @@ import { displayRole, roleBadgeColors } from "../lib/roles";
 import { useAuth } from "../state/auth";
 import { useMyProfile } from "../state/profile";
 import { emitAdminMemberChange } from "../state/adminMemberEvents";
+import { isSuperAdmin } from "../lib/superAdmin";
 import type { MoreStackParamList } from "../navigation/MoreStack";
 
 type Props = NativeStackScreenProps<MoreStackParamList, "AdminMemberDetail">;
@@ -42,8 +43,12 @@ export default function AdminMemberDetailScreen({ route, navigation }: Props) {
   const [isDisabled, setIsDisabled] = useState(false);
 
   // Derived governance flags
+  const viewerIsSuperAdmin = isSuperAdmin(session?.user?.id ?? "");
   const crossAdminBlocked =
-    !isSelf && myProfile?.role === "admin" && profile?.role === "admin";
+    !isSelf &&
+    myProfile?.role === "admin" &&
+    profile?.role === "admin" &&
+    !viewerIsSuperAdmin;
   const selfRoleBlocked = isSelf;
   const roleBlocked = selfRoleBlocked || crossAdminBlocked;
   const selfDisableBlocked = isSelf;
@@ -229,6 +234,17 @@ export default function AdminMemberDetailScreen({ route, navigation }: Props) {
             </Text>
           </View>
         )}
+
+        {!isSelf &&
+          viewerIsSuperAdmin &&
+          myProfile?.role === "admin" &&
+          profile?.role === "admin" && (
+            <View style={styles.superAdminNote}>
+              <Text style={styles.superAdminNoteText}>
+                Super-admin access — you may modify this admin account.
+              </Text>
+            </View>
+          )}
       </View>
 
       {/* ---- Role ---- */}
@@ -421,6 +437,14 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   crossAdminNoteText: { fontSize: 12, color: "#92400e", fontWeight: "600", textAlign: "center" },
+  superAdminNote: {
+    marginTop: 10,
+    backgroundColor: "#ede9fe",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  superAdminNoteText: { fontSize: 12, color: "#5b21b6", fontWeight: "600", textAlign: "center" },
 
   // Blocked / disabled section styling
   sectionBlocked: { opacity: 0.6 },
