@@ -32,6 +32,9 @@ export {
   shouldRedirect,
 } from "./auth";
 
+// Super-admin identity helpers (ADMIN-GOV-06B)
+export { parseSuperAdminIds, isSuperAdmin } from "./superAdmin";
+
 // Storage helpers (EXPO-03)
 export {
   normalizeExtension,
