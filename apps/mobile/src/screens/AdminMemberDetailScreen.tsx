@@ -18,7 +18,7 @@ import { displayRole, roleBadgeColors } from "../lib/roles";
 import { useAuth } from "../state/auth";
 import { useMyProfile } from "../state/profile";
 import { emitAdminMemberChange } from "../state/adminMemberEvents";
-import { isSuperAdmin } from "../lib/superAdmin";
+import { isSuperAdmin, isSuperAdminFull } from "../lib/superAdmin";
 import type { MoreStackParamList } from "../navigation/MoreStack";
 
 type Props = NativeStackScreenProps<MoreStackParamList, "AdminMemberDetail">;
@@ -42,17 +42,34 @@ export default function AdminMemberDetailScreen({ route, navigation }: Props) {
   const [isListedAsTutor, setIsListedAsTutor] = useState(false);
   const [isDisabled, setIsDisabled] = useState(false);
 
+  // Super-admin overlay state for the target member
+  const [targetIsSuperAdmin, setTargetIsSuperAdmin] = useState(false);
+  const [superAdminLoading, setSuperAdminLoading] = useState(false);
+
+  // Viewer super-admin status (env + DB). Seeded from sync env check, then
+  // resolved asynchronously so DB-backed super-admins are recognised too.
+  const [viewerIsSuperAdmin, setViewerIsSuperAdmin] = useState(() =>
+    isSuperAdmin(session?.user?.id ?? ""),
+  );
+
+  // Whether the *target* is a bootstrap (env-configured) super-admin.
+  // Bootstrap super-admins cannot be revoked from the app.
+  const targetIsBootstrap = isSuperAdmin(profileId);
+
   // Derived governance flags
-  const viewerIsSuperAdmin = isSuperAdmin(session?.user?.id ?? "");
   const crossAdminBlocked =
     !isSelf &&
     myProfile?.role === "admin" &&
     profile?.role === "admin" &&
     !viewerIsSuperAdmin;
   const selfRoleBlocked = isSelf;
-  const roleBlocked = selfRoleBlocked || crossAdminBlocked;
+  // Super-admins must remain role='admin' — block role changes while active
+  const superAdminRoleBlocked = targetIsSuperAdmin;
+  const roleBlocked = selfRoleBlocked || crossAdminBlocked || superAdminRoleBlocked;
   const selfDisableBlocked = isSelf;
-  const disableBlocked = selfDisableBlocked || crossAdminBlocked;
+  // Bootstrap super-admins are fully protected — cannot be disabled
+  const bootstrapDisableBlocked = targetIsBootstrap;
+  const disableBlocked = selfDisableBlocked || crossAdminBlocked || bootstrapDisableBlocked;
   const instructorToggleDisabled = role !== "tutor";
 
   // ------------------------------------------------------------------
@@ -95,6 +112,92 @@ export default function AdminMemberDetailScreen({ route, navigation }: Props) {
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
+
+  // Resolve viewer super-admin status from env + DB so DB-backed
+  // super-admins get real super-admin controls.
+  useEffect(() => {
+    const viewerId = session?.user?.id;
+    if (!viewerId) return;
+    let cancelled = false;
+    isSuperAdminFull(viewerId).then((result) => {
+      if (!cancelled) setViewerIsSuperAdmin(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id]);
+
+  // Check whether the target member is a super-admin (env + DB)
+  useEffect(() => {
+    if (!profileId) return;
+    let cancelled = false;
+    isSuperAdminFull(profileId).then((result) => {
+      if (!cancelled) setTargetIsSuperAdmin(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [profileId]);
+
+  // ------------------------------------------------------------------
+  // Super-admin grant / revoke
+  // ------------------------------------------------------------------
+
+  const handleGrantSuperAdmin = () => {
+    Alert.alert(
+      "Grant Super-Admin",
+      "This will give this admin elevated super-admin privileges. Continue?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Grant",
+          style: "destructive",
+          onPress: async () => {
+            setSuperAdminLoading(true);
+            const { error: rpcError } = await supabase.rpc(
+              "grant_super_admin",
+              { target_user_id: profileId },
+            );
+            setSuperAdminLoading(false);
+            if (rpcError) {
+              Alert.alert("Error", rpcError.message);
+              return;
+            }
+            setTargetIsSuperAdmin(true);
+            Alert.alert("Done", "Super-admin status granted.");
+          },
+        },
+      ],
+    );
+  };
+
+  const handleRevokeSuperAdmin = () => {
+    Alert.alert(
+      "Revoke Super-Admin",
+      "This will remove super-admin privileges from this user. Continue?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Revoke",
+          style: "destructive",
+          onPress: async () => {
+            setSuperAdminLoading(true);
+            const { error: rpcError } = await supabase.rpc(
+              "revoke_super_admin",
+              { target_user_id: profileId },
+            );
+            setSuperAdminLoading(false);
+            if (rpcError) {
+              Alert.alert("Error", rpcError.message);
+              return;
+            }
+            setTargetIsSuperAdmin(false);
+            Alert.alert("Done", "Super-admin status revoked.");
+          },
+        },
+      ],
+    );
+  };
 
   // ------------------------------------------------------------------
   // Role change handler — clears instructor listing when leaving tutor
@@ -199,6 +302,11 @@ export default function AdminMemberDetailScreen({ route, navigation }: Props) {
               {displayRole(profile.role).toUpperCase()}
             </Text>
           </View>
+          {targetIsSuperAdmin && profile.role === "admin" && (
+            <View style={styles.superAdminBadge}>
+              <Text style={styles.superAdminBadgeText}>SUPER-ADMIN</Text>
+            </View>
+          )}
           {profile.is_disabled && (
             <View style={styles.disabledBadge}>
               <Text style={styles.disabledBadgeText}>DISABLED</Text>
@@ -255,9 +363,16 @@ export default function AdminMemberDetailScreen({ route, navigation }: Props) {
             You cannot change your own role. Another admin must do this.
           </Text>
         )}
-        {crossAdminBlocked && (
+        {crossAdminBlocked && !superAdminRoleBlocked && (
           <Text style={styles.blockedHint}>
             Admins cannot modify other admin accounts.
+          </Text>
+        )}
+        {superAdminRoleBlocked && !selfRoleBlocked && (
+          <Text style={styles.blockedHint}>
+            {targetIsBootstrap
+              ? "Bootstrap super-admin is protected and must remain Admin."
+              : "This user has super-admin status. Revoke super-admin first to change their role."}
           </Text>
         )}
         <View style={[styles.roleOptions, roleBlocked && styles.blockedOverlay]}>
@@ -315,9 +430,11 @@ export default function AdminMemberDetailScreen({ route, navigation }: Props) {
             <Text style={styles.toggleHint}>
               {isSelf
                 ? "You cannot disable your own account"
-                : crossAdminBlocked
-                  ? "Admins cannot modify other admin accounts"
-                  : "Disabled accounts cannot access the app"}
+                : bootstrapDisableBlocked
+                  ? "Bootstrap super-admin accounts cannot be disabled"
+                  : crossAdminBlocked
+                    ? "Admins cannot modify other admin accounts"
+                    : "Disabled accounts cannot access the app"}
             </Text>
           </View>
           <Switch
@@ -327,6 +444,46 @@ export default function AdminMemberDetailScreen({ route, navigation }: Props) {
           />
         </View>
       </View>
+
+      {/* ---- Super-admin overlay ---- */}
+      {viewerIsSuperAdmin && !isSelf && profile.role === "admin" && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Super-Admin Status</Text>
+          <Text style={styles.toggleHint}>
+            {targetIsSuperAdmin
+              ? targetIsBootstrap
+                ? "This super-admin is protected by environment configuration."
+                : "This admin currently has super-admin privileges."
+              : "This admin does not have super-admin privileges."}
+          </Text>
+          {superAdminLoading ? (
+            <ActivityIndicator style={styles.superAdminAction} size="small" />
+          ) : targetIsSuperAdmin ? (
+            targetIsBootstrap ? (
+              <View style={styles.bootstrapNote}>
+                <Text style={styles.bootstrapNoteText}>
+                  Bootstrap super-admins are configured at deploy time and cannot
+                  be revoked from the app.
+                </Text>
+              </View>
+            ) : (
+              <Pressable
+                style={styles.revokeButton}
+                onPress={handleRevokeSuperAdmin}
+              >
+                <Text style={styles.revokeButtonText}>Revoke Super-Admin</Text>
+              </Pressable>
+            )
+          ) : (
+            <Pressable
+              style={styles.grantButton}
+              onPress={handleGrantSuperAdmin}
+            >
+              <Text style={styles.grantButtonText}>Grant Super-Admin</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
 
       {/* ---- Save ---- */}
       <Pressable
@@ -405,6 +562,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   badgeText: { fontSize: 10, fontWeight: "700", letterSpacing: 0.5 },
+  superAdminBadge: {
+    backgroundColor: "#ede9fe",
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: "#c4b5fd",
+  },
+  superAdminBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#5b21b6",
+    letterSpacing: 0.5,
+  },
   disabledBadge: {
     backgroundColor: "#fde8e8",
     borderRadius: 8,
@@ -498,6 +669,42 @@ const styles = StyleSheet.create({
   },
   toggleLabel: { flex: 1, marginRight: 12 },
   toggleHint: { fontSize: 12, color: "#888", marginTop: 2 },
+
+  // Super-admin grant/revoke
+  superAdminAction: { marginTop: 12, alignItems: "center" },
+  grantButton: {
+    marginTop: 12,
+    backgroundColor: "#5b21b6",
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  grantButtonText: { color: "#fff", fontSize: 14, fontWeight: "600" },
+  revokeButton: {
+    marginTop: 12,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#dc2626",
+  },
+  revokeButtonText: { color: "#dc2626", fontSize: 14, fontWeight: "600" },
+  bootstrapNote: {
+    marginTop: 12,
+    backgroundColor: "#f0fdf4",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#86efac",
+  },
+  bootstrapNoteText: {
+    fontSize: 12,
+    color: "#166534",
+    fontWeight: "500",
+    textAlign: "center",
+  },
 
   // Save
   saveButton: {
