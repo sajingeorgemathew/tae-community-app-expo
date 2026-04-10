@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { AuthProvider } from "./src/state/auth";
 import RootNavigator from "./src/navigation/RootNavigator";
 import { usePresenceHeartbeat } from "./src/hooks/usePresenceHeartbeat";
+import { usePushTokenRegistration } from "./src/hooks/usePushTokenRegistration";
 import {
   bootstrapNotifications,
   configureNotificationHandler,
@@ -18,6 +19,11 @@ function PresenceHeartbeat() {
   return null;
 }
 
+function PushTokenRegistration() {
+  usePushTokenRegistration();
+  return null;
+}
+
 function NotificationsBootstrap() {
   React.useEffect(() => {
     void bootstrapNotifications();
@@ -29,6 +35,7 @@ export default function App() {
   return (
     <AuthProvider>
       <NotificationsBootstrap />
+      <PushTokenRegistration />
       <PresenceHeartbeat />
       <NavigationContainer>
         <RootNavigator />
